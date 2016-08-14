@@ -248,6 +248,9 @@ FULLW,0,1,1,1,1,1,1,20160814,20160821
 ### Trip/Stop-times minimizer
 ---
 Minimizes stop times in `stop_times.txt` and trips in `trips.txt` by searching for progression (frequency) covers on the stop times. If multiple trips with equivalent attributes (route, shapes etc) and the same relative stop times are found, they are checked for frequency patterns. If a pattern could be found, the trips are combined into a single frequency-based trip (via `frequency.txt`).
+
+The algorithm is based on a CAP (Cover by Arithmetic Progression) algorithm proposed by [Hannah Bast and Sabine Storandt](http://ad-publications.informatik.uni-freiburg.de/SIGSPATIAL_frequency_BS_2014.pdf).
+
 #### Flags
 * `-T`: search for frequency patterns in explicit trips and combine them
 #### Modifies
