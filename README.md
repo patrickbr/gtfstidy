@@ -117,7 +117,7 @@ route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route
 ```
 
 ### Orphan remover
----
+
 Feed is checked for entries that are not referenced anywhere. These entries are removed from the output.
 
 #### Flags
@@ -150,7 +150,7 @@ FUR_CREEK_RES,Furnace Creek Resort (Demo),36.42529,-117.13316,META1
 ```
 
 ### Shape minimizer
----
+
 Minimizes shape geometries using Douglas-Peucker. This processor **implicitely calls the shape remeasurer!** The shape coordinates are projected to web mercator ([EPSG:3857](http://spatialreference.org/ref/sr-org/7483/)) prior to minimization. The ε value for Douglas-Peucker is set to 1.0
 
 #### Flags
@@ -200,7 +200,6 @@ B_shp,3.5,1,6,42.910156
 ```
 ### Service minimizer
 
----
 Minimizes service ranges in `calendar.txt` and `calendar_dates.txt` by searching for optimal coverages of range entries in `calendar.txt` and exception entries in `calendar_dates.txt`.
 
 #### Flags
@@ -246,7 +245,7 @@ FULLW,0,1,1,1,1,1,1,20160814,20160821
 (empty)
 ```
 ### Trip/Stop-times minimizer
----
+
 Minimizes stop times in `stop_times.txt` and trips in `trips.txt` by searching for progression (frequency) covers on the stop times. If multiple trips with equivalent attributes (route, shapes etc) and the same relative stop times are found, they are checked for frequency patterns. If a pattern could be found, the trips are combined into a single frequency-based trip (via `frequency.txt`).
 
 The algorithm is based on a CAP (Cover by Arithmetic Progression) algorithm proposed by [Hannah Bast and Sabine Storandt](http://ad-publications.informatik.uni-freiburg.de/SIGSPATIAL_frequency_BS_2014.pdf).
@@ -302,7 +301,7 @@ trip_id,start_time,end_time,headway_secs,exact_times
 AB1a,8:00:00,8:40:00,600,1
 ```
 ### Route duplicate remover
----
+
 Removes duplicate routes (routes that have the same attributes and the same fare rules), updates references in `trips.txt` and deletes redundant rules in `fare_rules.txt` as well.
 
 #### Flags
@@ -348,7 +347,7 @@ p,CFC
 ```
 
 ### Service duplicate remover
----
+
 Removes duplicate services (services that covers the same set of dates) and updates references.
 #### Flags
 * `-C`: remove duplicate services in calendar.txt and calendar_dates.txt
@@ -385,7 +384,7 @@ service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,e
 A,1,1,1,1,1,1,0,20160814,20160821
 ```
 ### Shape duplicate remover
----
+
 Removes duplicate shapes and updates references in `trips.txt`. Shape equality testing is done with a simple heuristic which resembles the [Fréchet-Distance](https://en.wikipedia.org/wiki/Fr%C3%A9chet_distance) but is faster. The check never underestimates the distance between two shapes, but overestimates it for shapes with total distances that are `>>` the max distance. **This processor implicitely calls the shape remeasurer**.
 
 #### Flags
@@ -429,7 +428,7 @@ B_shp,3.500005,1,6,42.91
 ```
 
 ### Shape remeasurer
----
+
 Remeasures shapes and fills measurement gaps.
 
 #### Flags
@@ -472,7 +471,7 @@ A_shp,3.5,1,6,42.910156
 ```
 
 ### Set erroneous values to standard defaults
----
+
 If optional field values of feed entries have errors, this processors sets them to the default values specified in the GTFS standard.
 
 #### Flags
@@ -510,7 +509,6 @@ STBA,DTA,30,Stagecoach - Airport Shuttle,3
 ```
 
 ### Drop erroneous entries
----
 
 If feed entries have errors that can't be fixed in any other way (e.g. by `-e`), this processor completely removes them.
 
