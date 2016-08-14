@@ -37,7 +37,9 @@ Process the SFMTA-Feed with all features enabled:
 ## 4. Evaluation results
 
 ### SFMTA feed
+
 Processed with `-SCRmTcdsOeD`.
+
 | File  | # lines before | size before || # lines after | size after|
 |---|---|---|---|---|---|
 | `agency.txt`  | 2  | 159 || 2 | 153 |
@@ -53,7 +55,9 @@ Processed with `-SCRmTcdsOeD`.
 | `trips.txt`  | 29,141  | 1,4M  || **21,747** | **740K** |
 
 ### Prague feed
+
 Processed with `-SCRmTcdsOeD`.
+
 | File  | # lines before | size before || # lines after | size after|
 |---|---|---|---|---|---|
 | `agency.txt`  | 17  | 1,4K || 17 | 1,4K |
@@ -72,18 +76,18 @@ Processed with `-SCRmTcdsOeD`.
 
 There are two classes of processors. Processors with a lowercase flag modify existing entries. Processors with an uppercase flag **delete** existing entries, either because they are duplicates or because they can be combined with other entries.
 
-#### ID minimizer
+### ID minimizer
 ---
 IDs are packed into dense integer arrays, either as base 10 or base 36 integer. You should not use this processor if you are referencing entities from outside the static feed (for example, if the IDs are references from a GTFS-realtime feed).
 
-##### Flags
+#### Flags
 * `-i`: pack IDs into dense base 10 integers
 * `-d`: pack IDs into dense base 36 integers
 
-##### Modifies
+#### Modifies
 Every file.
-##### Example
-###### Before
+#### Example
+##### Before
 `routes.txt`
 ```
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
@@ -95,7 +99,7 @@ AAMV,DTA,50,Airport - Amargosa Valley,,3,,,
 AAMV2,DTA,50,Airport - Amargosa Valley,,3,,,
 
 ```
-###### After
+##### After
 `routes.txt`
 ```
 route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
@@ -107,17 +111,17 @@ route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route
 1,1,10,Airport - Bullfrog,3,FFFFFF,000000
 ```
 
-#### Orphan remover
+### Orphan remover
 ---
 Feed is checked for entries that are not referenced anywhere. These entries are removed from the output.
-##### Flags
+#### Flags
 * `-O`: remove entities that are not referenced anywhere
 
-##### Modifies
+#### Modifies
 `trips.txt`, `stops.txt`, `routes.txt`, `calendar_dates.txt`, `calendar.txt`
 
-##### Example
-###### Before
+#### Example
+##### Before
 `stops.txt`
 ```
 stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,parent_station
@@ -125,24 +129,24 @@ META1,Furnace Creek,,36.425288,-117.1333162,,,
 META2,Furnace Creek,,36.425288,-117.1333162,,,
 FUR_CREEK_RES,Furnace Creek Resort (Demo),,36.425288,-117.133162,,,META1
 ```
-###### After
+##### After
 `stops.txt`
 ```
 stop_id,stop_name,stop_lat,stop_lon,parent_station
 META1,Furnace Creek,36.42529,-117.133316,
 FUR_CREEK_RES,Furnace Creek Resort (Demo),36.42529,-117.13316,META1
 ```
-#### Shape minimizer
+### Shape minimizer
 ---
 Minimizes shape geometries using Douglas-Peucker. This processor **implicitely calls the shape remeasurer!** The shape coordinates are projected to web mercator ([EPSG:3857](http://spatialreference.org/ref/sr-org/7483/)) prior to minimization. The ε value for Douglas-Peucker is set to 1.0
-##### Flags
+#### Flags
 * `-s`: minimize shapes (using Douglas-Peucker)
 
-##### Modifies
+#### Modifies
 `shapes.txt`
 
-##### Example
-###### Before
+#### Example
+##### Before
 `shapes.txt`
 ```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
@@ -159,7 +163,7 @@ B_shp,2,1,4
 B_shp,3,1,5,36.76
 B_shp,3.5,1,6, -.1
 ```
-###### After
+##### After
 `shapes.txt`
 ```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
@@ -172,15 +176,15 @@ B_shp,0.6,0.5,2,6.831
 B_shp,1,1,3,15.8765
 B_shp,3.5,1,6,42.910156
 ```
-#### Service minimizer
+### Service minimizer
 ---
 Minimizes service ranges in `calendar.txt` and `calendar_dates.txt` by searching for optimal coverages of range entries in `calendar.txt` and exception entries in `calendar_dates.txt`.
-##### Flags
+#### Flags
 * `-c`: minimize services by searching for the optimal exception/range coverage
-##### Modifies
+#### Modifies
 `calendar.txt`, `calendar_dates.txt`
-##### Example
-###### Before
+#### Example
+##### Before
 `calendar.txt`
 ```
 (empty)
@@ -197,7 +201,7 @@ FULLW,20160819,1
 FULLW,20160820,1
 FULLW,20160821,1
 ```
-###### After
+##### After
 `calendar.txt`
 ```
 service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
@@ -207,16 +211,16 @@ FULLW,0,1,1,1,1,1,1,20160814,20160821
 ```
 (empty)
 ```
-#### Trip/Stop-times minimizer
+### Trip/Stop-times minimizer
 ---
 Minimizes stop times in `stop_times.txt` and trips in `trips.txt` by searching for progression (frequency) covers on the stop times. If multiple trips with equivalent attributes (route, shapes etc) and the same relative stop times are found, they are checked for frequency patterns. If a pattern could be found, the trips are combined into a single frequency-based trip (via `frequency.txt`).
-##### Flags
+#### Flags
 * `-T`: search for frequency patterns in explicit trips and combine them
-##### Modifies
+#### Modifies
 `trips.txt`, `stop_times.txt`, `frequencies.txt`
-##### Example
+#### Example
 
-###### Before
+##### Before
 `stop_times.txt`
 ```
 trip_id,arrival_time,departure_time,stop_id,stop_sequence
@@ -241,7 +245,7 @@ AB,FULLW,AB1d,to Bullfrog,0,1,A_shp
 ```
 (empty)
 ```
-###### After
+##### After
 `stop_times.txt`
 ```
 trip_id,arrival_time,departure_time,stop_id,stop_sequence
@@ -258,16 +262,16 @@ AB,FULLW,AB1a,to Bullfrog,0,1,A_shp
 trip_id,start_time,end_time,headway_secs,exact_times
 AB1a,8:00:00,8:40:00,600,1
 ```
-#### Route duplicate remover
+### Route duplicate remover
 ---
 Removes duplicate routes (routes that have the same attributes and the same fare rules), updates references in `trips.txt` and deletes redundant rules in `fare_rules.txt` as well.
-##### Flags
+#### Flags
 * `-R`: remove route duplicates
-##### Modifies
+#### Modifies
 `routes.txt`, `trips.txt`, `fare_rules.txt`
 
-##### Example
-###### Before
+#### Example
+##### Before
 `routes.txt`
 ```
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
@@ -282,7 +286,7 @@ p,AB,,,
 p,BFC,,,
 p,CFC,,,
 ```
-###### After
+##### After
 `routes.txt`
 ```
 route_id,agency_id,route_short_name,route_long_name,route_type
@@ -297,18 +301,18 @@ p,AB
 p,CFC
 ```
 
-#### Service duplicate remover
+### Service duplicate remover
 ---
 Removes duplicate services (services that covers the same set of dates) and updates references.
-##### Flags
+#### Flags
 * `-C`: remove duplicate services in calendar.txt and calendar_dates.txt
 
-##### Modifies
+#### Modifies
 `calendar_dates.txt`, `calendar.txt`, `trips.txt`
 
-##### Example
+#### Example
 
-###### Before
+##### Before
 `calendar_dates.txt`
 ```
 service_id,date,exception_type
@@ -324,7 +328,7 @@ B,20160820,1
 service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
 A,1,1,1,1,1,1,0,20160814,20160821
 ```
-###### After
+##### After
 `calendar_dates.txt`
 ```
 (empty)
@@ -334,17 +338,20 @@ A,1,1,1,1,1,1,0,20160814,20160821
 service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
 A,1,1,1,1,1,1,0,20160814,20160821
 ```
-#### Shape duplicate remover
+### Shape duplicate remover
 ---
 Removes duplicate shapes and updates references in `trips.txt`. Shape equality testing is done with a simple heuristic which resembles the [Fréchet-Distance](https://en.wikipedia.org/wiki/Fr%C3%A9chet_distance) but is faster. The check never underestimates the distance between two shapes, but overestimates it for shapes with total distances that are `>>` the max distance. **This processor implicitely calls the shape remeasurer**.
-##### Flags
+
+#### Flags
 * `-S`: remove shape duplicates
 
-##### Modifies
+#### Modifies
 `shapes.txt`, `trips.txt`
 
-##### Example
-###### Before
+#### Example
+
+##### Before
+
 `shapes.txt`
 ```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
@@ -361,7 +368,7 @@ B_shp,2,1,4,26.315065
 B_shp,3,1,5,36.75
 B_shp,3.500005,1,6,42.91
 ```
-###### After
+##### After
 `shapes.txt`
 ```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
@@ -373,20 +380,24 @@ B_shp,3,1,5,36.75
 B_shp,3.500005,1,6,42.91
 ```
 
-#### Shape remeasurer
+### Shape remeasurer
 ---
 Remeasures shapes and fills measurement gaps.
 
-##### Flags
+#### Flags
+
 * `-m`: remeasure shapes (filling measurement-holes)
 
-##### Modifies
+#### Modifies
+
 `shapes.txt`
 
-##### Example:
+#### Example:
 
-###### Before
+##### Before
+
 `shapes.txt`
+
 ```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
 A_shp,0,0,1,
@@ -396,8 +407,11 @@ A_shp,2,1,4
 A_shp,3,1,5,36.76
 A_shp,3.5,1,6,
 ```
-###### After
+
+##### After
+
 `shapes.txt`
+
 ```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
 A_shp,0,0,1,0
@@ -409,18 +423,22 @@ A_shp,3.5,1,6,42.910156
 
 ```
 
-#### Set erroneous values to standard defaults
+### Set erroneous values to standard defaults
 ---
 If optional field values of feed entries have errors, this processors sets them to the default values specified in the GTFS standard.
 
-##### Flags
+#### Flags
+
 * `-e`: remeasure shapes (filling measurement-holes)
 
-##### Modifies
+#### Modifies
+
 Every file, if errors are present.
 
-##### Example:
-###### Before
+#### Example:
+
+##### Before
+
 `routes.txt`
 ```
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
@@ -431,7 +449,7 @@ CITY,DTA,40,City,,3,,,
 AAMV,DTA,50,Airport - Amargosa Valley,,3,,,
 AAMV2,DTA,50,Airport - Amargosa Valley,,3,,,
 ```
-###### After
+##### After
 `routes.txt`
 ```
 route_id,agency_id,route_short_name,route_long_name,route_type
@@ -443,19 +461,22 @@ BFC,DTA,20,Bullfrog - Furnace Creek Resort,3
 STBA,DTA,30,Stagecoach - Airport Shuttle,3
 ```
 
-#### Drop erroneous entries
+### Drop erroneous entries
 ---
 
 If feed entries have errors that can't be fixed in any other way (e.g. by `-e`), this processor completely removes them.
 
-##### Flags:
+#### Flags:
+
 * `-D`: drop erroneous entries from feed
 
-##### Modifies:
+#### Modifies:
+
 Every file, if errors are present.
 
-##### Example:
-###### Before
+#### Example:
+##### Before
+
 `routes.txt`
 ```
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
@@ -466,7 +487,7 @@ CITY,DTA,40,City,,3,,,
 AAMV,DTA,50,Airport - Amargosa Valley,,3,,,
 AAMV2,DTA,50,Airport - Amargosa Valley,,3,,,
 ```
-###### After
+##### After
 `routes.txt`
 ```
 route_id,agency_id,route_short_name,route_long_name,route_type
