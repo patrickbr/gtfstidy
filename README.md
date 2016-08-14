@@ -33,7 +33,7 @@ for possible options.
 
 Process the SFMTA-Feed with all processors enabled:
 
-    $ gtfstidy -SCRmTcidsOeD sanfrancisco.zip
+    $ gtfstidy -SCRmTcdsOeD sanfrancisco.zip
 
 ## 4. Evaluation
 
