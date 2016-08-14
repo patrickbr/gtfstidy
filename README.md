@@ -253,8 +253,10 @@ The algorithm is based on a CAP (Cover by Arithmetic Progression) algorithm prop
 
 #### Flags
 * `-T`: search for frequency patterns in explicit trips and combine them
+
 #### Modifies
 `trips.txt`, `stop_times.txt`, `frequencies.txt`
+
 #### Example
 
 ##### Before
@@ -302,14 +304,21 @@ AB1a,8:00:00,8:40:00,600,1
 ### Route duplicate remover
 ---
 Removes duplicate routes (routes that have the same attributes and the same fare rules), updates references in `trips.txt` and deletes redundant rules in `fare_rules.txt` as well.
+
 #### Flags
+
 * `-R`: remove route duplicates
+
 #### Modifies
+
 `routes.txt`, `trips.txt`, `fare_rules.txt`
 
 #### Example
+
 ##### Before
+
 `routes.txt`
+
 ```
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
 AB,DTA,10,Airport - Bullfrog,,3,,,
