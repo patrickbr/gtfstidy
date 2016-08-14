@@ -23,18 +23,19 @@ Output feeds are **semantically equivalent** to the input feed. In this context,
     $ go get github.com/patrickbr/gtfstidy
 
 ## 2. Usage
-Each GTFS processor has to be excplitly enable. See
+Each GTFS processor has to be enabled explicitly. See
 
     $ gtfstidy --help
 
 for possible options.
 
 ## 3. Example
-Process the SFMTA-Feed with all features enabled:
+
+Process the SFMTA-Feed with all processors enabled:
 
     $ gtfstidy -SCRmTcidsOeD sanfrancisco.zip
 
-## 4. Evaluation results
+## 4. Evaluation
 
 ### SFMTA feed
 
@@ -80,7 +81,7 @@ There are two classes of processors. Processors with a lowercase flag modify exi
 
 ---
 
-IDs are packed into dense integer arrays, either as base 10 or base 36 integer. You should not use this processor if you are referencing entities from outside the static feed (for example, if the IDs are references from a GTFS-realtime feed).
+IDs are packed into dense integer arrays, either as base 10 or base 36 integers. You should not use this processor if you are referencing entities from outside the static feed (for example, if the IDs are references from a GTFS-realtime feed).
 
 #### Flags
 
@@ -143,6 +144,7 @@ META1,Furnace Creek,,36.425288,-117.1333162,,,
 META2,Furnace Creek,,36.425288,-117.1333162,,,
 FUR_CREEK_RES,Furnace Creek Resort (Demo),,36.425288,-117.133162,,,META1
 ```
+
 ##### After
 
 `stops.txt`
@@ -211,9 +213,11 @@ B_shp,3.5,1,6,42.910156
 Minimizes service ranges in `calendar.txt` and `calendar_dates.txt` by searching for optimal coverages of range entries in `calendar.txt` and exception entries in `calendar_dates.txt`.
 
 #### Flags
+
 * `-c`: minimize services by searching for the optimal exception/range coverage
 
 #### Modifies
+
 `calendar.txt`, `calendar_dates.txt`
 
 #### Example
@@ -252,21 +256,25 @@ FULLW,0,1,1,1,1,1,1,20160814,20160821
 ```
 (empty)
 ```
+
 ### Trip/Stop-times minimizer
 
-Minimizes stop times in `stop_times.txt` and trips in `trips.txt` by searching for progression (frequency) covers on the stop times. If multiple trips with equivalent attributes (route, shapes etc) and the same relative stop times are found, they are checked for frequency patterns. If a pattern could be found, the trips are combined into a single frequency-based trip (via `frequency.txt`).
+Minimizes stop times in `stop_times.txt` and trips in `trips.txt` by searching for progression (frequency) covers on the stop times. If multiple trips with equivalent attributes (route, shapes etc) and the same relative stop times are found, they are checked for frequency patterns. If a pattern could be found, the trips are combined into a single frequency-based trip (via `frequency.txt`). Existing frequencies in `frequencies.txt` are also optimized and/or combined with entries in `stop_times.txt`.
 
 The algorithm is based on a CAP (Cover by Arithmetic Progression) algorithm proposed by [Hannah Bast and Sabine Storandt](http://ad-publications.informatik.uni-freiburg.de/SIGSPATIAL_frequency_BS_2014.pdf).
 
 #### Flags
+
 * `-T`: search for frequency patterns in explicit trips and combine them
 
 #### Modifies
+
 `trips.txt`, `stop_times.txt`, `frequencies.txt`
 
 #### Example
 
 ##### Before
+
 `stop_times.txt`
 ```
 trip_id,arrival_time,departure_time,stop_id,stop_sequence
@@ -291,7 +299,9 @@ AB,FULLW,AB1d,to Bullfrog,0,1,A_shp
 ```
 (empty)
 ```
+
 ##### After
+
 `stop_times.txt`
 ```
 trip_id,arrival_time,departure_time,stop_id,stop_sequence
@@ -341,7 +351,9 @@ p,AB,,,
 p,BFC,,,
 p,CFC,,,
 ```
+
 ##### After
+
 `routes.txt`
 ```
 route_id,agency_id,route_short_name,route_long_name,route_type
@@ -360,16 +372,20 @@ p,CFC
 
 ---
 
-Removes duplicate services (services that covers the same set of dates) and updates references.
+Removes duplicate services (services that cover the same set of dates) and updates references.
+
 #### Flags
+
 * `-C`: remove duplicate services in calendar.txt and calendar_dates.txt
 
 #### Modifies
+
 `calendar_dates.txt`, `calendar.txt`, `trips.txt`
 
 #### Example
 
 ##### Before
+
 `calendar_dates.txt`
 ```
 service_id,date,exception_type
@@ -385,7 +401,9 @@ B,20160820,1
 service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
 A,1,1,1,1,1,1,0,20160814,20160821
 ```
+
 ##### After
+
 `calendar_dates.txt`
 ```
 (empty)
@@ -395,6 +413,7 @@ A,1,1,1,1,1,1,0,20160814,20160821
 service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
 A,1,1,1,1,1,1,0,20160814,20160821
 ```
+
 ### Shape duplicate remover
 
 ---
@@ -430,7 +449,9 @@ B_shp,3.500005,1,6,42.91
 ```
 
 ##### After
+
 `shapes.txt`
+
 ```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
 B_shp,0,0,1,0
@@ -505,6 +526,7 @@ Every file, if errors are present.
 ##### Before
 
 `routes.txt`
+
 ```
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
 AB,DTAoopserror,10,Airport - Bullfrog,,3,,,
@@ -514,8 +536,11 @@ CITY,DTA,40,City,,3,,,
 AAMV,DTA,50,Airport - Amargosa Valley,,3,,,
 AAMV2,DTA,50,Airport - Amargosa Valley,,3,,,
 ```
+
 ##### After
+
 `routes.txt`
+
 ```
 route_id,agency_id,route_short_name,route_long_name,route_type
 CITY,DTA,40,City,3
@@ -530,7 +555,7 @@ STBA,DTA,30,Stagecoach - Airport Shuttle,3
 
 ---
 
-If feed entries have errors that can't be fixed in any other way (e.g. by `-e`), this processor completely removes them.
+If feed entries have errors that can't be fixed in any other way (e.g. by `-e`), this processor completely removes them. This cascades through the entire feed: if an erroneous route is deleted, all trips that refer to this route are also deleted, all stop times for trips referencing this route are deleted as well and so on. You effectively get an error-free subset of the input feed.
 
 #### Flags:
 
@@ -541,6 +566,7 @@ If feed entries have errors that can't be fixed in any other way (e.g. by `-e`),
 Every file, if errors are present.
 
 #### Example:
+
 ##### Before
 
 `routes.txt`
