@@ -81,14 +81,19 @@ There are two classes of processors. Processors with a lowercase flag modify exi
 IDs are packed into dense integer arrays, either as base 10 or base 36 integer. You should not use this processor if you are referencing entities from outside the static feed (for example, if the IDs are references from a GTFS-realtime feed).
 
 #### Flags
+
 * `-i`: pack IDs into dense base 10 integers
 * `-d`: pack IDs into dense base 36 integers
 
 #### Modifies
 Every file.
+
+
 #### Example
 ##### Before
+
 `routes.txt`
+
 ```
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
 AB,DTA,10,Airport - Bullfrog,,3,,,
@@ -97,8 +102,8 @@ STBA,DTA,30,Stagecoach - Airport Shuttle,,3,,,
 CITY,DTA,40,City,,3,,,
 AAMV,DTA,50,Airport - Amargosa Valley,,3,,,
 AAMV2,DTA,50,Airport - Amargosa Valley,,3,,,
-
 ```
+
 ##### After
 `routes.txt`
 ```
@@ -114,15 +119,20 @@ route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route
 ### Orphan remover
 ---
 Feed is checked for entries that are not referenced anywhere. These entries are removed from the output.
+
 #### Flags
 * `-O`: remove entities that are not referenced anywhere
 
 #### Modifies
+
 `trips.txt`, `stops.txt`, `routes.txt`, `calendar_dates.txt`, `calendar.txt`
 
 #### Example
+
 ##### Before
+
 `stops.txt`
+
 ```
 stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,parent_station
 META1,Furnace Creek,,36.425288,-117.1333162,,,
@@ -130,24 +140,33 @@ META2,Furnace Creek,,36.425288,-117.1333162,,,
 FUR_CREEK_RES,Furnace Creek Resort (Demo),,36.425288,-117.133162,,,META1
 ```
 ##### After
+
 `stops.txt`
+
 ```
 stop_id,stop_name,stop_lat,stop_lon,parent_station
 META1,Furnace Creek,36.42529,-117.133316,
 FUR_CREEK_RES,Furnace Creek Resort (Demo),36.42529,-117.13316,META1
 ```
+
 ### Shape minimizer
 ---
 Minimizes shape geometries using Douglas-Peucker. This processor **implicitely calls the shape remeasurer!** The shape coordinates are projected to web mercator ([EPSG:3857](http://spatialreference.org/ref/sr-org/7483/)) prior to minimization. The ε value for Douglas-Peucker is set to 1.0
+
 #### Flags
+
 * `-s`: minimize shapes (using Douglas-Peucker)
 
 #### Modifies
+
 `shapes.txt`
 
 #### Example
+
 ##### Before
+
 `shapes.txt`
+
 ```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
 A_shp,0,0,1,
@@ -163,8 +182,11 @@ B_shp,2,1,4
 B_shp,3,1,5,36.76
 B_shp,3.5,1,6, -.1
 ```
+
 ##### After
+
 `shapes.txt`
+
 ```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
 A_shp,0,0,1,0
@@ -177,19 +199,28 @@ B_shp,1,1,3,15.8765
 B_shp,3.5,1,6,42.910156
 ```
 ### Service minimizer
+
 ---
 Minimizes service ranges in `calendar.txt` and `calendar_dates.txt` by searching for optimal coverages of range entries in `calendar.txt` and exception entries in `calendar_dates.txt`.
+
 #### Flags
 * `-c`: minimize services by searching for the optimal exception/range coverage
+
 #### Modifies
 `calendar.txt`, `calendar_dates.txt`
+
 #### Example
+
 ##### Before
+
 `calendar.txt`
+
 ```
 (empty)
 ```
+
 `calendar_dates.txt`
+
 ```
 service_id,date,exception_type
 FULLW,20160814,1
@@ -201,8 +232,11 @@ FULLW,20160819,1
 FULLW,20160820,1
 FULLW,20160821,1
 ```
+
 ##### After
+
 `calendar.txt`
+
 ```
 service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
 FULLW,0,1,1,1,1,1,1,20160814,20160821
@@ -354,6 +388,7 @@ Removes duplicate shapes and updates references in `trips.txt`. Shape equality t
 
 `shapes.txt`
 ```
+
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
 A_shp,0,0,1,0
 A_shp,0.6,0.5,2,6.831
@@ -368,6 +403,7 @@ B_shp,2,1,4,26.315065
 B_shp,3,1,5,36.75
 B_shp,3.500005,1,6,42.91
 ```
+
 ##### After
 `shapes.txt`
 ```
@@ -478,6 +514,7 @@ Every file, if errors are present.
 ##### Before
 
 `routes.txt`
+
 ```
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
 AB,DTAoopserror,10,Airport - Bullfrog,,3,,,
@@ -487,8 +524,11 @@ CITY,DTA,40,City,,3,,,
 AAMV,DTA,50,Airport - Amargosa Valley,,3,,,
 AAMV2,DTA,50,Airport - Amargosa Valley,,3,,,
 ```
+
 ##### After
+
 `routes.txt`
+
 ```
 route_id,agency_id,route_short_name,route_long_name,route_type
 CITY,DTA,40,City,3
