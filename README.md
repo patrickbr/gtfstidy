@@ -77,7 +77,9 @@ Processed with `-SCRmTcdsOeD`.
 There are two classes of processors. Processors with a lowercase flag modify existing entries. Processors with an uppercase flag **delete** existing entries, either because they are duplicates or because they can be combined with other entries.
 
 ### ID minimizer
+
 ---
+
 IDs are packed into dense integer arrays, either as base 10 or base 36 integer. You should not use this processor if you are referencing entities from outside the static feed (for example, if the IDs are references from a GTFS-realtime feed).
 
 #### Flags
@@ -118,6 +120,8 @@ route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route
 
 ### Orphan remover
 
+---
+
 Feed is checked for entries that are not referenced anywhere. These entries are removed from the output.
 
 #### Flags
@@ -150,6 +154,8 @@ FUR_CREEK_RES,Furnace Creek Resort (Demo),36.42529,-117.13316,META1
 ```
 
 ### Shape minimizer
+
+---
 
 Minimizes shape geometries using Douglas-Peucker. This processor **implicitely calls the shape remeasurer!** The shape coordinates are projected to web mercator ([EPSG:3857](http://spatialreference.org/ref/sr-org/7483/)) prior to minimization. The ε value for Douglas-Peucker is set to 1.0
 
@@ -199,6 +205,8 @@ B_shp,1,1,3,15.8765
 B_shp,3.5,1,6,42.910156
 ```
 ### Service minimizer
+
+---
 
 Minimizes service ranges in `calendar.txt` and `calendar_dates.txt` by searching for optimal coverages of range entries in `calendar.txt` and exception entries in `calendar_dates.txt`.
 
@@ -302,6 +310,8 @@ AB1a,8:00:00,8:40:00,600,1
 ```
 ### Route duplicate remover
 
+---
+
 Removes duplicate routes (routes that have the same attributes and the same fare rules), updates references in `trips.txt` and deletes redundant rules in `fare_rules.txt` as well.
 
 #### Flags
@@ -348,6 +358,8 @@ p,CFC
 
 ### Service duplicate remover
 
+---
+
 Removes duplicate services (services that covers the same set of dates) and updates references.
 #### Flags
 * `-C`: remove duplicate services in calendar.txt and calendar_dates.txt
@@ -384,6 +396,8 @@ service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,e
 A,1,1,1,1,1,1,0,20160814,20160821
 ```
 ### Shape duplicate remover
+
+---
 
 Removes duplicate shapes and updates references in `trips.txt`. Shape equality testing is done with a simple heuristic which resembles the [Fréchet-Distance](https://en.wikipedia.org/wiki/Fr%C3%A9chet_distance) but is faster. The check never underestimates the distance between two shapes, but overestimates it for shapes with total distances that are `>>` the max distance. **This processor implicitely calls the shape remeasurer**.
 
@@ -429,6 +443,8 @@ B_shp,3.500005,1,6,42.91
 
 ### Shape remeasurer
 
+---
+
 Remeasures shapes and fills measurement gaps.
 
 #### Flags
@@ -472,6 +488,8 @@ A_shp,3.5,1,6,42.910156
 
 ### Set erroneous values to standard defaults
 
+---
+
 If optional field values of feed entries have errors, this processors sets them to the default values specified in the GTFS standard.
 
 #### Flags
@@ -509,6 +527,8 @@ STBA,DTA,30,Stagecoach - Airport Shuttle,3
 ```
 
 ### Drop erroneous entries
+
+---
 
 If feed entries have errors that can't be fixed in any other way (e.g. by `-e`), this processor completely removes them.
 
