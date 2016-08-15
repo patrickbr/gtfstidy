@@ -110,13 +110,13 @@ AAMV2,DTA,50,Airport - Amargosa Valley,,3,,,
 ##### After
 `routes.txt`
 ```
-route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
-2,1,20,Bullfrog - Furnace Creek Resort,3,FFFFFF,000000
-3,1,30,Stagecoach - Airport Shuttle,3,FFFFFF,000000
-4,1,40,City,3,FFFFFF,000000
-5,1,50,Airport - Amargosa Valley,3,FFFFFF,000000
-6,1,50,Airport - Amargosa Valley,3,FFFFFF,000000
-1,1,10,Airport - Bullfrog,3,FFFFFF,000000
+route_id,agency_id,route_short_name,route_long_name,route_type
+2,1,20,Bullfrog - Furnace Creek Resort,3
+3,1,30,Stagecoach - Airport Shuttle,3
+4,1,40,City,3
+5,1,50,Airport - Amargosa Valley,3
+6,1,50,Airport - Amargosa Valley,3
+1,1,10,Airport - Bullfrog,3
 ```
 
 ### Orphan remover
@@ -182,13 +182,13 @@ A_shp,0.6,0.5,2,6.8310
 A_shp,1,1,3,15.8765
 A_shp,2,1,4
 A_shp,3,1,5,36.76
-A_shp,3.5,1,6, -.1
+A_shp,3.5,1,6,
 B_shp,0,0,1,
 B_shp,0.6,0.5,2,6.8310
 B_shp,1,1,3,15.8765
 B_shp,2,1,4
 B_shp,3,1,5,36.76
-B_shp,3.5,1,6, -.1
+B_shp,3.5,1,6,
 ```
 
 ##### After
@@ -431,8 +431,8 @@ Removes duplicate shapes and updates references in `trips.txt`. Shape equality t
 ##### Before
 
 `shapes.txt`
-```
 
+```
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
 A_shp,0,0,1,0
 A_shp,0.6,0.5,2,6.831
@@ -515,7 +515,7 @@ If optional field values of feed entries have errors, this processors sets them 
 
 #### Flags
 
-* `-e`: remeasure shapes (filling measurement-holes)
+* `-e`: if non-required fields have errors, fall back to the default values
 
 #### Modifies
 
