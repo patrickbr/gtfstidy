@@ -41,37 +41,37 @@ Process the SFMTA-Feed with all processors enabled:
 
 Processed with `-SCRmTcdsOeD`.
 
-| File  | # lines before | size before || # lines after | size after|
+| File  | # lines before | size before | | # lines after | size after|
 |---|---|---|---|---|---|
-| `agency.txt`  | 2  | 159 || 2 | 153 |
-| `calendar_dates.txt`  | 3  | 60 || 3 | 57 |
-| `calendar.txt`  | 4  | 192 || 4 | 190 |
-| `fare_attributes.txt`  | 3  |  109 || 3 | 107 |
-| `fare_rules.txt`  | 84  | 1,1K  || 84 | 397 |
-| `frequencies.txt` | _N/A_ | _N/A_ || **3,982** | **113k** |
-| `routes.txt`  | 84  | 3,2K  || 84 | 1,9k |
-| `shapes.txt`  | 97,909  |  3,6M || **20,180** | **630K** |
-| `stops.txt`  | 4,639  | 259K  || 3,554 | 174K |
-| `stop_times.txt`  | 1,123,860  | 46M  || **893,300** | **25M** |
-| `trips.txt`  | 29,141  | 1,4M  || **21,747** | **740K** |
+| `agency.txt`  | 2  | 159 | | 2 | 153 |
+| `calendar_dates.txt`  | 3  | 60 | | 3 | 57 |
+| `calendar.txt`  | 4  | 192 | | 4 | 190 |
+| `fare_attributes.txt`  | 3  |  109 | | 3 | 107 |
+| `fare_rules.txt`  | 84  | 1,1K  | | 84 | 397 |
+| `frequencies.txt` | _N/A_ | _N/A_ | | **3,982** | **113k** |
+| `routes.txt`  | 84  | 3,2K  | | 84 | 1,9k |
+| `shapes.txt`  | 97,909  |  3,6M | | **20,180** | **630K** |
+| `stops.txt`  | 4,639  | 259K  | | 3,554 | 174K |
+| `stop_times.txt`  | 1,123,860  | 46M  | | **893,300** | **25M** |
+| `trips.txt`  | 29,141  | 1,4M  | | **21,747** | **740K** |
 
 ### Prague feed
 
 Processed with `-SCRmTcdsOeD`.
 
-| File  | # lines before | size before || # lines after | size after|
+| File  | # lines before | size before | | # lines after | size after|
 |---|---|---|---|---|---|
-| `agency.txt`  | 17  | 1,4K || 17 | 1,4K |
-| `calendar_dates.txt`  | 1  | 32 || 20 | 289 |
+| `agency.txt`  | 17  | 1,4K | | 17 | 1,4K |
+| `calendar_dates.txt`  | 1  | 32 | | 20 | 289 |
 | `calendar.txt`  | 52  | 1,9k || 14 | 536 |
-| `fare_attributes.txt`  |  _N/A_  |   _N/A_ ||  _N/A_ |  _N/A_ |
-| `fare_rules.txt`  |  _N/A_  |  _N/A_  ||  _N/A_ |  _N/A_ |
-| `frequencies.txt` | _N/A_ | _N/A_ || **20,135** | **591K** |
-| `routes.txt`  | 351  | 21K  || 351 | 19K |
-| `shapes.txt`  | 547,871  |  16M || **406,482** | **11M** |
-| `stops.txt`  | 6,103  | 315K  || 6,103 | 274K |
-| `stop_times.txt`  | 1,916,123  | 63M  || **746,749** | **22M** |
-| `trips.txt`  | 85,551  | 3,2M  || **33,056** | **1,2M** |
+| `fare_attributes.txt`  |  _N/A_  |   _N/A_ | |  _N/A_ |  _N/A_ |
+| `fare_rules.txt`  |  _N/A_  |  _N/A_  | |  _N/A_ |  _N/A_ |
+| `frequencies.txt` | _N/A_ | _N/A_ | | **20,135** | **591K** |
+| `routes.txt`  | 351  | 21K  | | 351 | 19K |
+| `shapes.txt`  | 547,871  |  16M | | **406,482** | **11M** |
+| `stops.txt`  | 6,103  | 315K  | | 6,103 | 274K |
+| `stop_times.txt`  | 1,916,123  | 63M  | | **746,749** | **22M** |
+| `trips.txt`  | 85,551  | 3,2M  | | **33,056** | **1,2M** |
 
 ## 5. Available processors
 
