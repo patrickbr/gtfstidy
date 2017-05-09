@@ -17,11 +17,13 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "gtfstidy - 2016 by P. Brosi\n\nUsage:\n\n  %s -o <outputfile> <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "gtfstidy - 2016 by P. Brosi\n\nUsage:\n\n  %s [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
-	outputPath := flag.StringP("output", "o", "gtfs-out", "gtfs output path, zip or directory")
+	onlyValidate := flag.BoolP("validation-mode", "v", false, "only validate the feed")
+
+	outputPath := flag.StringP("output", "o", "gtfs-out", "gtfs output directory (must exist)")
 
 	useDefaultValuesOnError := flag.BoolP("default-on-errs", "e", false, "if non-required fields have errors, fall back to the default values")
 	dropErroneousEntities := flag.BoolP("drop-errs", "D", false, "drop erroneous entries from feed")
@@ -52,16 +54,19 @@ func main() {
 	}()
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{false, false}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false}
 	opts.DropErroneous = *dropErroneousEntities
 	opts.UseDefValueOnError = *useDefaultValuesOnError
 	feed.SetParseOpts(opts)
+
 	e := feed.Parse(gtfsPath)
 
 	if e != nil {
-		fmt.Fprintf(os.Stderr, "Error while parsing GTFS feed in '%s':\n ", gtfsPath)
+		fmt.Fprintf(os.Stderr, "Error while parsing GTFS feed in '%s':\n", gtfsPath)
 		fmt.Fprintln(os.Stderr, e.Error())
-		fmt.Fprintln(os.Stdout, "You may want to try running gtfstidy with -e and/or -D for error fixing / skipping. See --help for details.")
+		if !*onlyValidate {
+			fmt.Fprintln(os.Stdout, "\nYou may want to try running gtfstidy with -e and/or -D for error fixing / skipping. See --help for details.")
+		}
 		os.Exit(1)
 	} else {
 		var minzers []processors.Processor = make([]processors.Processor, 0)
@@ -109,14 +114,20 @@ func main() {
 			m.Run(feed)
 		}
 
-		// write feed back to output
-		w := gtfswriter.Writer{}
-		e := w.Write(feed, *outputPath)
+		if *onlyValidate {
+			fmt.Fprintf(os.Stdout, "No errors.")
+			os.Exit(0)
+		} else {
 
-		if e != nil {
-			fmt.Fprintf(os.Stderr, "Error while writing GTFS feed in '%s':\n ", *outputPath)
-			fmt.Fprintf(os.Stderr, e.Error())
-			os.Exit(1)
+			// write feed back to output
+			w := gtfswriter.Writer{}
+			e := w.Write(feed, *outputPath)
+
+			if e != nil {
+				fmt.Fprintf(os.Stderr, "Error while writing GTFS feed in '%s':\n ", *outputPath)
+				fmt.Fprintf(os.Stderr, e.Error())
+				os.Exit(1)
+			}
 		}
 	}
 }
