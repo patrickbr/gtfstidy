@@ -119,6 +119,10 @@ func main() {
 			os.Exit(0)
 		} else {
 
+			if _, err := os.Stat(*outputPath); os.IsNotExist(err) {
+				os.Mkdir(*outputPath, os.ModePerm)
+			}
+
 			// write feed back to output
 			w := gtfswriter.Writer{}
 			e := w.Write(feed, *outputPath)
