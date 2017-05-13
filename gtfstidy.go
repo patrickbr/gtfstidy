@@ -54,7 +54,7 @@ func main() {
 	}()
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate}
 	opts.DropErroneous = *dropErroneousEntities
 	opts.UseDefValueOnError = *useDefaultValuesOnError
 	feed.SetParseOpts(opts)
