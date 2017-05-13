@@ -374,7 +374,7 @@ func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, t
  * Convert seconds since midnight to a GTFS time
  */
 func (m FrequencyMinimizer) getGtfsTimeFromSec(s int) gtfs.Time {
-	return gtfs.Time{s / 3600, int8((s - (s/3600)*3600) / 60), int8(s - ((s / 60) * 60))}
+	return gtfs.Time{int8(s / 3600), int8((s - (s/3600)*3600) / 60), int8(s - ((s / 60) * 60))}
 }
 
 /**

@@ -21,7 +21,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	onlyValidate := flag.BoolP("validation-mode", "v", false, "only validate the feed")
+	onlyValidate := flag.BoolP("validation-mode", "v", false, "only validate the feed, no processors will be called")
 
 	outputPath := flag.StringP("output", "o", "gtfs-out", "gtfs output directory (must exist)")
 
@@ -55,8 +55,8 @@ func main() {
 
 	feed := gtfsparser.NewFeed()
 	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate}
-	opts.DropErroneous = *dropErroneousEntities
-	opts.UseDefValueOnError = *useDefaultValuesOnError
+	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
+	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	feed.SetParseOpts(opts)
 
 	e := feed.Parse(gtfsPath)
@@ -109,16 +109,14 @@ func main() {
 			minzers = append(minzers, processors.IdMinimizer{36})
 		}
 
-		// do processing
-		for _, m := range minzers {
-			m.Run(feed)
-		}
-
 		if *onlyValidate {
-			fmt.Fprintf(os.Stdout, "No errors.")
+			fmt.Fprintln(os.Stdout, "No errors.")
 			os.Exit(0)
 		} else {
-
+			// do processing
+			for _, m := range minzers {
+				m.Run(feed)
+			}
 			if _, err := os.Stat(*outputPath); os.IsNotExist(err) {
 				os.Mkdir(*outputPath, os.ModePerm)
 			}
@@ -129,7 +127,7 @@ func main() {
 
 			if e != nil {
 				fmt.Fprintf(os.Stderr, "Error while writing GTFS feed in '%s':\n ", *outputPath)
-				fmt.Fprintf(os.Stderr, e.Error())
+				fmt.Fprintln(os.Stderr, e.Error())
 				os.Exit(1)
 			}
 		}
