@@ -29,6 +29,12 @@ Each GTFS processor has to be enabled explicitly. See
 
 for possible options.
 
+You can use
+
+	$ gtfstidy -v <feed>
+
+to do a simple feed validation.
+
 ## 3. Example
 
 Process the SFMTA-Feed with all processors enabled:
