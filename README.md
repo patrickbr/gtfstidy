@@ -1,6 +1,6 @@
 # gtfstidy
 
-Tidy [GTFS](https://developers.google.com/transit/gtfs/) feeds.
+Tidy (and validate) [GTFS](https://developers.google.com/transit/gtfs/) feeds.
 
 Fixes small inconsistencies, minimizes the overall feed size, prepares the feed for secure, standard-compliant further usage.
 
@@ -18,6 +18,7 @@ Output feeds are **semantically equivalent** to the input feed. In this context,
 * **Trip/Stop-Time minimization**. Minimize trips and stop-times by analyzing `stop_times.txt` and `frequencies.txt` and searching for optimal frequency covers.
 * **Shape remeasurement**. If shape measures (`shape_dist_traveled`) have gaps, try to fill them by interpolating surrounding measurements
 * **Duplicate removal**. Safely remove routes, shapes and services that are semantically equivalent to others and combine them into one.
+* **Extensive feed validation**. Validation includes for example checking stop time progressions, id references, missing required fields, shape measurements, timezone strings, general field value range validity, URLs, mail adresses, ISO language codes, timepoint validity ...
 
 ## 1. Installation
     $ go get github.com/patrickbr/gtfstidy
@@ -40,6 +41,10 @@ to do a simple feed validation.
 Process the SFMTA-Feed with all processors enabled:
 
     $ gtfstidy -SCRmTcdsOeD sanfrancisco.zip
+
+Validate the SFMTA-Feed:
+
+    $ gtfstidy -v sanfrancisco.zip
 
 ## 4. Evaluation
 
