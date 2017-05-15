@@ -172,5 +172,5 @@ func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gt
  */
 func (m RouteDuplicateRemover) routeEquals(a *gtfs.Route, b *gtfs.Route) bool {
 	return a.Agency == b.Agency && a.Short_name == b.Short_name && a.Long_name == b.Long_name &&
-		a.Desc == b.Desc && a.Type == b.Type && a.Url.String() == b.Url.String() && a.Color == b.Color && a.Text_color == b.Text_color
+		a.Desc == b.Desc && a.Type == b.Type && ((a.Url != nil && b.Url != nil && a.Url.String() == b.Url.String()) || a.Url == b.Url) && a.Color == b.Color && a.Text_color == b.Text_color
 }
