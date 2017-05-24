@@ -13,6 +13,7 @@ import (
 	"github.com/patrickbr/gtfswriter"
 	flag "github.com/spf13/pflag"
 	"os"
+	"path"
 )
 
 func main() {
@@ -23,7 +24,7 @@ func main() {
 
 	onlyValidate := flag.BoolP("validation-mode", "v", false, "only validate the feed, no processors will be called")
 
-	outputPath := flag.StringP("output", "o", "gtfs-out", "gtfs output directory (must exist)")
+	outputPath := flag.StringP("output", "o", "gtfs-out", "gtfs output directory or zip file (must end with .zip)")
 
 	useDefaultValuesOnError := flag.BoolP("default-on-errs", "e", false, "if non-required fields have errors, fall back to the default values")
 	dropErroneousEntities := flag.BoolP("drop-errs", "D", false, "drop erroneous entries from feed")
@@ -117,8 +118,13 @@ func main() {
 			for _, m := range minzers {
 				m.Run(feed)
 			}
+
 			if _, err := os.Stat(*outputPath); os.IsNotExist(err) {
-				os.Mkdir(*outputPath, os.ModePerm)
+				if path.Ext(*outputPath) == ".zip" {
+					os.Create(*outputPath)
+				} else {
+					os.Mkdir(*outputPath, os.ModePerm)
+				}
 			}
 
 			// write feed back to output
