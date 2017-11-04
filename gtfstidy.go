@@ -128,7 +128,7 @@ func main() {
 			}
 
 			// write feed back to output
-			w := gtfswriter.Writer{}
+			w := gtfswriter.Writer{ZipCompressionLevel: 9}
 			e := w.Write(feed, *outputPath)
 
 			if e != nil {
