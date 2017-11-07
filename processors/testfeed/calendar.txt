@@ -1,0 +1,5 @@
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+FULLW,1,1,1,1,1,1,1,20070101,20100201
+WE,0,0,0,0,0,1,1,20070101,20070201
+SINGLE_WE_WITH_CALENDAR,0,0,0,0,0,1,1,20171104,20171105
+SINGLE_WE_WITH_CALENDAR_AND_DATES,0,0,0,0,1,1,0,20171103,20171105
