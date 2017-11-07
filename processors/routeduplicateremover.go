@@ -20,28 +20,77 @@ type RouteDuplicateRemover struct {
  * Removes duplicate routes from the feed.
  */
 func (m RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
-	fmt.Fprintf(os.Stdout, "Removing redundant routes...\n")
+	fmt.Fprintf(os.Stdout, "Removing redundant routes... ")
 	var idCount int64 = 1 // counter for new ids
+	proced := make(map[*gtfs.Route]bool, len(feed.Routes))
+	bef := len(feed.Routes)
+
+	numchunks := MaxParallelism()
+	chunksize := (len(feed.Routes) + numchunks - 1) / numchunks
+	chunks := make([][]*gtfs.Route, numchunks)
+	curchunk := 0
+
+	trips := make(map[*gtfs.Route][]*gtfs.Trip, len(feed.Routes))
 
 	for _, r := range feed.Routes {
-		eqRoutes := m.getEquivalentRoutes(r, feed)
-
-		if len(eqRoutes) > 0 {
-			m.combineRoutes(feed, append(eqRoutes, r), &idCount)
+		chunks[curchunk] = append(chunks[curchunk], r)
+		if len(chunks[curchunk]) == chunksize {
+			curchunk++
 		}
 	}
+
+	for _, t := range feed.Trips {
+		trips[t.Route] = append(trips[t.Route], t)
+	}
+
+	for _, r := range feed.Routes {
+		if _, ok := proced[r]; ok {
+			continue
+		}
+		eqRoutes := m.getEquivalentRoutes(r, feed, chunks)
+
+		if len(eqRoutes) > 0 {
+			m.combineRoutes(feed, append(eqRoutes, r), trips, &idCount)
+
+			for _, r := range eqRoutes {
+				proced[r] = true
+			}
+
+			proced[r] = true
+		}
+	}
+
+	fmt.Fprintf(os.Stdout, "done. (-%d routes)\n", (bef - len(feed.Routes)))
 }
 
 /**
  * Returns the feed's routes that are equivalent to route
  */
-func (m RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gtfsparser.Feed) []*gtfs.Route {
+func (m RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gtfsparser.Feed, chunks [][]*gtfs.Route) []*gtfs.Route {
+	rets := make([][]*gtfs.Route, len(chunks))
+	sem := make(chan empty, len(chunks))
+
+	for i, c := range chunks {
+		go func(j int, chunk []*gtfs.Route) {
+			for _, r := range chunk {
+				if r != route && m.routeEquals(r, route) && m.checkFareEquality(feed, route, r) {
+					rets[j] = append(rets[j], r)
+				}
+			}
+			sem <- empty{}
+		}(i, c)
+	}
+
+	// wait for goroutines to finish
+	for i := 0; i < len(chunks); i++ {
+		<-sem
+	}
+
+	// combine results
 	ret := make([]*gtfs.Route, 0)
 
-	for _, r := range feed.Routes {
-		if r != route && m.routeEquals(r, route) && m.checkFareEquality(feed, route, r) {
-			ret = append(ret, r)
-		}
+	for _, r := range rets {
+		ret = append(ret, r...)
 	}
 
 	return ret
@@ -123,15 +172,22 @@ func (m RouteDuplicateRemover) fareRulesEqual(attr *gtfs.FareAttribute, a *gtfs.
 /**
  * Combine a slice of equal routes into a single route
  */
-func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gtfs.Route, idCount *int64) {
+func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gtfs.Route, trips map[*gtfs.Route][]*gtfs.Trip, idCount *int64) {
+	// heuristic: use the route with the shortest ID as 'reference'
 	var ref *gtfs.Route = routes[0]
+
+	for _, r := range routes {
+		if len(r.Id) < len(ref.Id) {
+			ref = r
+		}
+	}
 
 	for _, r := range routes {
 		if r == ref {
 			continue
 		}
 
-		for _, t := range feed.Trips {
+		for _, t := range trips[r] {
 			if t.Route == r {
 				t.Route = ref
 			}

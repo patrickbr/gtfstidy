@@ -21,10 +21,34 @@ type ShapeRemeasurer struct {
  * Remeasure shapes
  */
 func (s ShapeRemeasurer) Run(feed *gtfsparser.Feed) {
-	fmt.Fprintf(os.Stdout, "Remeasuring shapes...\n")
-	for _, shp := range feed.Shapes {
-		s.remeasure(shp)
+	fmt.Fprintf(os.Stdout, "Remeasuring shapes... ")
+	numchunks := MaxParallelism()
+	chunksize := (len(feed.Shapes) + numchunks - 1) / numchunks
+	chunks := make([][]*gtfs.Shape, numchunks)
+
+	curchunk := 0
+	for _, s := range feed.Shapes {
+		chunks[curchunk] = append(chunks[curchunk], s)
+		if len(chunks[curchunk]) == chunksize {
+			curchunk++
+		}
 	}
+
+	sem := make(chan empty, len(feed.Services))
+	for _, c := range chunks {
+		go func(chunk []*gtfs.Shape) {
+			for _, shp := range chunk {
+				s.remeasure(shp)
+			}
+			sem <- empty{}
+		}(c)
+	}
+
+	// wait for goroutines to finish
+	for i := 0; i < len(chunks); i++ {
+		<-sem
+	}
+	fmt.Fprintf(os.Stdout, "done. (remeasured %d shapes)\n", len(feed.Shapes))
 }
 
 /*

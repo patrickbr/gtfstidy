@@ -22,10 +22,42 @@ type ShapeMinimizer struct {
  * Minimize shapes.
  */
 func (minimizer ShapeMinimizer) Run(feed *gtfsparser.Feed) {
-	fmt.Fprintf(os.Stdout, "Minimizing shapes...\n")
+	fmt.Fprintf(os.Stdout, "Minimizing shapes... ")
+	numchunks := MaxParallelism()
+	chunksize := (len(feed.Shapes) + numchunks - 1) / numchunks
+	chunks := make([][]*gtfs.Shape, numchunks)
+	chunkgain := make([]int, numchunks)
+
+	curchunk := 0
 	for _, s := range feed.Shapes {
-		s.Points = minimizer.minimizeShape(s.Points, minimizer.Epsilon)
+		chunks[curchunk] = append(chunks[curchunk], s)
+		if len(chunks[curchunk]) == chunksize {
+			curchunk++
+		}
 	}
+
+	sem := make(chan empty, len(feed.Services))
+	for i, c := range chunks {
+		go func(chunk []*gtfs.Shape) {
+			for _, s := range chunk {
+				bef := len(s.Points)
+				s.Points = minimizer.minimizeShape(s.Points, minimizer.Epsilon)
+				chunkgain[i] += bef - len(s.Points)
+			}
+			sem <- empty{}
+		}(c)
+	}
+
+	// wait for goroutines to finish
+	for i := 0; i < len(chunks); i++ {
+		<-sem
+	}
+
+	n := 0
+	for _, g := range chunkgain {
+		n = n + g
+	}
+	fmt.Fprintf(os.Stdout, "done. (-%d shape points)\n", n)
 }
 
 /**
@@ -36,7 +68,7 @@ func (minimizer *ShapeMinimizer) minimizeShape(points gtfs.ShapePoints, e float6
 	var maxI int = 0
 
 	for i := 1; i < len(points)-1; i++ {
-		// TODO: this is not entirely correct, we should check the measurement distance also here!
+		// TODO: this is not entirely correct, we should check the measurement distance here also!
 		d := minimizer.perpendicularDist(&points[i], &points[0], &points[len(points)-1])
 		if d > maxD {
 			maxI = i

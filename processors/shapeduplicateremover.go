@@ -24,7 +24,7 @@ type ShapeDuplicateRemover struct {
  * Removes duplicate shapes
  */
 func (m ShapeDuplicateRemover) Run(feed *gtfsparser.Feed) {
-	fmt.Fprintf(os.Stdout, "Removing redundant shapes...\n")
+	fmt.Fprintf(os.Stdout, "Removing redundant shapes... ")
 
 	// build a slice of shapes for parallel processing
 	shapesSl := make([]*gtfs.Shape, 0)
@@ -33,6 +33,7 @@ func (m ShapeDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	}
 
 	var idCount int64 = 1 // counter for new ids
+	bef := len(feed.Shapes)
 
 	for _, s := range feed.Shapes {
 		eqShapes := m.getEquivalentShapes(s, shapesSl, feed)
@@ -41,10 +42,12 @@ func (m ShapeDuplicateRemover) Run(feed *gtfsparser.Feed) {
 			m.combineShapes(feed, append(eqShapes, s), &idCount, shapesSl)
 		}
 	}
+
+	fmt.Fprintf(os.Stdout, "done. (-%d shapes)\n", bef-len(feed.Shapes))
 }
 
 /**
- * Return the shapes that are equivalent to shape
+ * Return all shapes that are equivalent (within MaxEqDistance) to shape
  */
 func (m *ShapeDuplicateRemover) getEquivalentShapes(shape *gtfs.Shape, shapes []*gtfs.Shape, feed *gtfsparser.Feed) []*gtfs.Shape {
 	chunks := MaxParallelism()

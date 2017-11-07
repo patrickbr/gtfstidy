@@ -20,10 +20,18 @@ type OrphanRemover struct {
  * Removes entities that aren't referenced anywhere
  */
 func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
-	fmt.Fprintf(os.Stdout, "Removing unreferenced entries...\n")
+	fmt.Fprintf(os.Stdout, "Removing unreferenced entries... ")
+
+	tripsB := len(feed.Trips)
+	stopsB := len(feed.Stops)
+	shapesB := len(feed.Shapes)
+	serviceB := len(feed.Services)
+	routesB := len(feed.Routes)
+
 	or.removeTripOrphans(feed)
 
 	or.removeStopOrphans(feed)
+
 	// do this 2 times, because stop deletion can create new stop orphans (parent_station)
 	or.removeStopOrphans(feed)
 
@@ -32,6 +40,14 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 	or.removeServiceOrphans(feed)
 
 	or.removeRouteOrphans(feed)
+
+	fmt.Fprintf(os.Stdout, "done. (-%d trips, -%d stops, -%d shapes, -%d services, -%d routes)\n",
+		(tripsB - len(feed.Trips)),
+		(stopsB - len(feed.Stops)),
+		(shapesB - len(feed.Shapes)),
+		(serviceB - len(feed.Services)),
+		(routesB - len(feed.Routes)),
+	)
 }
 
 /**

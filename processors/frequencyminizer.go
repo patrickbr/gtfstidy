@@ -12,7 +12,6 @@ import (
 	gtfs "github.com/patrickbr/gtfsparser/gtfs"
 	"math"
 	"os"
-	"runtime"
 	"sort"
 	"strconv"
 	"sync"
@@ -54,8 +53,13 @@ func (a TripWrappers) Less(i, j int) bool {
  * for trip times.
  */
 func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
-	fmt.Fprintf(os.Stdout, "Minimizing frequencies / stop times...\n")
+	fmt.Fprintf(os.Stdout, "Minimizing frequencies / stop times... ")
 	processed := make(map[*gtfs.Trip]empty, 0)
+	freqBef := 0
+	for _, t := range feed.Trips {
+		freqBef += len(t.Frequencies)
+	}
+	tripsBef := len(feed.Trips)
 
 	// build a slice of trips for parallel processing
 	tripsSl := make([]*gtfs.Trip, 0)
@@ -67,6 +71,10 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 	for _, t := range feed.Trips {
 		curAt++
 		if _, contained := processed[t]; contained {
+			continue
+		}
+
+		if len(t.StopTimes) == 0 {
 			continue
 		}
 
@@ -176,6 +184,24 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 			}
 		}
 	}
+
+	freqsSign := ""
+	tripsSign := ""
+
+	freqAfter := 0
+	for _, t := range feed.Trips {
+		freqAfter += len(t.Frequencies)
+	}
+
+	if freqAfter >= freqBef {
+		freqsSign = "+"
+	}
+
+	if len(feed.Trips) >= tripsBef {
+		tripsSign = "+"
+	}
+
+	fmt.Fprintf(os.Stdout, "done. (%s%d frequencies, %s%d trips)\n", freqsSign, freqAfter-freqBef, tripsSign, len(feed.Trips)-tripsBef)
 }
 
 /**
@@ -428,7 +454,7 @@ func (m FrequencyMinimizer) hasSameRelStopTimes(a *gtfs.Trip, b *gtfs.Trip) bool
 		if !(a.StopTimes[i].Stop == b.StopTimes[i].Stop &&
 			a.StopTimes[i].Headsign == b.StopTimes[i].Headsign &&
 			a.StopTimes[i].Pickup_type == b.StopTimes[i].Pickup_type && a.StopTimes[i].Drop_off_type == b.StopTimes[i].Drop_off_type &&
-			floatEquals(a.StopTimes[i].Shape_dist_traveled, b.StopTimes[i].Shape_dist_traveled, 0.01) && a.StopTimes[i].Timepoint == b.StopTimes[i].Timepoint) {
+			FloatEquals(a.StopTimes[i].Shape_dist_traveled, b.StopTimes[i].Shape_dist_traveled, 0.01) && a.StopTimes[i].Timepoint == b.StopTimes[i].Timepoint) {
 			return false
 		}
 		if i != 0 {
@@ -444,20 +470,4 @@ func (m FrequencyMinimizer) hasSameRelStopTimes(a *gtfs.Trip, b *gtfs.Trip) bool
 		bPrev = &b.StopTimes[i]
 	}
 	return true
-}
-
-func floatEquals(a float32, b float32, e float32) bool {
-	if (a-b) < e && (b-a) < e {
-		return true
-	}
-	return false
-}
-
-func MaxParallelism() int {
-	maxProcs := runtime.GOMAXPROCS(0)
-	numCPU := runtime.NumCPU()
-	if maxProcs < numCPU {
-		return maxProcs
-	}
-	return numCPU
 }

@@ -39,8 +39,15 @@ func main() {
 	useIdMinimizerChar := flag.BoolP("minimize-ids-char", "d", false, "minimize IDs using character IDs (e.g. abc, abd, abe, abf...)")
 	useServiceMinimizer := flag.BoolP("minimize-services", "c", false, "minimize services by searching for the optimal exception/range coverage")
 	useFrequencyMinimizer := flag.BoolP("minimize-stoptimes", "T", false, "search for frequency patterns in explicit trips and combine them, using a CAP approach")
+	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		return
+	}
+
 	gtfsPath := flag.Arg(0)
 
 	if len(gtfsPath) == 0 {
@@ -119,6 +126,8 @@ func main() {
 				m.Run(feed)
 			}
 
+			fmt.Fprintln(os.Stdout, "Outputting GTFS...")
+
 			if _, err := os.Stat(*outputPath); os.IsNotExist(err) {
 				if path.Ext(*outputPath) == ".zip" {
 					os.Create(*outputPath)
@@ -128,7 +137,7 @@ func main() {
 			}
 
 			// write feed back to output
-			w := gtfswriter.Writer{ZipCompressionLevel: 9}
+			w := gtfswriter.Writer{ZipCompressionLevel: 9, Sorted: true}
 			e := w.Write(feed, *outputPath)
 
 			if e != nil {

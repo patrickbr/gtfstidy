@@ -22,13 +22,39 @@ type IdMinimizer struct {
  * Minimize id by replacing them be continous integer IDs
  */
 func (minimizer IdMinimizer) Run(feed *gtfsparser.Feed) {
-	fmt.Fprintf(os.Stdout, "Minimizing ids...\n")
-	minimizer.minimizeTripIds(feed)
-	minimizer.minimizeStopIds(feed)
-	minimizer.minimizeRouteIds(feed)
-	minimizer.minimizeShapeIds(feed)
-	minimizer.minimizeAgencyIds(feed)
-	minimizer.minimizeServiceIds(feed)
+	fmt.Fprintf(os.Stdout, "Minimizing ids... ")
+	sem := make(chan empty, len(feed.Services))
+
+	go func() {
+		minimizer.minimizeTripIds(feed)
+		sem <- empty{}
+	}()
+	go func() {
+		minimizer.minimizeStopIds(feed)
+		sem <- empty{}
+	}()
+	go func() {
+		minimizer.minimizeRouteIds(feed)
+		sem <- empty{}
+	}()
+	go func() {
+		minimizer.minimizeShapeIds(feed)
+		sem <- empty{}
+	}()
+	go func() {
+		minimizer.minimizeAgencyIds(feed)
+		sem <- empty{}
+	}()
+	go func() {
+		minimizer.minimizeServiceIds(feed)
+		sem <- empty{}
+	}()
+
+	for i := 0; i < 6; i++ {
+		<-sem
+	}
+
+	fmt.Fprintf(os.Stdout, "done.\n")
 }
 
 /**
