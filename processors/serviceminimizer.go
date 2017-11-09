@@ -38,20 +38,38 @@ func hasBit(n uint, pos uint) bool {
  */
 func (minimizer ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Minimizing services... ")
-	sem := make(chan empty, len(feed.Services))
 	calBefore, datesBefore := minimizer.countServices(feed)
 
-	// do this in parallel
-	for _, s := range feed.Services {
-		go func(s *gtfs.Service) {
-			minimizer.perfectMinimize(s)
+	full := len(feed.Services)
+	count := 0
 
+	numchunks := MaxParallelism()
+	chunksize := (len(feed.Services) + numchunks - 1) / numchunks
+	chunks := make([][]*gtfs.Service, numchunks)
+
+	curchunk := 0
+	for _, s := range feed.Services {
+		chunks[curchunk] = append(chunks[curchunk], s)
+		if len(chunks[curchunk]) == chunksize {
+			curchunk++
+		}
+	}
+
+	sem := make(chan empty, len(feed.Services))
+	for _, c := range chunks {
+		go func(chunk []*gtfs.Service) {
+			for _, s := range chunk {
+				fmt.Fprintf(os.Stdout, "@ %d/%d\n", count, full)
+				minimizer.perfectMinimize(s)
+
+				count++
+			}
 			sem <- empty{}
-		}(s)
+		}(c)
 	}
 
 	// wait for goroutines to finish
-	for i := 0; i < len(feed.Services); i++ {
+	for i := 0; i < len(chunks); i++ {
 		<-sem
 	}
 

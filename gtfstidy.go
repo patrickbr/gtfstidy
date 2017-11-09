@@ -67,16 +67,18 @@ func main() {
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	feed.SetParseOpts(opts)
 
+	fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
 	e := feed.Parse(gtfsPath)
 
 	if e != nil {
-		fmt.Fprintf(os.Stderr, "Error while parsing GTFS feed in '%s':\n", gtfsPath)
+		fmt.Fprintf(os.Stderr, "\nError while parsing GTFS feed:\n")
 		fmt.Fprintln(os.Stderr, e.Error())
 		if !*onlyValidate {
 			fmt.Fprintln(os.Stdout, "\nYou may want to try running gtfstidy with -e and/or -D for error fixing / skipping. See --help for details.")
 		}
 		os.Exit(1)
 	} else {
+		fmt.Fprintf(os.Stdout, " done.\n")
 		var minzers []processors.Processor = make([]processors.Processor, 0)
 
 		if *useOrphanDeleter {
@@ -126,7 +128,7 @@ func main() {
 				m.Run(feed)
 			}
 
-			fmt.Fprintln(os.Stdout, "Outputting GTFS...")
+			fmt.Fprintf(os.Stdout, "Outputting GTFS feed to '%s'...", *outputPath)
 
 			if _, err := os.Stat(*outputPath); os.IsNotExist(err) {
 				if path.Ext(*outputPath) == ".zip" {
@@ -141,10 +143,12 @@ func main() {
 			e := w.Write(feed, *outputPath)
 
 			if e != nil {
-				fmt.Fprintf(os.Stderr, "Error while writing GTFS feed in '%s':\n ", *outputPath)
+				fmt.Fprintf(os.Stderr, "\nError while writing GTFS feed in '%s':\n ", *outputPath)
 				fmt.Fprintln(os.Stderr, e.Error())
 				os.Exit(1)
 			}
+
+			fmt.Fprintf(os.Stdout, " done.\n")
 		}
 	}
 }

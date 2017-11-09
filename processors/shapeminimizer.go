@@ -36,7 +36,7 @@ func (minimizer ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
-	sem := make(chan empty, len(feed.Services))
+	sem := make(chan empty, len(feed.Shapes))
 	for i, c := range chunks {
 		go func(chunk []*gtfs.Shape) {
 			for _, s := range chunk {

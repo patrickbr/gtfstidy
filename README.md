@@ -2,7 +2,7 @@
 
 Tidy (and validate) [GTFS](https://developers.google.com/transit/gtfs/) feeds.
 
-Fixes small inconsistencies, minimizes the overall feed size, prepares the feed for secure, standard-compliant further usage.
+Fixes small inconsistencies, minimizes the overall feed size, prepares the feed for secure, standard-compliant further use.
 
 Output feeds are **semantically equivalent** to the input feed. In this context, semantical equivalency means that the output feed provides exactly the same trips with exactly the same attributes (routes, stop-times, shapes, agency, fares etc.). In other words, the output feed is equivalent the to input feed from a passenger's perspective.
 
@@ -18,7 +18,8 @@ Output feeds are **semantically equivalent** to the input feed. In this context,
 * **Trip/Stop-Time minimization**. Minimize trips and stop-times by analyzing `stop_times.txt` and `frequencies.txt` and searching for optimal frequency covers.
 * **Shape remeasurement**. If shape measures (`shape_dist_traveled`) have gaps, try to fill them by interpolating surrounding measurements
 * **Duplicate removal**. Safely remove routes, shapes and services that are semantically equivalent to others and combine them into one.
-* **Extensive feed validation**. Validation includes for example checking stop time progressions, id references, missing required fields, shape measurements, timezone strings, general field value range validity, URLs, mail adresses, ISO language codes, timepoint validity ...
+* **Extensive feed validation**. Validation includes for example checking stop time progressions, id references, id collisions,  missing required fields, shape measurements, timezone strings, general field value range validity, URLs, mail adresses, ISO language codes, timepoint validity ...
+* **Entropy-minimizing heuristics**. Sort lines prior to writing them to keep the entropy of the resulting CSV files small. This often leads to better compression results (see below).
 
 ## 1. Installation
     $ go get github.com/patrickbr/gtfstidy
@@ -48,41 +49,83 @@ Validate the SFMTA-Feed:
 
 ## 4. Evaluation
 
+All zipped sized using `zip -9`.
+
 ### SFMTA feed
 
 Processed with `-SCRmTcdsOeD`.
 
-| File  | # lines before | size before | | # lines after | size after|
+| File  | # lines before | size before (B) | | # lines after | size after (B) |
 |---|---|---|---|---|---|
 | `agency.txt`  | 2  | 159 | | 2 | 153 |
-| `calendar_dates.txt`  | 3  | 60 | | 3 | 57 |
-| `calendar.txt`  | 4  | 192 | | 4 | 190 |
+| `calendar_dates.txt`  | 11  | 172  | | 11 | 161 |
+| `calendar.txt`  | 4  | 194  | | 4 | 190 |
 | `fare_attributes.txt`  | 3  |  109 | | 3 | 107 |
-| `fare_rules.txt`  | 84  | 1,1K  | | 84 | 397 |
-| `frequencies.txt` | _N/A_ | _N/A_ | | **3,982** | **113k** |
-| `routes.txt`  | 84  | 3,2K  | | 84 | 1,9k |
-| `shapes.txt`  | 97,909  |  3,6M | | **20,180** | **630K** |
-| `stops.txt`  | 4,639  | 259K  | | 3,554 | 174K |
-| `stop_times.txt`  | 1,123,860  | 46M  | | **893,300** | **25M** |
-| `trips.txt`  | 29,141  | 1,4M  | | **21,747** | **740K** |
+| `fare_rules.txt`  | 83 | 1k  | | 83 |  392 |
+| `frequencies.txt` | _N/A_ | _N/A_  | | **3,904** | **111k** |
+| `routes.txt`  | 83  | 3,2K   | | 83 | 1,9k |
+| `shapes.txt`  | 201,831  |  7.4M  | | **19,863** | **620K** |
+| `stops.txt`  | 3,556  | 212K   | | 3,540 | 172K |
+| `stop_times.txt`  | 1,115,598  | 46M   | | **893,344** | **25M** |
+| `trips.txt`  | 28,989  | 1,4M   | | **21,741** | **739K** |
+
+Compression gain:
+
+| File  | processors | size before (B)| | size after (B)|
+|---|---|---|---|---|
+| `feed.zip`  | `-SCRmTcdsOeD` | 8.8M | | **5.9M** |
+| `feed.zip`  | *none* | 8.8M | | 8.5M |
+
+### Switzerland feed
+
+Processed with `-SCRmTcdsOeD`.
+
+| File  | # lines before | size before (B) | | # lines after | size after (B) |
+|---|---|---|---|---|---|
+| `agency.txt`  | 424  | 40K | | 424 | 33K |
+| `calendar_dates.txt`  | 4,387,195  | 113M  | | **455,843** | **6.6M** |
+| `calendar.txt`  | 32,822  | 2M  | | **28,873** | **1014K** |
+| `fare_attributes.txt`  | _N/A_ |  _N/A_ | | _N/A_ | _N/A_ |
+| `fare_rules.txt`  | _N/A_ | _N/A_  | | _N/A_ |  _N/A_ |
+| `frequencies.txt` | _N/A_ | _N/A_  | | **2,023** | **57K** |
+| `routes.txt`  | 5,564  | 254K   | | 4,613 | **105K** |
+| `shapes.txt`  | _N/A_  | _N/A_ | | _N/A_ | _N/A_ |
+| `stops.txt`  | 31,753  | 2.4M  | | 31,753 | **1.4M** |
+| `stop_times.txt`  | 11,569,991  | 790M   | | **10,771,471** | **323M** |
+| `transfers.txt`  | 21,691  | 846K | | 21,691 | **295K** |
+| `trips.txt`  | 1,055,231  | 86M | | **662,771** | **26M** |
+
+Compression gain:
+
+| File  | processors | size before (B)| | size after (B)|
+|---|---|---|---|---|
+| `feed.zip`  | `-SCRmTcdsOeD` | 80M | | **63M** |
+| `feed.zip`  | *none* | 80M | | 77M |
 
 ### Prague feed
 
 Processed with `-SCRmTcdsOeD`.
 
-| File  | # lines before | size before | | # lines after | size after|
+| File  | # lines before | size before (B) | | # lines after | size after (B) |
 |---|---|---|---|---|---|
-| `agency.txt`  | 17  | 1,4K | | 17 | 1,4K |
-| `calendar_dates.txt`  | 1  | 32 | | 20 | 289 |
-| `calendar.txt`  | 52  | 1,9k || 14 | 536 |
-| `fare_attributes.txt`  |  _N/A_  |   _N/A_ | |  _N/A_ |  _N/A_ |
-| `fare_rules.txt`  |  _N/A_  |  _N/A_  | |  _N/A_ |  _N/A_ |
-| `frequencies.txt` | _N/A_ | _N/A_ | | **20,135** | **591K** |
-| `routes.txt`  | 351  | 21K  | | 351 | 19K |
-| `shapes.txt`  | 547,871  |  16M | | **406,482** | **11M** |
-| `stops.txt`  | 6,103  | 315K  | | 6,103 | 274K |
-| `stop_times.txt`  | 1,916,123  | 63M  | | **746,749** | **22M** |
-| `trips.txt`  | 85,551  | 3,2M  | | **33,056** | **1,2M** |
+| `agency.txt`  | 21  | 1.7K | | 21 | 1.6K |
+| `calendar_dates.txt`  | 1  | 32  | | 8 | 122 |
+| `calendar.txt`  | 49  | 1.8K  | | 27 | 972 |
+| `fare_attributes.txt`  | _N/A_  |  _N/A_ | | _N/A_ | _N/A_ |
+| `fare_rules.txt`  | _N/A_ | _N/A_  | | _N/A_ |  _N/A_ | ? |
+| `frequencies.txt` | _N/A_ | _N/A_  | | **21,425** | **604K** |
+| `routes.txt`  | 434  | 25K   | | 434 | 22K |
+| `shapes.txt`  | 784,062  |  22M  | | **578,211** | **15M** |
+| `stops.txt`  | 7,401  | 385K   | | 7,401 | 323K |
+| `stop_times.txt`  | 1,879,757  | 69M   | | **751,415** | **23M** |
+| `trips.txt`  | 87,348  | 3.3M   | | **34,812** | **1.1M** |
+
+Compression gain:
+
+| File  | processors | size before (B)| | size after (B)|
+|---|---|---|---|---|
+| `feed.zip`  | `-SCRmTcdsOeD` | 16M | | **9.4M** |
+| `feed.zip`  | *none* | 16M | | 16M |
 
 ## 5. Available processors
 
