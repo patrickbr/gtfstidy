@@ -49,7 +49,7 @@ Validate the SFMTA-Feed:
 
 ## 4. Evaluation
 
-All zipped sized using `zip -9`.
+All zipped sizes using `zip -9`.
 
 ### SFMTA feed
 
