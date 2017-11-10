@@ -62,7 +62,7 @@ Processed with `-SCRmTcdsOeD`.
 | `calendar.txt`  | 4  | 194  | | 4 | 190 |
 | `fare_attributes.txt`  | 3  |  109 | | 3 | 107 |
 | `fare_rules.txt`  | 83 | 1k  | | 83 |  392 |
-| `frequencies.txt` | _N/A_ | _N/A_  | | **3,904** | **111k** |
+| `frequencies.txt` | --- | ---  | | **3,904** | **111k** |
 | `routes.txt`  | 83  | 3,2K   | | 83 | 1,9k |
 | `shapes.txt`  | 201,831  |  7.4M  | | **19,863** | **620K** |
 | `stops.txt`  | 3,556  | 212K   | | 3,540 | 172K |
@@ -85,11 +85,11 @@ Processed with `-SCRmTcdsOeD`.
 | `agency.txt`  | 424  | 40K | | 424 | 33K |
 | `calendar_dates.txt`  | 4,387,195  | 113M  | | **455,843** | **6.6M** |
 | `calendar.txt`  | 32,822  | 2M  | | **28,873** | **1014K** |
-| `fare_attributes.txt`  | _N/A_ |  _N/A_ | | _N/A_ | _N/A_ |
-| `fare_rules.txt`  | _N/A_ | _N/A_  | | _N/A_ |  _N/A_ |
-| `frequencies.txt` | _N/A_ | _N/A_  | | **2,023** | **57K** |
+| `fare_attributes.txt`  | --- |  --- | | --- | --- |
+| `fare_rules.txt`  | --- | ---  | | --- |  --- |
+| `frequencies.txt` | --- | ---  | | **2,023** | **57K** |
 | `routes.txt`  | 5,564  | 254K   | | 4,613 | **105K** |
-| `shapes.txt`  | _N/A_  | _N/A_ | | _N/A_ | _N/A_ |
+| `shapes.txt`  | ---  | --- | | --- | --- |
 | `stops.txt`  | 31,753  | 2.4M  | | 31,753 | **1.4M** |
 | `stop_times.txt`  | 11,569,991  | 790M   | | **10,771,471** | **323M** |
 | `transfers.txt`  | 21,691  | 846K | | 21,691 | **295K** |
@@ -111,9 +111,9 @@ Processed with `-SCRmTcdsOeD`.
 | `agency.txt`  | 21  | 1.7K | | 21 | 1.6K |
 | `calendar_dates.txt`  | 1  | 32  | | 8 | 122 |
 | `calendar.txt`  | 49  | 1.8K  | | 27 | 972 |
-| `fare_attributes.txt`  | _N/A_  |  _N/A_ | | _N/A_ | _N/A_ |
-| `fare_rules.txt`  | _N/A_ | _N/A_  | | _N/A_ |  _N/A_ | ? |
-| `frequencies.txt` | _N/A_ | _N/A_  | | **21,425** | **604K** |
+| `fare_attributes.txt`  | ---  |  --- | | --- | --- |
+| `fare_rules.txt`  | --- | ---  | | --- |  --- | ? |
+| `frequencies.txt` | --- | ---  | | **21,425** | **604K** |
 | `routes.txt`  | 434  | 25K   | | 434 | 22K |
 | `shapes.txt`  | 784,062  |  22M  | | **578,211** | **15M** |
 | `stops.txt`  | 7,401  | 385K   | | 7,401 | 323K |
