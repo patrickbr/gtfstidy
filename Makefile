@@ -22,6 +22,7 @@ lint:
 	@gofmt -w -s $(SRC)
 
 install:
+	@go get -u -t ./...
 	@go install
 
 fmt:
