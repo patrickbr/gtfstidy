@@ -1,0 +1,13 @@
+language: go
+
+go:
+  - 1.x
+  - master
+
+install:
+  - make install
+
+script:
+  - make lint
+  - make vet
+  - make test
