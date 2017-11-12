@@ -1,4 +1,4 @@
-[![Go Report Card](https://goreportcard.com/report/github.com/patrickbr/gtfstidy)](https://goreportcard.com/report/github.com/patrickbr/gtfstidy)
+[![Go Report Card](https://goreportcard.com/badge/github.com/patrickbr/gtfstidy)](https://goreportcard.com/report/github.com/patrickbr/gtfstidy)
 
 # gtfstidy
 
