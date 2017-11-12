@@ -13,12 +13,11 @@ import (
 	"os"
 )
 
+// OrphanRemover removes entities that aren't referenced anywhere
 type OrphanRemover struct {
 }
 
-/**
- * Removes entities that aren't referenced anywhere
- */
+// Run the OrphanRemover on some feed
 func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing unreferenced entries... ")
 
@@ -50,10 +49,8 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 	)
 }
 
-/**
- * Remove stop orphans
- */
-func (m OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
+// Remove stop orphans
+func (or OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
 	referenced := make(map[*gtfs.Stop]empty, 0)
 	for _, t := range feed.Trips {
 		for _, st := range t.StopTimes {
@@ -80,10 +77,8 @@ func (m OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
 	}
 }
 
-/**
- * Remove shape orphans
- */
-func (m OrphanRemover) removeShapeOrphans(feed *gtfsparser.Feed) {
+// Remove shape orphans
+func (or OrphanRemover) removeShapeOrphans(feed *gtfsparser.Feed) {
 	referenced := make(map[*gtfs.Shape]empty, 0)
 	for _, t := range feed.Trips {
 		if t.Shape != nil {
@@ -99,10 +94,8 @@ func (m OrphanRemover) removeShapeOrphans(feed *gtfsparser.Feed) {
 	}
 }
 
-/**
- * Remove service orphans
- */
-func (m OrphanRemover) removeServiceOrphans(feed *gtfsparser.Feed) {
+// Remove service orphans
+func (or OrphanRemover) removeServiceOrphans(feed *gtfsparser.Feed) {
 	referenced := make(map[*gtfs.Service]empty, 0)
 	for _, t := range feed.Trips {
 		referenced[t.Service] = empty{}
@@ -116,10 +109,8 @@ func (m OrphanRemover) removeServiceOrphans(feed *gtfsparser.Feed) {
 	}
 }
 
-/**
- * Remove trip orphans
- */
-func (m OrphanRemover) removeTripOrphans(feed *gtfsparser.Feed) {
+// Remove trip orphans
+func (or OrphanRemover) removeTripOrphans(feed *gtfsparser.Feed) {
 	for id, s := range feed.Trips {
 		if len(s.StopTimes) == 0 && len(s.Frequencies) == 0 {
 			delete(feed.Trips, id)
@@ -127,10 +118,8 @@ func (m OrphanRemover) removeTripOrphans(feed *gtfsparser.Feed) {
 	}
 }
 
-/**
- * Remove route orphans
- */
-func (m OrphanRemover) removeRouteOrphans(feed *gtfsparser.Feed) {
+// Remove route orphans
+func (or OrphanRemover) removeRouteOrphans(feed *gtfsparser.Feed) {
 	referenced := make(map[*gtfs.Route]empty, 0)
 	for _, t := range feed.Trips {
 		referenced[t.Route] = empty{}

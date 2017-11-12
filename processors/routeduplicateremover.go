@@ -13,12 +13,11 @@ import (
 	"os"
 )
 
+// RouteDuplicateRemover merges semantically equivalent routes
 type RouteDuplicateRemover struct {
 }
 
-/**
- * Removes duplicate routes from the feed.
- */
+// Run this RouteDuplicateRemover on some feed
 func (m RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing redundant routes... ")
 	var idCount int64 = 1 // counter for new ids
@@ -63,9 +62,7 @@ func (m RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "done. (-%d routes)\n", (bef - len(feed.Routes)))
 }
 
-/**
- * Returns the feed's routes that are equivalent to route
- */
+// Returns the feed's routes that are equivalent to route
 func (m RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gtfsparser.Feed, chunks [][]*gtfs.Route) []*gtfs.Route {
 	rets := make([][]*gtfs.Route, len(chunks))
 	sem := make(chan empty, len(chunks))
@@ -96,9 +93,7 @@ func (m RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gtfs
 	return ret
 }
 
-/**
- * Check if two routes are equal regarding the fares
- */
+// Check if two routes are equal regarding the fares
 func (m RouteDuplicateRemover) checkFareEquality(feed *gtfsparser.Feed, a *gtfs.Route, b *gtfs.Route) bool {
 	for _, fa := range feed.FareAttributes {
 		// check if this rule contains route a
@@ -107,10 +102,9 @@ func (m RouteDuplicateRemover) checkFareEquality(feed *gtfsparser.Feed, a *gtfs.
 				// if so,
 				if !m.fareRulesEqual(fa, a, b) {
 					return false
-				} else {
-					// go on to the next FareClass
-					break
 				}
+				// go on to the next FareClass
+				break
 			}
 		}
 	}
@@ -118,9 +112,7 @@ func (m RouteDuplicateRemover) checkFareEquality(feed *gtfsparser.Feed, a *gtfs.
 	return true
 }
 
-/**
- * Check if two fare rules are equal
- */
+// Check if two fare rules are equal
 func (m RouteDuplicateRemover) fareRulesEqual(attr *gtfs.FareAttribute, a *gtfs.Route, b *gtfs.Route) bool {
 	rulesA := make([]*gtfs.FareAttributeRule, 0)
 	rulesB := make([]*gtfs.FareAttributeRule, 0)
@@ -138,7 +130,7 @@ func (m RouteDuplicateRemover) fareRulesEqual(attr *gtfs.FareAttribute, a *gtfs.
 					/**
 					 * we EXPLICITLY break here. this means that if two equivalent rules are contained for route A,
 					 * but only one of them in route B, the fare rules are considered NOT equal.
-					 * this should be minimized in a seperate redundantFareRulesMinimizer, not here!
+					 * this should be minimized in a separate redundantFareRulesMinimizer, not here!
 					 */
 					break
 				}
@@ -169,12 +161,10 @@ func (m RouteDuplicateRemover) fareRulesEqual(attr *gtfs.FareAttribute, a *gtfs.
 	return len(rulesA) == 0 && len(rulesB) == 0
 }
 
-/**
- * Combine a slice of equal routes into a single route
- */
+// Combine a slice of equal routes into a single route
 func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gtfs.Route, trips map[*gtfs.Route][]*gtfs.Trip, idCount *int64) {
 	// heuristic: use the route with the shortest ID as 'reference'
-	var ref *gtfs.Route = routes[0]
+	ref := routes[0]
 
 	for _, r := range routes {
 		if len(r.Id) < len(ref.Id) {
@@ -223,9 +213,7 @@ func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gt
 	}
 }
 
-/**
- * Check if two routes are equal
- */
+// Check if two routes are equal
 func (m RouteDuplicateRemover) routeEquals(a *gtfs.Route, b *gtfs.Route) bool {
 	return a.Agency == b.Agency && a.Short_name == b.Short_name && a.Long_name == b.Long_name &&
 		a.Desc == b.Desc && a.Type == b.Type && ((a.Url != nil && b.Url != nil && a.Url.String() == b.Url.String()) || a.Url == b.Url) && a.Color == b.Color && a.Text_color == b.Text_color

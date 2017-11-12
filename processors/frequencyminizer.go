@@ -17,41 +17,39 @@ import (
 	"sync"
 )
 
+// FrequencyMinimizer minimizes trips, stop_times and frequencies by searching optimal covers for trip times.
 type FrequencyMinimizer struct {
 }
 
-type FreqCandidate struct {
+type freqCandidate struct {
 	matches  []int
 	headways int
 }
 
-type ProgressionCover struct {
-	progressions []FreqCandidate
+type progressionCover struct {
+	progressions []freqCandidate
 	coveredTrips map[*gtfs.Trip]empty
 }
 
-type TripWrapper struct {
+type tripWrapper struct {
 	*gtfs.Trip
 	t          gtfs.Time
 	marked     bool
 	sourceFreq *gtfs.Frequency
 }
 
-type TripWrappers struct {
-	trips        []TripWrapper
+type tripWrappers struct {
+	trips        []tripWrapper
 	coveredTrips map[*gtfs.Trip]empty
 }
 
-func (a TripWrappers) Len() int      { return len(a.trips) }
-func (a TripWrappers) Swap(i, j int) { a.trips[i], a.trips[j] = a.trips[j], a.trips[i] }
-func (a TripWrappers) Less(i, j int) bool {
+func (a tripWrappers) Len() int      { return len(a.trips) }
+func (a tripWrappers) Swap(i, j int) { a.trips[i], a.trips[j] = a.trips[j], a.trips[i] }
+func (a tripWrappers) Less(i, j int) bool {
 	return a.trips[i].t.SecondsSinceMidnight() < a.trips[j].t.SecondsSinceMidnight()
 }
 
-/**
- * Minimize trips, stop_times and frequencies by searching optimal covers
- * for trip times.
- */
+// Run the FrequencyMinimizer on a feed
 func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Minimizing frequencies / stop times... ")
 	processed := make(map[*gtfs.Trip]empty, 0)
@@ -87,11 +85,11 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 			continue
 		}
 
-		var cands ProgressionCover
-		var packed []ProgressionCover
+		var cands progressionCover
+		var packed []progressionCover
 
-		var candsOverlapping ProgressionCover
-		var packedOverlapping []ProgressionCover
+		var candsOverlapping progressionCover
+		var packedOverlapping []progressionCover
 
 		cands = m.getCover(eqs, false)
 		packed = m.packCovers(cands, eqs)
@@ -111,22 +109,22 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 		// each "pack" is one trip
 		suffixC := 1
 		for _, indProgr := range packed {
-			var curTrip *gtfs.Trip = nil
+			var curTrip *gtfs.Trip
 
 			if suffixC > 1 {
 				curTrip = new(gtfs.Trip)
 
-				var newId string
+				var newID string
 				for true {
-					newId = t.Id + "_" + strconv.FormatInt(int64(suffixC), 10)
-					if _, in := feed.Trips[newId]; in {
+					newID = t.Id + "_" + strconv.FormatInt(int64(suffixC), 10)
+					if _, in := feed.Trips[newID]; in {
 						suffixC++
 					} else {
 						break
 					}
 				}
 
-				curTrip.Id = newId
+				curTrip.Id = newID
 				feed.Trips[curTrip.Id] = curTrip
 				processed[curTrip] = empty{}
 				curTrip.Route = t.Route
@@ -204,18 +202,16 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "done. (%s%d frequencies, %s%d trips)\n", freqsSign, freqAfter-freqBef, tripsSign, len(feed.Trips)-tripsBef)
 }
 
-/**
- * Pack covers into non-overlapping progressions
- */
-func (m FrequencyMinimizer) packCovers(c ProgressionCover, t TripWrappers) []ProgressionCover {
-	ret := make([]ProgressionCover, 0)
-	singleTrips := make([]ProgressionCover, 0)
-	ret = append(ret, ProgressionCover{make([]FreqCandidate, 0), make(map[*gtfs.Trip]empty, 0)})
+// Pack covers into non-overlapping progressions
+func (m FrequencyMinimizer) packCovers(c progressionCover, t tripWrappers) []progressionCover {
+	ret := make([]progressionCover, 0)
+	singleTrips := make([]progressionCover, 0)
+	ret = append(ret, progressionCover{make([]freqCandidate, 0), make(map[*gtfs.Trip]empty, 0)})
 
 	for _, c := range c.progressions {
 		if len(c.matches) == 1 {
 			// handle single-match progressions separately (they should remain single trips)
-			newCover := ProgressionCover{make([]FreqCandidate, 0), make(map[*gtfs.Trip]empty, 0)}
+			newCover := progressionCover{make([]freqCandidate, 0), make(map[*gtfs.Trip]empty, 0)}
 			newCover.progressions = append(newCover.progressions, c)
 			singleTrips = append(singleTrips, newCover)
 
@@ -240,7 +236,7 @@ func (m FrequencyMinimizer) packCovers(c ProgressionCover, t TripWrappers) []Pro
 		}
 
 		if !inserted {
-			newCover := ProgressionCover{make([]FreqCandidate, 0), make(map[*gtfs.Trip]empty, 0)}
+			newCover := progressionCover{make([]freqCandidate, 0), make(map[*gtfs.Trip]empty, 0)}
 			newCover.progressions = append(newCover.progressions, c)
 			ret = append(ret, newCover)
 		}
@@ -253,24 +249,22 @@ func (m FrequencyMinimizer) packCovers(c ProgressionCover, t TripWrappers) []Pro
 	return append(ret, singleTrips...)
 }
 
-/**
- * Modified version of a CAP approximation algorithm proposed by
- * Hannah Bast and Sabine Storandt in
- * http://ad-publications.informatik.uni-freiburg.de/SIGSPATIAL_frequency_BS_2014.pdf
- **/
-func (m FrequencyMinimizer) getCover(eqs TripWrappers, overlapping bool) ProgressionCover {
-	for i, _ := range eqs.trips {
+// Modified version of a CAP approximation algorithm proposed by
+// Hannah Bast and Sabine Storandt in
+// http://ad-publications.informatik.uni-freiburg.de/SIGSPATIAL_frequency_BS_2014.pdf
+func (m FrequencyMinimizer) getCover(eqs tripWrappers, overlapping bool) progressionCover {
+	for i := range eqs.trips {
 		eqs.trips[i].marked = false
 	}
 
-	cand := ProgressionCover{make([]FreqCandidate, 0), make(map[*gtfs.Trip]empty)}
+	cand := progressionCover{make([]freqCandidate, 0), make(map[*gtfs.Trip]empty)}
 	// sort them by start time
 	sort.Sort(eqs)
 
 	// collect possible frequency values contained in this collection
 	freqs := m.getPossibleFreqs(eqs)
 
-	MINIMUM_COVER_SIZE := 2
+	minimumCoverSize := 2
 
 	hasUnmarked := true
 	for hasUnmarked {
@@ -290,10 +284,10 @@ func (m FrequencyMinimizer) getCover(eqs TripWrappers, overlapping bool) Progres
 			}
 
 			startTime := eqs.trips[i].t
-			curCand := FreqCandidate{make([]int, 0), 0}
+			curCand := freqCandidate{make([]int, 0), 0}
 			curCand.matches = append(curCand.matches, i)
-			for freq, _ := range freqs {
-				nextCand := FreqCandidate{make([]int, 0), 0}
+			for freq := range freqs {
+				nextCand := freqCandidate{make([]int, 0), 0}
 				nextCand.matches = append(nextCand.matches, i)
 
 				for j := i + 1; j < len(eqs.trips); j++ {
@@ -315,7 +309,7 @@ func (m FrequencyMinimizer) getCover(eqs TripWrappers, overlapping bool) Progres
 					}
 				}
 
-				if len(nextCand.matches) > len(curCand.matches) && (len(nextCand.matches) >= MINIMUM_COVER_SIZE || len(nextCand.matches) == 1) {
+				if len(nextCand.matches) > len(curCand.matches) && (len(nextCand.matches) >= minimumCoverSize || len(nextCand.matches) == 1) {
 					curCand = nextCand
 				}
 			}
@@ -334,13 +328,11 @@ func (m FrequencyMinimizer) getCover(eqs TripWrappers, overlapping bool) Progres
 	return cand
 }
 
-/**
- * Get possible frequencies from a collection of TripWrappers
- */
-func (m FrequencyMinimizer) getPossibleFreqs(tws TripWrappers) map[int]empty {
+// Get possible frequencies from a collection of tripWrappers
+func (m FrequencyMinimizer) getPossibleFreqs(tws tripWrappers) map[int]empty {
 	ret := make(map[int]empty, 0)
 
-	for i, _ := range tws.trips {
+	for i := range tws.trips {
 		for ii := i + 1; ii < len(tws.trips); ii++ {
 			fre := tws.trips[ii].t.SecondsSinceMidnight() - tws.trips[i].t.SecondsSinceMidnight()
 			if fre != 0 {
@@ -351,11 +343,9 @@ func (m FrequencyMinimizer) getPossibleFreqs(tws TripWrappers) map[int]empty {
 	return ret
 }
 
-/**
- * Get trips that are equal to trip without considering the absolute time values
- */
-func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, trips []*gtfs.Trip, processed map[*gtfs.Trip]empty) TripWrappers {
-	ret := TripWrappers{make([]TripWrapper, 0), make(map[*gtfs.Trip]empty, 0)}
+// Get trips that are equal to trip without considering the absolute time values
+func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, trips []*gtfs.Trip, processed map[*gtfs.Trip]empty) tripWrappers {
+	ret := tripWrappers{make([]tripWrapper, 0), make(map[*gtfs.Trip]empty, 0)}
 
 	chunks := MaxParallelism()
 	sem := make(chan empty, chunks)
@@ -370,7 +360,7 @@ func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, t
 				if t.Id == trip.Id || m.isTimeIndependentEqual(t, trip) {
 					if len(t.Frequencies) == 0 {
 						mutex.Lock()
-						ret.trips = append(ret.trips, TripWrapper{t, t.StopTimes[0].Arrival_time, false, nil})
+						ret.trips = append(ret.trips, tripWrapper{t, t.StopTimes[0].Arrival_time, false, nil})
 						ret.coveredTrips[t] = empty{}
 						mutex.Unlock()
 					} else {
@@ -378,7 +368,7 @@ func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, t
 						for _, f := range t.Frequencies {
 							for s := f.Start_time.SecondsSinceMidnight(); s < f.End_time.SecondsSinceMidnight(); s = s + f.Headway_secs {
 								mutex.Lock()
-								ret.trips = append(ret.trips, TripWrapper{t, m.getGtfsTimeFromSec(s), false, &f})
+								ret.trips = append(ret.trips, tripWrapper{t, m.getGtfsTimeFromSec(s), false, &f})
 								ret.coveredTrips[t] = empty{}
 								mutex.Unlock()
 							}
@@ -396,16 +386,12 @@ func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, t
 	return ret
 }
 
-/**
- * Convert seconds since midnight to a GTFS time
- */
+// Convert seconds since midnight to a GTFS time
 func (m FrequencyMinimizer) getGtfsTimeFromSec(s int) gtfs.Time {
-	return gtfs.Time{int8(s / 3600), int8((s - (s/3600)*3600) / 60), int8(s - ((s / 60) * 60))}
+	return gtfs.Time{Hour: int8(s / 3600), Minute: int8((s - (s/3600)*3600) / 60), Second: int8(s - ((s / 60) * 60))}
 }
 
-/**
- * Check if two trips are equal without considering absolute stop times
- */
+// Check if two trips are equal without considering absolute stop times
 func (m FrequencyMinimizer) isTimeIndependentEqual(a *gtfs.Trip, b *gtfs.Trip) bool {
 	return a.Route == b.Route && a.Service == b.Service && a.Headsign == b.Headsign &&
 		a.Short_name == b.Short_name && a.Direction_id == b.Direction_id && a.Block_id == b.Block_id &&
@@ -413,10 +399,8 @@ func (m FrequencyMinimizer) isTimeIndependentEqual(a *gtfs.Trip, b *gtfs.Trip) b
 		a.Bikes_allowed == b.Bikes_allowed && m.hasSameRelStopTimes(a, b)
 }
 
-/**
- * Remeasure a trips stop times by taking their relative values and changing the sequence to
- * start with time
- */
+// Remeasure a trips stop times by taking their relative values and changing the sequence to
+// start with time
 func (m FrequencyMinimizer) remeasureStopTimes(t *gtfs.Trip, time gtfs.Time) {
 	diff := 0
 	curArrDepDiff := 0
@@ -433,10 +417,8 @@ func (m FrequencyMinimizer) remeasureStopTimes(t *gtfs.Trip, time gtfs.Time) {
 	}
 }
 
-/**
- * true if two trips share the same stops in the same order with the same
- * relative stop times
- */
+// true if two trips share the same stops in the same order with the same
+// relative stop times
 func (m FrequencyMinimizer) hasSameRelStopTimes(a *gtfs.Trip, b *gtfs.Trip) bool {
 	// handle trivial cases
 	if len(a.StopTimes) != len(b.StopTimes) {
@@ -450,7 +432,7 @@ func (m FrequencyMinimizer) hasSameRelStopTimes(a *gtfs.Trip, b *gtfs.Trip) bool
 	var aPrev *gtfs.StopTime
 	var bPrev *gtfs.StopTime
 
-	for i, _ := range a.StopTimes {
+	for i := range a.StopTimes {
 		if !(a.StopTimes[i].Stop == b.StopTimes[i].Stop &&
 			a.StopTimes[i].Headsign == b.StopTimes[i].Headsign &&
 			a.StopTimes[i].Pickup_type == b.StopTimes[i].Pickup_type && a.StopTimes[i].Drop_off_type == b.StopTimes[i].Drop_off_type &&

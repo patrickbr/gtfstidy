@@ -14,14 +14,13 @@ import (
 	"strconv"
 )
 
-type IdMinimizer struct {
+// IDMinimizer minimizes IDs by replacing them be continuous integer
+type IDMinimizer struct {
 	Base int
 }
 
-/**
- * Minimize id by replacing them be continous integer IDs
- */
-func (minimizer IdMinimizer) Run(feed *gtfsparser.Feed) {
+// Run this IDMinimizer on a feed
+func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Minimizing ids... ")
 	sem := make(chan empty, len(feed.Services))
 
@@ -57,10 +56,8 @@ func (minimizer IdMinimizer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "done.\n")
 }
 
-/**
- * Minimize trip IDs
- */
-func (minimizer IdMinimizer) minimizeTripIds(feed *gtfsparser.Feed) {
+// Minimize trip IDs
+func (minimizer IDMinimizer) minimizeTripIds(feed *gtfsparser.Feed) {
 	var idCount int64 = 1
 
 	newMap := make(map[string]*gtfs.Trip)
@@ -73,10 +70,8 @@ func (minimizer IdMinimizer) minimizeTripIds(feed *gtfsparser.Feed) {
 	feed.Trips = newMap
 }
 
-/**
- * Minimize shape IDs
- */
-func (minimizer IdMinimizer) minimizeShapeIds(feed *gtfsparser.Feed) {
+// Minimize shape IDs
+func (minimizer IDMinimizer) minimizeShapeIds(feed *gtfsparser.Feed) {
 	var idCount int64 = 1
 
 	newMap := make(map[string]*gtfs.Shape)
@@ -89,10 +84,8 @@ func (minimizer IdMinimizer) minimizeShapeIds(feed *gtfsparser.Feed) {
 	feed.Shapes = newMap
 }
 
-/**
- * Minimize route IDs
- */
-func (minimizer IdMinimizer) minimizeRouteIds(feed *gtfsparser.Feed) {
+// Minimize route IDs
+func (minimizer IDMinimizer) minimizeRouteIds(feed *gtfsparser.Feed) {
 	var idCount int64 = 1
 
 	newMap := make(map[string]*gtfs.Route)
@@ -105,10 +98,8 @@ func (minimizer IdMinimizer) minimizeRouteIds(feed *gtfsparser.Feed) {
 	feed.Routes = newMap
 }
 
-/**
- * Minimize service IDs
- */
-func (minimizer IdMinimizer) minimizeServiceIds(feed *gtfsparser.Feed) {
+// Minimize service IDs
+func (minimizer IDMinimizer) minimizeServiceIds(feed *gtfsparser.Feed) {
 	var idCount int64 = 1
 
 	newMap := make(map[string]*gtfs.Service)
@@ -121,10 +112,8 @@ func (minimizer IdMinimizer) minimizeServiceIds(feed *gtfsparser.Feed) {
 	feed.Services = newMap
 }
 
-/**
- * Minimize stop IDs
- */
-func (minimizer IdMinimizer) minimizeStopIds(feed *gtfsparser.Feed) {
+// Minimize stop IDs
+func (minimizer IDMinimizer) minimizeStopIds(feed *gtfsparser.Feed) {
 	var idCount int64 = 1
 
 	newMap := make(map[string]*gtfs.Stop)
@@ -137,10 +126,8 @@ func (minimizer IdMinimizer) minimizeStopIds(feed *gtfsparser.Feed) {
 	feed.Stops = newMap
 }
 
-/**
- * Minimize agency IDs
- */
-func (minimizer IdMinimizer) minimizeAgencyIds(feed *gtfsparser.Feed) {
+// Minimize agency IDs
+func (minimizer IDMinimizer) minimizeAgencyIds(feed *gtfsparser.Feed) {
 	var idCount int64 = 1
 
 	newMap := make(map[string]*gtfs.Agency)

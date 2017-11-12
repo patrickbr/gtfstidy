@@ -13,13 +13,12 @@ import (
 	"os"
 )
 
+// ShapeRemeasurer remeasure shapes
 type ShapeRemeasurer struct {
 	ShapeMinimizer
 }
 
-/*
- * Remeasure shapes
- */
+// Run this ShapeRemeasurer on some feed
 func (s ShapeRemeasurer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Remeasuring shapes... ")
 	numchunks := MaxParallelism()
@@ -51,9 +50,7 @@ func (s ShapeRemeasurer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "done. (remeasured %d shapes)\n", len(feed.Shapes))
 }
 
-/*
- * Remeasure a single shape
- */
+// Remeasure a single shape
 func (s ShapeRemeasurer) remeasure(shape *gtfs.Shape) {
 	avgMeasure, nulled := s.remasureKnown(shape)
 
@@ -61,17 +58,15 @@ func (s ShapeRemeasurer) remeasure(shape *gtfs.Shape) {
 		s.remasureUnknown(shape, avgMeasure)
 	} else {
 		// no avg measurement found, null all values
-		for i, _ := range shape.Points {
+		for i := range shape.Points {
 			shape.Points[i].Dist_traveled = 0
 			shape.Points[i].Has_dist = false
 		}
 	}
 }
 
-/*
- * Remeasure parts of the shape we could not guess the correct measurement by using
- * the average measurement
- */
+// Remeasure parts of the shape we could not guess the correct measurement by using
+// the average measurement
 func (s ShapeRemeasurer) remasureUnknown(shape *gtfs.Shape, avgMeasure float64) {
 	lastUMIndex := -1
 	lastM := 0.0
@@ -91,9 +86,7 @@ func (s ShapeRemeasurer) remasureUnknown(shape *gtfs.Shape, avgMeasure float64) 
 	}
 }
 
-/*
- * Remeasure parts of the shape we can guess by using surrounding points
- */
+// Remeasure parts of the shape we can guess by using surrounding points
 func (s ShapeRemeasurer) remasureKnown(shape *gtfs.Shape) (float64, bool) {
 	c := 0
 	m := 0.0
@@ -131,9 +124,7 @@ func (s ShapeRemeasurer) remasureKnown(shape *gtfs.Shape) (float64, bool) {
 	return m / float64(c), false
 }
 
-/*
- * Remeasure between points i and end
- */
+// Remeasure between points i and end
 func (s ShapeRemeasurer) remeasureBetween(i int, end int, mPUnit float64, lastMeasure float64, shape *gtfs.Shape) {
 	d := 0.0
 

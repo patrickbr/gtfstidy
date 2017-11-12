@@ -11,12 +11,16 @@ import (
 	"runtime"
 )
 
+// Processor modifies an existing GTFS feed in-place
 type Processor interface {
 	Run(*gtfsparser.Feed)
 }
 
 type empty struct{}
 
+// MaxParallelism returns the number of CPUs, or the
+// maximum number of processes if the latter is smaller
+// than the former
 func MaxParallelism() int {
 	maxProcs := runtime.GOMAXPROCS(0)
 	numCPU := runtime.NumCPU()
@@ -26,6 +30,8 @@ func MaxParallelism() int {
 	return numCPU
 }
 
+// FloatEquals checks if the difference of two floats is
+// smaller than epsilon
 func FloatEquals(a float32, b float32, e float32) bool {
 	if (a-b) < e && (b-a) < e {
 		return true

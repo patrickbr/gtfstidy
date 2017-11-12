@@ -14,37 +14,37 @@ import (
 	"sort"
 )
 
+// ServiceDuplicateRemover removes duplicate services. Services are considered equal if they
+// resolve to exactly the same service dates
 type ServiceDuplicateRemover struct {
 }
 
-type ServiceRanged struct {
+type serviceRanged struct {
 	Service *gtfs.Service
 	Range   DateRange
 	ActDays int
 }
-type ServiceList []ServiceRanged
 
-func (l ServiceList) Len() int      { return len(l) }
-func (l ServiceList) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
-func (l ServiceList) Less(i, j int) bool {
+type serviceList []serviceRanged
+
+func (l serviceList) Len() int      { return len(l) }
+func (l serviceList) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
+func (l serviceList) Less(i, j int) bool {
 	return l[i].Range.Start.GetTime().Before(l[j].Range.Start.GetTime()) ||
 		(l[i].Range.Start == l[j].Range.Start && (l[i].Range.End.GetTime().Before(l[j].Range.End.GetTime()) ||
 			(l[i].Range.End == l[j].Range.End && l[i].ActDays < l[j].ActDays)))
 }
 
-/**
- * Removes duplicate services. Services are considered equal if they
- * resolve to exactly the same service dates
- */
-func (m ServiceDuplicateRemover) Run(feed *gtfsparser.Feed) {
+// Run this ServiceDuplicateRemover on some feed
+func (sdr ServiceDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing service duplicates... ")
-	list := make(ServiceList, 0)
+	list := make(serviceList, 0)
 	trips := make(map[*gtfs.Service][]*gtfs.Trip, len(feed.Services))
 	proced := make(map[*gtfs.Service]bool, len(feed.Services))
 	bef := len(feed.Services)
 
 	for _, s := range feed.Services {
-		list = append(list, ServiceRanged{s, GetDateRange(s), GetActDays(s)})
+		list = append(list, serviceRanged{s, GetDateRange(s), GetActDays(s)})
 	}
 
 	for _, t := range feed.Trips {
@@ -54,7 +54,7 @@ func (m ServiceDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	// cluster equivalent services
 	sort.Sort(list)
 
-	chunks := make([]ServiceList, 1)
+	chunks := make([]serviceList, 1)
 	chunkP := 0
 
 	for i := 0; i < len(list); i++ {
@@ -63,7 +63,7 @@ func (m ServiceDuplicateRemover) Run(feed *gtfsparser.Feed) {
 				chunks[chunkP][len(chunks[chunkP])-1].Range.End != list[i].Range.End ||
 				chunks[chunkP][len(chunks[chunkP])-1].ActDays != list[i].ActDays) {
 			chunkP++
-			chunks = append(chunks, make(ServiceList, 0))
+			chunks = append(chunks, make(serviceList, 0))
 		}
 
 		chunks[chunkP] = append(chunks[chunkP], list[i])
@@ -74,10 +74,10 @@ func (m ServiceDuplicateRemover) Run(feed *gtfsparser.Feed) {
 			if _, ok := proced[t.Service]; ok {
 				continue
 			}
-			eqServices := m.getEquivalentServices(t.Service, c)
+			eqServices := sdr.getEquivalentServices(t.Service, c)
 
 			if len(eqServices) > 0 {
-				m.combineServices(feed, append(eqServices, t.Service), trips)
+				sdr.combineServices(feed, append(eqServices, t.Service), trips)
 
 				for _, s := range eqServices {
 					proced[s] = true
@@ -90,10 +90,8 @@ func (m ServiceDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "done. (-%d services)\n", (bef - len(feed.Services)))
 }
 
-/**
- * Return the services that are equivalent to service
- */
-func (m ServiceDuplicateRemover) getEquivalentServices(service *gtfs.Service, cands ServiceList) []*gtfs.Service {
+// Return the services that are equivalent to service
+func (sdr ServiceDuplicateRemover) getEquivalentServices(service *gtfs.Service, cands serviceList) []*gtfs.Service {
 	ret := make([]*gtfs.Service, 0)
 
 	for _, c := range cands {
@@ -105,12 +103,10 @@ func (m ServiceDuplicateRemover) getEquivalentServices(service *gtfs.Service, ca
 	return ret
 }
 
-/**
- * Combine a slice of equivalent services into a single service
- */
-func (m ServiceDuplicateRemover) combineServices(feed *gtfsparser.Feed, services []*gtfs.Service, trips map[*gtfs.Service][]*gtfs.Trip) {
+// Combine a slice of equivalent services into a single service
+func (sdr ServiceDuplicateRemover) combineServices(feed *gtfsparser.Feed, services []*gtfs.Service, trips map[*gtfs.Service][]*gtfs.Trip) {
 	// heuristic: use the service with the least number of exceptions as 'reference'
-	var ref *gtfs.Service = services[0]
+	ref := services[0]
 
 	for _, s := range services {
 		if len(s.Exceptions) < len(ref.Exceptions) {

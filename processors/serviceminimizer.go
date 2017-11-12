@@ -14,14 +14,17 @@ import (
 	"time"
 )
 
+// ServiceMinimizer minimizes services by finding optimal calendar.txt and
+// calendar_dates.txt coverages.
 type ServiceMinimizer struct {
 }
 
-type ServiceException struct {
+type serviceException struct {
 	Date gtfs.Date
 	Type int8
 }
 
+// DateRange specified a date range from Start to End
 type DateRange struct {
 	Start gtfs.Date
 	End   gtfs.Date
@@ -32,16 +35,10 @@ func hasBit(n uint, pos uint) bool {
 	return (val > 0)
 }
 
-/**
- * Minimizes services by finding optimal calendar.txt and
- * calendar_dates.txt coverages.
- */
-func (minimizer ServiceMinimizer) Run(feed *gtfsparser.Feed) {
+// Run this ServiceMinimizer on some feed
+func (sm ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Minimizing services... ")
-	calBefore, datesBefore := minimizer.countServices(feed)
-
-	full := len(feed.Services)
-	count := 0
+	calBefore, datesBefore := sm.countServices(feed)
 
 	numchunks := MaxParallelism()
 	chunksize := (len(feed.Services) + numchunks - 1) / numchunks
@@ -59,10 +56,7 @@ func (minimizer ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 	for _, c := range chunks {
 		go func(chunk []*gtfs.Service) {
 			for _, s := range chunk {
-				fmt.Fprintf(os.Stdout, "@ %d/%d\n", count, full)
-				minimizer.perfectMinimize(s)
-
-				count++
+				sm.perfectMinimize(s)
 			}
 			sem <- empty{}
 		}(c)
@@ -73,7 +67,7 @@ func (minimizer ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 		<-sem
 	}
 
-	calAfter, datesAfter := minimizer.countServices(feed)
+	calAfter, datesAfter := sm.countServices(feed)
 
 	datesSign := ""
 	calsSign := ""
@@ -89,7 +83,7 @@ func (minimizer ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "done. (%s%d calendar_dates.txt entries, %s%d calendar.txt entries)\n", datesSign, datesAfter-datesBefore, calsSign, calAfter-calBefore)
 }
 
-func (m ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
+func (sm ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
 	/**
 	 *	TODO: maybe find a more performant approximation algorithm for this. It
 	 *  feels like this problem could be reduced to SetCover (making it NP-complete),
@@ -109,29 +103,13 @@ func (m ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
 	bestA := 0
 	bestB := 0
 
-	activeOn := make([]bool, 0)
-	activeOnDate := make(map[gtfs.Date]bool, 0)
-
 	// build active map once for faster lookup later on
-
 	// start and end at full weeks
 	startTimeAm := startTime.AddDate(0, 0, -int(startTime.Weekday()))
 	endTimeAm := endTime.AddDate(0, 0, 6-int(endTime.Weekday()))
-	for d := m.getGtfsDateFromTime(startTimeAm); !d.GetTime().After(endTimeAm); d = m.getNextDate(d) {
-		act := service.IsActiveOn(d)
-		activeOn = append(activeOn, act)
-		activeOnDate[d] = act
-	}
 
-	daysNotMatched := make([]int, 128)
-	for d := uint(1); d < 128; d++ {
-		for i := 0; i < 7; i++ {
-			if service.Daymap[i] && !hasBit(d, uint(i)) {
-				daysNotMatched[d]++
-			}
-		}
-	}
-
+	activeOn := sm.getActiveOnMap(startTimeAm, endTimeAm, service)
+	daysNotMatched := sm.getDaysNotMatched(service)
 	l := len(activeOn)
 
 	for a := 0; a < l; a = a + 7 {
@@ -144,7 +122,7 @@ func (m ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
 					continue
 				}
 
-				c := m.countExceptions(service, activeOn, d, startTime, endTime, startTimeAm, a, b, e)
+				c := sm.countExceptions(service, activeOn, d, startTime, endTime, startTimeAm, a, b, e)
 				if c < e {
 					e = c
 					bestMap = d
@@ -155,64 +133,10 @@ func (m ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
 		}
 	}
 
-	newMap := [7]bool{hasBit(bestMap, 0), hasBit(bestMap, 1), hasBit(bestMap, 2), hasBit(bestMap, 3), hasBit(bestMap, 4), hasBit(bestMap, 5), hasBit(bestMap, 6)}
-	newBegin := startTime.AddDate(0, 0, bestA)
-	newEnd := startTime.AddDate(0, 0, bestB)
-	newExceptions := make([]*ServiceException, 0)
-
-	for !newBegin.After(newEnd) && !service.IsActiveOn(m.getGtfsDateFromTime(newBegin)) {
-		newBegin = m.getNextDateTime(newBegin)
-	}
-
-	for !newEnd.Before(newBegin) && !service.IsActiveOn(m.getGtfsDateFromTime(newEnd)) {
-		newEnd = m.getPrevDateTime(newEnd)
-	}
-
-	if newBegin == newEnd {
-		// dont allow single day maps, use exceptions for this
-		newMap = [7]bool{false, false, false, false, false, false, false}
-	}
-
-	for st := start.GetTime(); !st.After(end.GetTime()); st = m.getNextDateTime(st) {
-		gtfsD := m.getGtfsDateFromTime(st)
-		if st.Before(newBegin) || st.After(newEnd) {
-			if service.IsActiveOn(gtfsD) {
-				ex := new(ServiceException)
-				ex.Date = gtfsD
-				ex.Type = 1
-				newExceptions = append(newExceptions, ex)
-			}
-		} else {
-			if newMap[int(gtfsD.GetTime().Weekday())] {
-				if !service.IsActiveOn(gtfsD) {
-					ex := new(ServiceException)
-					ex.Date = gtfsD
-					ex.Type = 2
-					newExceptions = append(newExceptions, ex)
-				}
-			} else {
-				if service.IsActiveOn(gtfsD) {
-					ex := new(ServiceException)
-					ex.Date = gtfsD
-					ex.Type = 1
-					newExceptions = append(newExceptions, ex)
-				}
-			}
-		}
-	}
-
-	service.Exceptions = make(map[gtfs.Date]int8, 0)
-
-	for _, e := range newExceptions {
-		service.Exceptions[e.Date] = e.Type
-	}
-
-	service.Start_date = m.getGtfsDateFromTime(newBegin)
-	service.End_date = m.getGtfsDateFromTime(newEnd)
-	service.Daymap = newMap
+	sm.updateService(service, bestMap, bestA, bestB, startTime, endTime, start, end)
 }
 
-func (m ServiceMinimizer) countExceptions(s *gtfs.Service, actmap []bool, bm uint, start time.Time, end time.Time, startActMap time.Time, a int, b int, max uint) uint {
+func (sm ServiceMinimizer) countExceptions(s *gtfs.Service, actmap []bool, bm uint, start time.Time, end time.Time, startActMap time.Time, a int, b int, max uint) uint {
 	ret := uint(0)
 	l := len(actmap)
 
@@ -248,6 +172,7 @@ func (m ServiceMinimizer) countExceptions(s *gtfs.Service, actmap []bool, bm uin
 	return ret
 }
 
+// GetDateRange returns the active date range of a gtfs.Service
 func GetDateRange(service *gtfs.Service) DateRange {
 	first := service.GetFirstDefinedDate()
 	last := service.GetLastDefinedDate()
@@ -263,6 +188,7 @@ func GetDateRange(service *gtfs.Service) DateRange {
 	return DateRange{first, last}
 }
 
+// GetActDays returns the number of active days of a gtfs.Service
 func GetActDays(service *gtfs.Service) int {
 	first := service.GetFirstDefinedDate()
 	last := service.GetLastDefinedDate()
@@ -278,35 +204,35 @@ func GetActDays(service *gtfs.Service) int {
 	return count
 }
 
-func (minimizer ServiceMinimizer) getGtfsDateFromTime(t time.Time) gtfs.Date {
-	return gtfs.Date{int8(t.Day()), int8(t.Month()), int16(t.Year())}
+func (sm ServiceMinimizer) getGtfsDateFromTime(t time.Time) gtfs.Date {
+	return gtfs.Date{Day: int8(t.Day()), Month: int8(t.Month()), Year: int16(t.Year())}
 }
 
-func (minimizer ServiceMinimizer) getNextDate(d gtfs.Date) gtfs.Date {
+func (sm ServiceMinimizer) getNextDate(d gtfs.Date) gtfs.Date {
 	return d.GetOffsettedDate(1)
 }
 
-func (minimizer ServiceMinimizer) getPrevDate(d gtfs.Date) gtfs.Date {
+func (sm ServiceMinimizer) getPrevDate(d gtfs.Date) gtfs.Date {
 	return d.GetOffsettedDate(-1)
 }
 
-func (minimizer ServiceMinimizer) getNextDateTime(t time.Time) time.Time {
+func (sm ServiceMinimizer) getNextDateTime(t time.Time) time.Time {
 	return t.AddDate(0, 0, 1)
 }
 
-func (minimizer ServiceMinimizer) getPrevDateTime(t time.Time) time.Time {
+func (sm ServiceMinimizer) getPrevDateTime(t time.Time) time.Time {
 	return t.AddDate(0, 0, -1)
 }
 
-func (minimizer ServiceMinimizer) getNextDateTimeWeek(t time.Time) time.Time {
+func (sm ServiceMinimizer) getNextDateTimeWeek(t time.Time) time.Time {
 	return t.AddDate(0, 0, 7-int(t.Weekday()))
 }
 
-func (minimizer ServiceMinimizer) getPrevDateTimeWeek(t time.Time) time.Time {
+func (sm ServiceMinimizer) getPrevDateTimeWeek(t time.Time) time.Time {
 	return t.AddDate(0, 0, -(7 - int(t.Weekday())))
 }
 
-func (minimizer ServiceMinimizer) countServices(feed *gtfsparser.Feed) (int, int) {
+func (sm ServiceMinimizer) countServices(feed *gtfsparser.Feed) (int, int) {
 	cals := 0
 	dates := 0
 
@@ -317,4 +243,84 @@ func (minimizer ServiceMinimizer) countServices(feed *gtfsparser.Feed) (int, int
 		}
 	}
 	return cals, dates
+}
+
+func (sm ServiceMinimizer) getDaysNotMatched(service *gtfs.Service) [128]int {
+	var ret [128]int
+	for d := uint(1); d < 128; d++ {
+		for i := 0; i < 7; i++ {
+			if service.Daymap[i] && !hasBit(d, uint(i)) {
+				ret[d]++
+			}
+		}
+	}
+
+	return ret
+}
+
+func (sm ServiceMinimizer) getActiveOnMap(startTimeAm time.Time, endTimeAm time.Time, service *gtfs.Service) []bool {
+	activeOn := make([]bool, 0)
+	for d := sm.getGtfsDateFromTime(startTimeAm); !d.GetTime().After(endTimeAm); d = sm.getNextDate(d) {
+		act := service.IsActiveOn(d)
+		activeOn = append(activeOn, act)
+	}
+	return activeOn
+}
+
+func (sm ServiceMinimizer) updateService(service *gtfs.Service, bestMap uint, bestA int, bestB int, startTime time.Time, endTime time.Time, start gtfs.Date, end gtfs.Date) {
+	newMap := [7]bool{hasBit(bestMap, 0), hasBit(bestMap, 1), hasBit(bestMap, 2), hasBit(bestMap, 3), hasBit(bestMap, 4), hasBit(bestMap, 5), hasBit(bestMap, 6)}
+	newBegin := startTime.AddDate(0, 0, bestA)
+	newEnd := startTime.AddDate(0, 0, bestB)
+	newExceptions := make([]*serviceException, 0)
+
+	for !newBegin.After(newEnd) && !service.IsActiveOn(sm.getGtfsDateFromTime(newBegin)) {
+		newBegin = sm.getNextDateTime(newBegin)
+	}
+
+	for !newEnd.Before(newBegin) && !service.IsActiveOn(sm.getGtfsDateFromTime(newEnd)) {
+		newEnd = sm.getPrevDateTime(newEnd)
+	}
+
+	if newBegin == newEnd {
+		// dont allow single day maps, use exceptions for this
+		newMap = [7]bool{false, false, false, false, false, false, false}
+	}
+
+	for st := start.GetTime(); !st.After(end.GetTime()); st = sm.getNextDateTime(st) {
+		gtfsD := sm.getGtfsDateFromTime(st)
+		if st.Before(newBegin) || st.After(newEnd) {
+			if service.IsActiveOn(gtfsD) {
+				ex := new(serviceException)
+				ex.Date = gtfsD
+				ex.Type = 1
+				newExceptions = append(newExceptions, ex)
+			}
+		} else {
+			if newMap[int(gtfsD.GetTime().Weekday())] {
+				if !service.IsActiveOn(gtfsD) {
+					ex := new(serviceException)
+					ex.Date = gtfsD
+					ex.Type = 2
+					newExceptions = append(newExceptions, ex)
+				}
+			} else {
+				if service.IsActiveOn(gtfsD) {
+					ex := new(serviceException)
+					ex.Date = gtfsD
+					ex.Type = 1
+					newExceptions = append(newExceptions, ex)
+				}
+			}
+		}
+	}
+
+	service.Exceptions = make(map[gtfs.Date]int8, 0)
+
+	for _, e := range newExceptions {
+		service.Exceptions[e.Date] = e.Type
+	}
+
+	service.Start_date = sm.getGtfsDateFromTime(newBegin)
+	service.End_date = sm.getGtfsDateFromTime(newEnd)
+	service.Daymap = newMap
 }

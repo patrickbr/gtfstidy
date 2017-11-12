@@ -35,8 +35,8 @@ func main() {
 	useRedShapeRemover := flag.BoolP("remove-red-shapes", "S", false, "remove shape duplicates")
 	useRedRouteMinimizer := flag.BoolP("remove-red-routes", "R", false, "remove route duplicates")
 	useRedServiceMinimizer := flag.BoolP("remove-red-services", "C", false, "remove duplicate services in calendar.txt and calendar_dates.txt")
-	useIdMinimizerNum := flag.BoolP("minimize-ids-num", "i", false, "minimize IDs using numerical IDs (e.g. 144, 145, 146...)")
-	useIdMinimizerChar := flag.BoolP("minimize-ids-char", "d", false, "minimize IDs using character IDs (e.g. abc, abd, abe, abf...)")
+	useIDMinimizerNum := flag.BoolP("minimize-ids-num", "i", false, "minimize IDs using numerical IDs (e.g. 144, 145, 146...)")
+	useIDMinimizerChar := flag.BoolP("minimize-ids-char", "d", false, "minimize IDs using character IDs (e.g. abc, abd, abe, abf...)")
 	useServiceMinimizer := flag.BoolP("minimize-services", "c", false, "minimize services by searching for the optimal exception/range coverage")
 	useFrequencyMinimizer := flag.BoolP("minimize-stoptimes", "T", false, "search for frequency patterns in explicit trips and combine them, using a CAP approach")
 	help := flag.BoolP("help", "?", false, "this message")
@@ -79,7 +79,7 @@ func main() {
 		os.Exit(1)
 	} else {
 		fmt.Fprintf(os.Stdout, " done.\n")
-		var minzers []processors.Processor = make([]processors.Processor, 0)
+		minzers := make([]processors.Processor, 0)
 
 		if *useOrphanDeleter {
 			minzers = append(minzers, processors.OrphanRemover{})
@@ -113,10 +113,10 @@ func main() {
 			minzers = append(minzers, processors.FrequencyMinimizer{})
 		}
 
-		if *useIdMinimizerNum {
-			minzers = append(minzers, processors.IdMinimizer{10})
-		} else if *useIdMinimizerChar {
-			minzers = append(minzers, processors.IdMinimizer{36})
+		if *useIDMinimizerNum {
+			minzers = append(minzers, processors.IDMinimizer{Base: 10})
+		} else if *useIDMinimizerChar {
+			minzers = append(minzers, processors.IDMinimizer{Base: 36})
 		}
 
 		if *onlyValidate {
