@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/report/github.com/patrickbr/gtfstidy)](https://goreportcard.com/report/github.com/patrickbr/gtfstidy)
+
 # gtfstidy
 
 Tidy (and validate) [GTFS](https://developers.google.com/transit/gtfs/) feeds.
