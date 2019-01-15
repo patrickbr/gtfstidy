@@ -28,6 +28,7 @@ func main() {
 
 	useDefaultValuesOnError := flag.BoolP("default-on-errs", "e", false, "if non-required fields have errors, fall back to the default values")
 	dropErroneousEntities := flag.BoolP("drop-errs", "D", false, "drop erroneous entries from feed")
+	checkNullCoords := flag.BoolP("check-null-coords", "n", false, "check for (0, 0) coordinates")
 
 	useOrphanDeleter := flag.BoolP("delete-orphans", "O", false, "remove entities that are not referenced anywhere")
 	useShapeMinimizer := flag.BoolP("min-shapes", "s", false, "minimize shapes (using Douglas-Peucker)")
@@ -62,9 +63,10 @@ func main() {
 	}()
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
+	opts.CheckNullCoordinates = *checkNullCoords
 	feed.SetParseOpts(opts)
 
 	fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
