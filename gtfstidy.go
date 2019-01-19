@@ -26,7 +26,12 @@ func main() {
 
 	outputPath := flag.StringP("output", "o", "gtfs-out", "gtfs output directory or zip file (must end with .zip)")
 
+	fixShortHand := flag.BoolP("fix", "", false, "shorthand for -eDn -p '-'")
+	compressShortHand := flag.BoolP("compress", "", false, "shorthand for -OSRCc")
+	minimizeShortHand := flag.BoolP("Compress", "", false, "shorthand for -OSRCcdT, like --compress, but additionally compress stop times into frequencies and use dense character ids. The latter destroys any existing external references (like in GTFS realtime streams)")
+
 	useDefaultValuesOnError := flag.BoolP("default-on-errs", "e", false, "if non-required fields have errors, fall back to the default values")
+	emptyStrRepl := flag.StringP("empty-str-repl", "p", "", "string to use if a non-critical required string field is empty (like stop_name, agency_name, ...)")
 	dropErroneousEntities := flag.BoolP("drop-errs", "D", false, "drop erroneous entries from feed")
 	checkNullCoords := flag.BoolP("check-null-coords", "n", false, "check for (0, 0) coordinates")
 
@@ -62,11 +67,34 @@ func main() {
 		}
 	}()
 
+	if *fixShortHand {
+		*useDefaultValuesOnError = true
+		*dropErroneousEntities = true
+		*checkNullCoords = true
+		*emptyStrRepl = "-"
+	}
+
+	if *minimizeShortHand {
+		*compressShortHand = true
+		*useIDMinimizerChar = true
+		*useFrequencyMinimizer = true
+	}
+
+	if *compressShortHand {
+		*useOrphanDeleter = true
+		*useShapeMinimizer = true
+		*useRedShapeRemover = true
+		*useRedRouteMinimizer = true
+		*useRedServiceMinimizer = true
+		*useServiceMinimizer = true
+	}
+
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: ""}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
+	opts.EmptyStringRepl = *emptyStrRepl
 	feed.SetParseOpts(opts)
 
 	fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
@@ -76,7 +104,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\nError while parsing GTFS feed:\n")
 		fmt.Fprintln(os.Stderr, e.Error())
 		if !*onlyValidate {
-			fmt.Fprintln(os.Stdout, "\nYou may want to try running gtfstidy with -e and/or -D for error fixing / skipping. See --help for details.")
+			fmt.Fprintln(os.Stdout, "\nYou may want to try running gtfstidy with --fix for error fixing / skipping. See --help for details.")
 		}
 		os.Exit(1)
 	} else {
