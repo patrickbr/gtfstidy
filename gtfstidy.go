@@ -26,11 +26,12 @@ func main() {
 
 	outputPath := flag.StringP("output", "o", "gtfs-out", "gtfs output directory or zip file (must end with .zip)")
 
-	fixShortHand := flag.BoolP("fix", "", false, "shorthand for -eDn -p '-'")
+	fixShortHand := flag.BoolP("fix", "", false, "shorthand for -eDnz -p '-'")
 	compressShortHand := flag.BoolP("compress", "", false, "shorthand for -OSRCc")
 	minimizeShortHand := flag.BoolP("Compress", "", false, "shorthand for -OSRCcdT, like --compress, but additionally compress stop times into frequencies and use dense character ids. The latter destroys any existing external references (like in GTFS realtime streams)")
 
 	useDefaultValuesOnError := flag.BoolP("default-on-errs", "e", false, "if non-required fields have errors, fall back to the default values")
+	fixZip := flag.BoolP("fix-zip", "z", false, "try to fix some errors in the ZIP file directory hierarchy")
 	emptyStrRepl := flag.StringP("empty-str-repl", "p", "", "string to use if a non-critical required string field is empty (like stop_name, agency_name, ...)")
 	dropErroneousEntities := flag.BoolP("drop-errs", "D", false, "drop erroneous entries from feed")
 	checkNullCoords := flag.BoolP("check-null-coords", "n", false, "check for (0, 0) coordinates")
@@ -71,6 +72,7 @@ func main() {
 		*useDefaultValuesOnError = true
 		*dropErroneousEntities = true
 		*checkNullCoords = true
+		*fixZip = true
 		*emptyStrRepl = "-"
 	}
 
@@ -90,11 +92,12 @@ func main() {
 	}
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: ""}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
 	opts.EmptyStringRepl = *emptyStrRepl
+	opts.ZipFix = *fixZip
 	feed.SetParseOpts(opts)
 
 	fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
