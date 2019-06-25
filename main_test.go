@@ -81,7 +81,7 @@ func TestGtfsTidy(t *testing.T) {
 	e = feed.Parse("./processors/testfeed-err")
 
 	if e == nil {
-		t.Error()
+		t.Error("No errors found.")
 		return
 	}
 
