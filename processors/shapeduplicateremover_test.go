@@ -23,7 +23,7 @@ func TestShapeDuplicateRemover(t *testing.T) {
 		return
 	}
 
-	proc := ShapeDuplicateRemover{MaxEqDistance: 10}
+	proc := ShapeDuplicateRemover{MaxEqDist: 10}
 	procM := ShapeRemeasurer{}
 	procM.Run(feed)
 	proc.Run(feed)

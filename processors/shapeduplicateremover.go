@@ -12,94 +12,142 @@ import (
 	gtfs "github.com/patrickbr/gtfsparser/gtfs"
 	"math"
 	"os"
-	"sync"
 )
 
 // ShapeDuplicateRemover removes duplicate shapes
 type ShapeDuplicateRemover struct {
-	ShapeMinimizer
-	MaxEqDistance float64
+	MaxEqDist float64
+	deleted   map[*gtfs.Shape]bool
+	mercs     map[*gtfs.Shape][][]float64
 }
 
 // Run this ShapeDuplicateRemover on some feed
 func (sdr ShapeDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing redundant shapes... ")
 
-	// build a slice of shapes for parallel processing
-	shapesSl := make([]*gtfs.Shape, 0)
+	// empty deleted cache
+	sdr.deleted = make(map[*gtfs.Shape]bool)
+
+	// build projection cache
+	sdr.mercs = make(map[*gtfs.Shape][][]float64)
+
 	for _, s := range feed.Shapes {
-		shapesSl = append(shapesSl, s)
+		for _, p := range s.Points {
+			x, y := latLngToWebMerc(p.Lat, p.Lon)
+			sdr.mercs[s] = append(sdr.mercs[s], []float64{x, y})
+		}
 	}
 
-	var idCount int64 = 1 // counter for new ids
+	numchunks := MaxParallelism()
+	chunksize := (len(feed.Shapes) + numchunks - 1) / numchunks
+	chunks := make([][]*gtfs.Shape, numchunks)
+	chunkIdxs := make([]*ShapeIdx, numchunks)
+	curchunk := 0
+
+	for _, r := range feed.Shapes {
+		chunks[curchunk] = append(chunks[curchunk], r)
+		if len(chunks[curchunk]) == chunksize {
+			curchunk++
+		}
+	}
+
+	for i, c := range chunks {
+		chunkIdxs[i] = NewShapeIdx(c, sdr.mercs, 1000, 1000)
+	}
+
+	// build shape-to-trip index
+	tidx := make(map[*gtfs.Shape][]*gtfs.Trip)
+
+	for _, t := range feed.Trips {
+		if t.Shape != nil {
+			tidx[t.Shape] = append(tidx[t.Shape], t)
+		}
+	}
+
 	bef := len(feed.Shapes)
 
-	for _, s := range feed.Shapes {
-		eqShapes := sdr.getEquivalentShapes(s, shapesSl, feed)
+	i := 0
 
-		if len(eqShapes) > 0 {
-			sdr.combineShapes(feed, append(eqShapes, s), &idCount, shapesSl)
+	for _, s := range feed.Shapes {
+		i = i + 1
+		if sdr.deleted[s] {
+			continue
+		}
+		eqShps := sdr.getEquShps(s, feed, chunkIdxs)
+
+		if len(eqShps) > 0 {
+			sdr.combineShapes(feed, append(eqShps, s), tidx)
 		}
 	}
 
 	fmt.Fprintf(os.Stdout, "done. (-%d shapes)\n", bef-len(feed.Shapes))
 }
 
-// Return all shapes that are equivalent (within MaxEqDistance) to shape
-func (sdr *ShapeDuplicateRemover) getEquivalentShapes(shape *gtfs.Shape, shapes []*gtfs.Shape, feed *gtfsparser.Feed) []*gtfs.Shape {
-	chunks := MaxParallelism()
-	sem := make(chan empty, chunks)
-	workload := int(math.Ceil(float64(len(shapes)) / float64(chunks)))
-	mutex := &sync.Mutex{}
+// Return all shapes that are equivalent (within MaxEqDist) to shape
+func (sdr *ShapeDuplicateRemover) getEquShps(shp *gtfs.Shape, feed *gtfsparser.Feed, idxs []*ShapeIdx) []*gtfs.Shape {
+	rets := make([][]*gtfs.Shape, len(idxs))
+	sem := make(chan empty, len(idxs))
 
-	ret := make([]*gtfs.Shape, 0)
+	for i, c := range idxs {
+		go func(j int, idx *ShapeIdx) {
+			neighs := idx.GetNeighbors(sdr.mercs[shp], sdr.MaxEqDist)
 
-	for j := 0; j < chunks; j++ {
-		go func(j int) {
-			for i := workload * j; i < workload*(j+1) && i < len(shapes); i++ {
-				s := shapes[i]
-				if _, in := feed.Shapes[s.Id]; !in {
-					continue
-				}
-
-				if s != shape && sdr.inDistanceToShape(sdr.MaxEqDistance, s.Points, shape.Points) && sdr.inDistanceToShape(sdr.MaxEqDistance, shape.Points, s.Points) {
-					mutex.Lock()
-					ret = append(ret, s)
-					mutex.Unlock()
+			for s := range neighs {
+				if s != shp && !sdr.deleted[s] && sdr.inDistTo(s, shp) && sdr.inDistTo(shp, s) {
+					rets[j] = append(rets[j], s)
 				}
 			}
 			sem <- empty{}
-		}(j)
+		}(i, c)
 	}
 
-	for i := 0; i < chunks; i++ {
+	// wait for goroutines to finish
+	for i := 0; i < len(idxs); i++ {
 		<-sem
 	}
+
+	// combine results
+	ret := make([]*gtfs.Shape, 0)
+
+	for _, r := range rets {
+		ret = append(ret, r...)
+	}
+
 	return ret
 }
 
 // True if shape b is in distance maxD to shape b
-func (sdr *ShapeDuplicateRemover) inDistanceToShape(maxD float64, a gtfs.ShapePoints, b gtfs.ShapePoints) bool {
-	step := 10.0
-	lastI := 0
+func (sdr *ShapeDuplicateRemover) inDistTo(shpA, shpB *gtfs.Shape) bool {
+	a := sdr.mercs[shpA]
+	b := sdr.mercs[shpB]
 
-	// skip first interpolation for performance
-	ax, ay := sdr.latLngToWebMerc(a[0].Lat, a[0].Lon)
-	bx, by := sdr.latLngToWebMerc(b[0].Lat, b[0].Lon)
-	if sdr.dist(ax, ay, bx, by) > maxD {
+	// skip first and last interpolation for performance
+	if dist(a[0][0], a[0][1], b[0][0], b[0][1]) > sdr.MaxEqDist {
 		return false
 	}
 
+	if dist(a[len(a)-1][0], a[len(a)-1][1], b[len(b)-1][0], b[len(b)-1][1]) > sdr.MaxEqDist {
+		return false
+	}
+
+	last := 0
+	curDist := 0.0
+	step := 10.0
+
 	for i := 1; i < len(a); i++ {
-		ax, ay := sdr.latLngToWebMerc(a[i-1].Lat, a[i-1].Lon)
-		bx, by := sdr.latLngToWebMerc(a[i].Lat, a[i].Lon)
-		d := sdr.dist(ax, ay, bx, by)
+		p := a[i-1]
+		orp := shpA.Points[i-1]
+		last, curDist = sdr.distToShp(p[0], p[1], b, last-1)
+		if curDist > sdr.MaxEqDist || orp.Dist_traveled > shpB.Points[imin(len(b)-1, last+2)].Dist_traveled || orp.Dist_traveled < shpB.Points[imax(0, last-1)].Dist_traveled {
+			return false
+		}
+
+		d := dist(a[i-1][0], a[i-1][1], a[i][0], a[i][1])
 
 		for curD := step; curD < d; curD = curD + step {
-			p := sdr.interpolate(curD, &a[i-1], &a[i])
-			var curDistance float64
-			lastI, curDistance = sdr.distPointToShape(&p, b, lastI-1)
-			if curDistance > maxD || p.Dist_traveled > b[imin(len(b)-1, lastI+2)].Dist_traveled || p.Dist_traveled < b[imax(0, lastI-1)].Dist_traveled {
+			px, py, pd := sdr.interpolate(curD, a[i-1][0], a[i-1][1], a[i][0], a[i][1], d, &shpA.Points[i-1], &shpA.Points[i])
+			last, curDist = sdr.distToShp(px, py, b, last-1)
+			if curDist > sdr.MaxEqDist || pd > shpB.Points[imin(len(b)-1, last+2)].Dist_traveled || pd < shpB.Points[imax(0, last-1)].Dist_traveled {
 				return false
 			}
 		}
@@ -111,7 +159,7 @@ func (sdr *ShapeDuplicateRemover) inDistanceToShape(maxD float64, a gtfs.ShapePo
 // Heuristic distance from point p to a shape. Starts checking at anchor point s in shape. Because we are only
 // looking at surrounding segments, this check underestimates the real distance but should work fine for
 // distances in nearly equal shapes.
-func (sdr *ShapeDuplicateRemover) distPointToShape(p *gtfs.ShapePoint, shape gtfs.ShapePoints, s int) (int, float64) {
+func (sdr *ShapeDuplicateRemover) distToShp(px, py float64, shp [][]float64, s int) (int, float64) {
 	minDist := math.Inf(1)
 	if s < 0 {
 		s = 0
@@ -120,8 +168,8 @@ func (sdr *ShapeDuplicateRemover) distPointToShape(p *gtfs.ShapePoint, shape gtf
 	minInd := s
 	maxSearchRad := 20
 
-	for i := imax(0, s-maxSearchRad) + 1; i < s+maxSearchRad && i < len(shape); i++ {
-		dist := sdr.perpendicularDist(p, &shape[i-1], &shape[i])
+	for i := imax(0, s-maxSearchRad) + 1; i < s+maxSearchRad && i < len(shp); i++ {
+		dist := perpendicularDist(px, py, shp[i-1][0], shp[i-1][1], shp[i][0], shp[i][1])
 		if dist < minDist {
 			minInd = i - 1
 			minDist = dist
@@ -132,11 +180,7 @@ func (sdr *ShapeDuplicateRemover) distPointToShape(p *gtfs.ShapePoint, shape gtf
 }
 
 // Interpolate between a and b at distance d
-func (sdr *ShapeDuplicateRemover) interpolate(d float64, a *gtfs.ShapePoint, b *gtfs.ShapePoint) gtfs.ShapePoint {
-	ax, ay := sdr.latLngToWebMerc(a.Lat, a.Lon)
-	bx, by := sdr.latLngToWebMerc(b.Lat, b.Lon)
-
-	dist := sdr.dist(ax, ay, bx, by)
+func (sdr *ShapeDuplicateRemover) interpolate(d, ax, ay, bx, by, dist float64, a, b *gtfs.ShapePoint) (float64, float64, float32) {
 	dm := b.Dist_traveled - a.Dist_traveled
 
 	dx := bx - ax
@@ -147,50 +191,23 @@ func (sdr *ShapeDuplicateRemover) interpolate(d float64, a *gtfs.ShapePoint, b *
 
 	me := a.Dist_traveled + dm*(float32(d/dist))
 
-	lat, lng := sdr.webMercToLatLng(x, y)
-
-	return gtfs.ShapePoint{Lat: lat, Lon: lng, Sequence: -1, Dist_traveled: me, Has_dist: b.HasDistanceTraveled()}
+	return x, y, me
 }
 
 // Combine a slice of equivalent shapes into a single one
-func (sdr *ShapeDuplicateRemover) combineShapes(feed *gtfsparser.Feed, shapes []*gtfs.Shape, idCount *int64, allShapes []*gtfs.Shape) {
-	ref := shapes[0]
+func (sdr *ShapeDuplicateRemover) combineShapes(feed *gtfsparser.Feed, shps []*gtfs.Shape, tidx map[*gtfs.Shape][]*gtfs.Trip) {
+	ref := shps[0]
 
-	for _, s := range shapes {
+	for _, s := range shps {
 		if s == ref {
 			continue
 		}
 
-		for _, t := range feed.Trips {
-			if t.Shape == s {
-				t.Shape = ref
-			}
+		for _, t := range tidx[s] {
+			t.Shape = ref
 		}
 
+		sdr.deleted[s] = true
 		delete(feed.Shapes, s.Id)
 	}
-}
-
-// Unproject web mercator coordinates to lat/lon values
-func (sdr *ShapeDuplicateRemover) webMercToLatLng(x float64, y float64) (float32, float32) {
-	a := 6378137.0
-
-	latitude := (1.5707963267948966 - (2.0 * math.Atan(math.Exp((-1.0*y)/a)))) * (180 / math.Pi)
-	longitude := ((x / a) * 57.295779513082323) - ((math.Floor((((x / a) * 57.295779513082323) + 180.0) / 360.0)) * 360.0)
-
-	return float32(latitude), float32(longitude)
-}
-
-func imax(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
-}
-
-func imin(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
 }

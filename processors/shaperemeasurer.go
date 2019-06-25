@@ -15,7 +15,6 @@ import (
 
 // ShapeRemeasurer remeasure shapes
 type ShapeRemeasurer struct {
-	ShapeMinimizer
 }
 
 // Run this ShapeRemeasurer on some feed
@@ -33,7 +32,7 @@ func (s ShapeRemeasurer) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
-	sem := make(chan empty, len(feed.Services))
+	sem := make(chan empty, len(chunks))
 	for _, c := range chunks {
 		go func(chunk []*gtfs.Shape) {
 			for _, shp := range chunk {
@@ -47,7 +46,7 @@ func (s ShapeRemeasurer) Run(feed *gtfsparser.Feed) {
 	for i := 0; i < len(chunks); i++ {
 		<-sem
 	}
-	fmt.Fprintf(os.Stdout, "done. (remeasured %d shapes)\n", len(feed.Shapes))
+	fmt.Fprintf(os.Stdout, "done. (%d shapes remeasured)\n", len(feed.Shapes))
 }
 
 // Remeasure a single shape
@@ -98,7 +97,7 @@ func (s ShapeRemeasurer) remasureKnown(shape *gtfs.Shape) (float64, bool) {
 
 	for i := 0; i < len(shape.Points); i++ {
 		if i > 0 {
-			d = d + s.distP(&shape.Points[i-1], &shape.Points[i])
+			d = d + distP(&shape.Points[i-1], &shape.Points[i])
 		}
 		if shape.Points[i].HasDistanceTraveled() {
 			if hasLast && d > 0 {
@@ -130,7 +129,7 @@ func (s ShapeRemeasurer) remeasureBetween(i int, end int, mPUnit float64, lastMe
 
 	for ; i < end; i++ {
 		if i > 0 {
-			d = d + s.distP(&shape.Points[i-1], &shape.Points[i])
+			d = d + distP(&shape.Points[i-1], &shape.Points[i])
 		}
 		shape.Points[i].Dist_traveled = float32(lastMeasure) + float32(d*mPUnit)
 		shape.Points[i].Has_dist = true

@@ -22,7 +22,7 @@ type IDMinimizer struct {
 // Run this IDMinimizer on a feed
 func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Minimizing ids... ")
-	sem := make(chan empty, len(feed.Services))
+	sem := make(chan empty, 9)
 
 	go func() {
 		minimizer.minimizeTripIds(feed)
@@ -48,8 +48,20 @@ func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
 		minimizer.minimizeServiceIds(feed)
 		sem <- empty{}
 	}()
+	go func() {
+		minimizer.minimizeFareIds(feed)
+		sem <- empty{}
+	}()
+	go func() {
+		minimizer.minimizePathwayIds(feed)
+		sem <- empty{}
+	}()
+	go func() {
+		minimizer.minimizeLevelIds(feed)
+		sem <- empty{}
+	}()
 
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 9; i++ {
 		<-sem
 	}
 
@@ -138,4 +150,46 @@ func (minimizer IDMinimizer) minimizeAgencyIds(feed *gtfsparser.Feed) {
 	}
 
 	feed.Agencies = newMap
+}
+
+// Minimize fare IDs
+func (minimizer IDMinimizer) minimizeFareIds(feed *gtfsparser.Feed) {
+	var idCount int64 = 1
+
+	newMap := make(map[string]*gtfs.FareAttribute)
+	for _, a := range feed.FareAttributes {
+		a.Id = strconv.FormatInt(idCount, minimizer.Base)
+		idCount = idCount + 1
+		newMap[a.Id] = a
+	}
+
+	feed.FareAttributes = newMap
+}
+
+// Minimize pathway IDs
+func (minimizer IDMinimizer) minimizePathwayIds(feed *gtfsparser.Feed) {
+	var idCount int64 = 1
+
+	newMap := make(map[string]*gtfs.Pathway)
+	for _, a := range feed.Pathways {
+		a.Id = strconv.FormatInt(idCount, minimizer.Base)
+		idCount = idCount + 1
+		newMap[a.Id] = a
+	}
+
+	feed.Pathways = newMap
+}
+
+// Minimize level IDs
+func (minimizer IDMinimizer) minimizeLevelIds(feed *gtfsparser.Feed) {
+	var idCount int64 = 1
+
+	newMap := make(map[string]*gtfs.Level)
+	for _, a := range feed.Levels {
+		a.Id = strconv.FormatInt(idCount, minimizer.Base)
+		idCount = idCount + 1
+		newMap[a.Id] = a
+	}
+
+	feed.Levels = newMap
 }

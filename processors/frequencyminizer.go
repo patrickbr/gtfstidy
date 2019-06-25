@@ -60,9 +60,13 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 	tripsBef := len(feed.Trips)
 
 	// build a slice of trips for parallel processing
-	tripsSl := make([]*gtfs.Trip, 0)
+	tripsSl := make(map[*gtfs.Route]map[*gtfs.Service][]*gtfs.Trip, 0)
 	for _, t := range feed.Trips {
-		tripsSl = append(tripsSl, t)
+		if _, in := tripsSl[t.Route]; !in {
+			tripsSl[t.Route] = make(map[*gtfs.Service][]*gtfs.Trip, 1)
+		}
+
+		tripsSl[t.Route][t.Service] = append(tripsSl[t.Route][t.Service], t)
 	}
 
 	curAt := 0
@@ -77,7 +81,7 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 		}
 
 		// trips time-independent equal to the current trip
-		eqs := m.getTimeIndependentEquivalentTrips(t, tripsSl, processed)
+		eqs := m.getTimeIndependentEquivalentTrips(t, tripsSl[t.Route][t.Service])
 		for _, t := range eqs.trips {
 			processed[t.Trip] = empty{}
 		}
@@ -344,7 +348,7 @@ func (m FrequencyMinimizer) getPossibleFreqs(tws tripWrappers) map[int]empty {
 }
 
 // Get trips that are equal to trip without considering the absolute time values
-func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, trips []*gtfs.Trip, processed map[*gtfs.Trip]empty) tripWrappers {
+func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, trips []*gtfs.Trip) tripWrappers {
 	ret := tripWrappers{make([]tripWrapper, 0), make(map[*gtfs.Trip]empty, 0)}
 
 	chunks := MaxParallelism()

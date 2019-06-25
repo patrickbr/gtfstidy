@@ -52,7 +52,7 @@ func (sm ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
-	sem := make(chan empty, len(feed.Services))
+	sem := make(chan empty, len(chunks))
 	for _, c := range chunks {
 		go func(chunk []*gtfs.Service) {
 			for _, s := range chunk {

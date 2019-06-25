@@ -69,6 +69,15 @@ func (or OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
 		}
 	}
 
+	for _, s := range feed.Pathways {
+		if s.From_stop != nil {
+			referenced[s.From_stop] = empty{}
+		}
+		if s.To_stop != nil {
+			referenced[s.To_stop] = empty{}
+		}
+	}
+
 	// delete unreferenced
 	for id, s := range feed.Stops {
 		if _, in := referenced[s]; !in {

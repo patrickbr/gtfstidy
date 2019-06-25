@@ -20,7 +20,6 @@ type RouteDuplicateRemover struct {
 // Run this RouteDuplicateRemover on some feed
 func (m RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing redundant routes... ")
-	var idCount int64 = 1 // counter for new ids
 	proced := make(map[*gtfs.Route]bool, len(feed.Routes))
 	bef := len(feed.Routes)
 
@@ -49,7 +48,7 @@ func (m RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		eqRoutes := m.getEquivalentRoutes(r, feed, chunks)
 
 		if len(eqRoutes) > 0 {
-			m.combineRoutes(feed, append(eqRoutes, r), trips, &idCount)
+			m.combineRoutes(feed, append(eqRoutes, r), trips)
 
 			for _, r := range eqRoutes {
 				proced[r] = true
@@ -162,7 +161,7 @@ func (m RouteDuplicateRemover) fareRulesEqual(attr *gtfs.FareAttribute, a *gtfs.
 }
 
 // Combine a slice of equal routes into a single route
-func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gtfs.Route, trips map[*gtfs.Route][]*gtfs.Trip, idCount *int64) {
+func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gtfs.Route, trips map[*gtfs.Route][]*gtfs.Trip) {
 	// heuristic: use the route with the shortest ID as 'reference'
 	ref := routes[0]
 
