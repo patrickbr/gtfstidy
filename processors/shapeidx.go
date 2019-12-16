@@ -193,6 +193,7 @@ func (gi *ShapeIdx) GetNeighbors(shp [][]float64, d float64) map[*gtfs.Shape]boo
 	xPerm := uint(math.Ceil(d / gi.cellWidth))
 	yPerm := uint(math.Ceil(d / gi.cellHeight))
 
+	// take a probe at the middle of the line
 	idx := (len(shp) - 1) / 2
 
 	ax, ay := shp[idx][0], shp[idx][1]
@@ -203,8 +204,8 @@ func (gi *ShapeIdx) GetNeighbors(shp [][]float64, d float64) map[*gtfs.Shape]boo
 	urx := math.Max(ax, bx)
 	ury := math.Max(ay, by)
 
-	swX := gi.getCellXFromX(llx)
-	swY := gi.getCellYFromY(lly)
+	swX := max(0, gi.getCellXFromX(llx)-xPerm)
+	swY := max(0, gi.getCellYFromY(lly)-yPerm)
 
 	neX := min(gi.xWidth-1, gi.getCellXFromX(urx)+xPerm)
 	neY := min(gi.yHeight-1, gi.getCellYFromY(ury)+yPerm)

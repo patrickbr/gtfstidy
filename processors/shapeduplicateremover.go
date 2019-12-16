@@ -205,6 +205,9 @@ func (sdr *ShapeDuplicateRemover) combineShapes(feed *gtfsparser.Feed, shps []*g
 
 		for _, t := range tidx[s] {
 			t.Shape = ref
+
+			// also add the trip to the trip index of the ref shape
+			tidx[ref] = append(tidx[ref], t)
 		}
 
 		sdr.deleted[s] = true
