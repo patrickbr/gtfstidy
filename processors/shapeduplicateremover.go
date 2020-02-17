@@ -52,7 +52,7 @@ func (sdr ShapeDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	}
 
 	for i, c := range chunks {
-		chunkIdxs[i] = NewShapeIdx(c, sdr.mercs, 1000, 1000)
+		chunkIdxs[i] = NewShapeIdx(c, sdr.mercs, 5000, 5000)
 	}
 
 	// build shape-to-trip index
