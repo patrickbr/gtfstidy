@@ -31,6 +31,7 @@ func (sm ServiceCalDatesRem) Run(feed *gtfsparser.Feed) {
 
 	for _, s := range feed.Services {
 		blocks := sm.getBlocks(feed, s)
+
 		if len(blocks) == 1 {
 			// change inplace
 			s.Start_date = blocks[0].Start_date
@@ -58,9 +59,8 @@ func (sm ServiceCalDatesRem) Run(feed *gtfsparser.Feed) {
 
 			for i := 1; i < len(val); i++ {
 				newTrip := new(gtfs.Trip)
-				newTrips = append(newTrips, newTrip)
 
-				newTrip.Service = val[0]
+				newTrip.Service = val[i]
 				newTrip.Bikes_allowed = trip.Bikes_allowed
 				newTrip.Block_id = trip.Block_id
 				newTrip.Direction_id = trip.Direction_id
@@ -147,13 +147,13 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 			curBlockStart = first.GetOffsettedDate(1)
 
 		}
-		// if map and exception say the same, do nothing
 
+		// if map and exception say the same, do nothing
 		first = first.GetOffsettedDate(1)
 	}
 
 	// add last block, if open
-	if curBlockStart != first {
+	if (s.Daymap[0] || s.Daymap[1] || s.Daymap[2] || s.Daymap[3] || s.Daymap[4] || s.Daymap[5] || s.Daymap[6]) && (curBlockStart.GetTime().Before(last.GetTime()) || curBlockStart.GetTime() == last.GetTime()) {
 		service := new(gtfs.Service)
 		service.Id = sm.freeServiceId(feed, s.Id+"_block_")
 		service.Exceptions = make(map[gtfs.Date]int8, 0)
