@@ -182,6 +182,20 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 		s.Daymap = newmap
 	}
 
+	if len(ret) == 0 {
+		// special case: service was empty, re-add empty
+
+		service := new(gtfs.Service)
+		service.Id = sm.freeServiceId(feed, s.Id+"_block_")
+		service.Exceptions = make(map[gtfs.Date]int8, 0)
+
+		service.Daymap = [7]bool{false, false, false, false, false, false, false}
+		service.Start_date = s.GetFirstDefinedDate()
+		service.End_date = s.GetLastDefinedDate()
+
+		ret = append(ret, service)
+	}
+
 	return ret
 }
 
