@@ -46,6 +46,7 @@ func main() {
 	useIDMinimizerChar := flag.BoolP("minimize-ids-char", "d", false, "minimize IDs using character IDs (e.g. abc, abd, abe, abf...)")
 	useServiceMinimizer := flag.BoolP("minimize-services", "c", false, "minimize services by searching for the optimal exception/range coverage")
 	useFrequencyMinimizer := flag.BoolP("minimize-stoptimes", "T", false, "search for frequency patterns in explicit trips and combine them, using a CAP approach")
+	useCalDatesRemover := flag.BoolP("remove-cal-dates", "", false, "don't use calendar_dates.txt")
 	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
@@ -144,6 +145,10 @@ func main() {
 
 		if *useFrequencyMinimizer {
 			minzers = append(minzers, processors.FrequencyMinimizer{})
+		}
+
+		if *useCalDatesRemover {
+			minzers = append(minzers, processors.ServiceCalDatesRem{})
 		}
 
 		if *useIDMinimizerNum {
