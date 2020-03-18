@@ -26,6 +26,7 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 	shapesB := len(feed.Shapes)
 	serviceB := len(feed.Services)
 	routesB := len(feed.Routes)
+	agenciesB := len(feed.Agencies)
 
 	or.removeTripOrphans(feed)
 
@@ -40,12 +41,15 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 
 	or.removeRouteOrphans(feed)
 
-	fmt.Fprintf(os.Stdout, "done. (-%d trips, -%d stops, -%d shapes, -%d services, -%d routes)\n",
+	or.removeAgencyOrphans(feed)
+
+	fmt.Fprintf(os.Stdout, "done. (-%d trips, -%d stops, -%d shapes, -%d services, -%d routes, -%d agencies)\n",
 		(tripsB - len(feed.Trips)),
 		(stopsB - len(feed.Stops)),
 		(shapesB - len(feed.Shapes)),
 		(serviceB - len(feed.Services)),
 		(routesB - len(feed.Routes)),
+		(agenciesB - len(feed.Agencies)),
 	)
 }
 
@@ -146,6 +150,29 @@ func (or OrphanRemover) removeRouteOrphans(feed *gtfsparser.Feed) {
 	for id, r := range feed.Routes {
 		if _, in := referenced[r]; !in {
 			delete(feed.Routes, id)
+		}
+	}
+}
+
+// Remove agencie orphans
+func (or OrphanRemover) removeAgencyOrphans(feed *gtfsparser.Feed) {
+	referenced := make(map[*gtfs.Agency]empty, 0)
+	for _, r := range feed.Routes {
+		if r.Agency != nil {
+			referenced[r.Agency] = empty{}
+		}
+	}
+
+	for _, fa := range feed.FareAttributes {
+		if fa.Agency != nil {
+			referenced[fa.Agency] = empty{}
+		}
+	}
+
+	// delete unreferenced
+	for id, a := range feed.Agencies {
+		if _, in := referenced[a]; !in {
+			delete(feed.Agencies, id)
 		}
 	}
 }
