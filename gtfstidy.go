@@ -48,6 +48,7 @@ func main() {
 	useFrequencyMinimizer := flag.BoolP("minimize-stoptimes", "T", false, "search for frequency patterns in explicit trips and combine them, using a CAP approach")
 	useCalDatesRemover := flag.BoolP("remove-cal-dates", "", false, "don't use calendar_dates.txt")
 	explicitCals := flag.BoolP("explicit-calendar", "", false, "add calendar.txt entry for every service, even irregular ones")
+	keepColOrder := flag.BoolP("keep-col-order", "", false, "keep the original column ordering of the input feed")
 	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
@@ -178,7 +179,7 @@ func main() {
 			}
 
 			// write feed back to output
-			w := gtfswriter.Writer{ZipCompressionLevel: 9, Sorted: true, ExplicitCalendar: *explicitCals}
+			w := gtfswriter.Writer{ZipCompressionLevel: 9, Sorted: true, ExplicitCalendar: *explicitCals, KeepColOrder: *keepColOrder}
 			e := w.Write(feed, *outputPath)
 
 			if e != nil {
