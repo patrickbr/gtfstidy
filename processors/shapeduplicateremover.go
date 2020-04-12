@@ -80,7 +80,9 @@ func (sdr ShapeDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
-	fmt.Fprintf(os.Stdout, "done. (-%d shapes)\n", bef-len(feed.Shapes))
+	fmt.Fprintf(os.Stdout, "done. (-%d shapes [-%.2f%%])\n",
+		bef-len(feed.Shapes),
+		100.0*float64(bef-len(feed.Shapes))/(float64(bef)+0.001))
 }
 
 // Return all shapes that are equivalent (within MaxEqDist) to shape

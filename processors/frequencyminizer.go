@@ -203,7 +203,25 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 		tripsSign = "+"
 	}
 
-	fmt.Fprintf(os.Stdout, "done. (%s%d frequencies, %s%d trips)\n", freqsSign, freqAfter-freqBef, tripsSign, len(feed.Trips)-tripsBef)
+	if freqBef > 0 {
+		fmt.Fprintf(os.Stdout, "done. (%s%d frequencies [%s%.2f%%], %s%d trips [%s%.2f%%])\n",
+			freqsSign,
+			freqAfter-freqBef,
+			freqsSign,
+			100.0*float64(freqAfter-freqBef)/(float64(freqBef)),
+			tripsSign,
+			len(feed.Trips)-tripsBef,
+			tripsSign,
+			100.0*float64(len(feed.Trips)-tripsBef)/(float64(tripsBef)+0.001))
+	} else {
+		fmt.Fprintf(os.Stdout, "done. (%s%d frequencies, %s%d trips [%s%.2f%%])\n",
+			freqsSign,
+			freqAfter-freqBef,
+			tripsSign,
+			len(feed.Trips)-tripsBef,
+			tripsSign,
+			100.0*float64(len(feed.Trips)-tripsBef)/(float64(tripsBef)+0.001))
+	}
 }
 
 // Pack covers into non-overlapping progressions

@@ -7,10 +7,13 @@
 package processors
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/patrickbr/gtfsparser"
 	gtfs "github.com/patrickbr/gtfsparser/gtfs"
+	"hash/fnv"
 	"os"
+	"unsafe"
 )
 
 // RouteDuplicateRemover merges semantically equivalent routes
@@ -18,37 +21,31 @@ type RouteDuplicateRemover struct {
 }
 
 // Run this RouteDuplicateRemover on some feed
-func (m RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
+func (rdr RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing redundant routes... ")
 	proced := make(map[*gtfs.Route]bool, len(feed.Routes))
 	bef := len(feed.Routes)
 
-	numchunks := MaxParallelism()
-	chunksize := (len(feed.Routes) + numchunks - 1) / numchunks
-	chunks := make([][]*gtfs.Route, numchunks)
-	curchunk := 0
-
 	trips := make(map[*gtfs.Route][]*gtfs.Trip, len(feed.Routes))
-
-	for _, r := range feed.Routes {
-		chunks[curchunk] = append(chunks[curchunk], r)
-		if len(chunks[curchunk]) == chunksize {
-			curchunk++
-		}
-	}
 
 	for _, t := range feed.Trips {
 		trips[t.Route] = append(trips[t.Route], t)
 	}
 
+	// builds buckets of equivalently hashed routes, split into
+	// number of processors for efficient search on collisions
+	chunks := rdr.getRouteChunks(feed)
+
 	for _, r := range feed.Routes {
 		if _, ok := proced[r]; ok {
 			continue
 		}
-		eqRoutes := m.getEquivalentRoutes(r, feed, chunks)
+
+		hash := rdr.routeHash(r)
+		eqRoutes := rdr.getEquivalentRoutes(r, feed, chunks[hash])
 
 		if len(eqRoutes) > 0 {
-			m.combineRoutes(feed, append(eqRoutes, r), trips)
+			rdr.combineRoutes(feed, append(eqRoutes, r), trips)
 
 			for _, r := range eqRoutes {
 				proced[r] = true
@@ -58,18 +55,20 @@ func (m RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
-	fmt.Fprintf(os.Stdout, "done. (-%d routes)\n", (bef - len(feed.Routes)))
+	fmt.Fprintf(os.Stdout, "done. (-%d routes [-%.2f%%])\n",
+		(bef - len(feed.Routes)),
+		100.0*float64(bef-len(feed.Routes))/(float64(bef)+0.001))
 }
 
 // Returns the feed's routes that are equivalent to route
-func (m RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gtfsparser.Feed, chunks [][]*gtfs.Route) []*gtfs.Route {
+func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gtfsparser.Feed, chunks [][]*gtfs.Route) []*gtfs.Route {
 	rets := make([][]*gtfs.Route, len(chunks))
 	sem := make(chan empty, len(chunks))
 
 	for i, c := range chunks {
 		go func(j int, chunk []*gtfs.Route) {
 			for _, r := range chunk {
-				if r != route && m.routeEquals(r, route) && m.checkFareEquality(feed, route, r) {
+				if r != route && rdr.routeEquals(r, route) && rdr.checkFareEquality(feed, route, r) {
 					rets[j] = append(rets[j], r)
 				}
 			}
@@ -93,13 +92,13 @@ func (m RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gtfs
 }
 
 // Check if two routes are equal regarding the fares
-func (m RouteDuplicateRemover) checkFareEquality(feed *gtfsparser.Feed, a *gtfs.Route, b *gtfs.Route) bool {
+func (rdr RouteDuplicateRemover) checkFareEquality(feed *gtfsparser.Feed, a *gtfs.Route, b *gtfs.Route) bool {
 	for _, fa := range feed.FareAttributes {
 		// check if this rule contains route a
 		for _, fr := range fa.Rules {
 			if fr.Route == a || fr.Route == b {
 				// if so,
-				if !m.fareRulesEqual(fa, a, b) {
+				if !rdr.fareRulesEqual(fa, a, b) {
 					return false
 				}
 				// go on to the next FareClass
@@ -112,7 +111,7 @@ func (m RouteDuplicateRemover) checkFareEquality(feed *gtfsparser.Feed, a *gtfs.
 }
 
 // Check if two fare rules are equal
-func (m RouteDuplicateRemover) fareRulesEqual(attr *gtfs.FareAttribute, a *gtfs.Route, b *gtfs.Route) bool {
+func (rdr RouteDuplicateRemover) fareRulesEqual(attr *gtfs.FareAttribute, a *gtfs.Route, b *gtfs.Route) bool {
 	rulesA := make([]*gtfs.FareAttributeRule, 0)
 	rulesB := make([]*gtfs.FareAttributeRule, 0)
 
@@ -161,7 +160,7 @@ func (m RouteDuplicateRemover) fareRulesEqual(attr *gtfs.FareAttribute, a *gtfs.
 }
 
 // Combine a slice of equal routes into a single route
-func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gtfs.Route, trips map[*gtfs.Route][]*gtfs.Trip) {
+func (rdr RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gtfs.Route, trips map[*gtfs.Route][]*gtfs.Trip) {
 	// heuristic: use the route with the shortest ID as 'reference'
 	ref := routes[0]
 
@@ -180,6 +179,10 @@ func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gt
 			if t.Route == r {
 				t.Route = ref
 			}
+		}
+
+		for _, attr := range r.Attributions {
+			ref.Attributions = append(ref.Attributions, attr)
 		}
 
 		// delete every fare rule that contains this route
@@ -212,8 +215,63 @@ func (m RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*gt
 	}
 }
 
+func (rdr RouteDuplicateRemover) getRouteChunks(feed *gtfsparser.Feed) map[uint32][][]*gtfs.Route {
+	numchunks := MaxParallelism()
+
+	// maps stop (parents) to all trips originating from it
+	routes := make(map[uint32][]*gtfs.Route)
+	chunks := make(map[uint32][][]*gtfs.Route)
+
+	for _, r := range feed.Routes {
+		hash := rdr.routeHash(r)
+		routes[hash] = append(routes[hash], r)
+	}
+
+	for hash, _ := range routes {
+		chunksize := (len(routes[hash]) + numchunks - 1) / numchunks
+		chunks[hash] = make([][]*gtfs.Route, numchunks)
+		curchunk := 0
+
+		for _, t := range routes[hash] {
+			chunks[hash][curchunk] = append(chunks[hash][curchunk], t)
+			if len(chunks[hash][curchunk]) == chunksize {
+				curchunk++
+			}
+		}
+	}
+
+	return chunks
+}
+
+func (rdr RouteDuplicateRemover) routeHash(r *gtfs.Route) uint32 {
+	h := fnv.New32a()
+
+	b := make([]byte, 8)
+
+	binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(r.Agency))))
+	h.Write(b)
+
+	h.Write([]byte(r.Short_name))
+	h.Write([]byte(r.Long_name))
+	h.Write([]byte(r.Desc))
+
+	binary.LittleEndian.PutUint64(b, uint64(r.Type))
+	h.Write(b)
+
+	h.Write([]byte(r.Color))
+	h.Write([]byte(r.Text_color))
+
+	return h.Sum32()
+}
+
 // Check if two routes are equal
-func (m RouteDuplicateRemover) routeEquals(a *gtfs.Route, b *gtfs.Route) bool {
-	return a.Agency == b.Agency && a.Short_name == b.Short_name && a.Long_name == b.Long_name &&
-		a.Desc == b.Desc && a.Type == b.Type && ((a.Url != nil && b.Url != nil && a.Url.String() == b.Url.String()) || a.Url == b.Url) && a.Color == b.Color && a.Text_color == b.Text_color
+func (rdr RouteDuplicateRemover) routeEquals(a *gtfs.Route, b *gtfs.Route) bool {
+	return a.Agency == b.Agency &&
+		a.Short_name == b.Short_name &&
+		a.Long_name == b.Long_name &&
+		a.Desc == b.Desc &&
+		a.Type == b.Type &&
+		((a.Url != nil && b.Url != nil && a.Url.String() == b.Url.String()) || a.Url == b.Url) &&
+		a.Color == b.Color &&
+		a.Text_color == b.Text_color
 }

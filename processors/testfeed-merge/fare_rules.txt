@@ -1,0 +1,12 @@
+fare_id,route_id,origin_id,destination_id,contains_id
+p,AB,,,
+p,STBA,,,
+p,BFC,,,
+a,AAMV,,,
+a,AAM2,,,
+a,AAM4,,,
+a,AAM5,,,
+a,AAM6,,,
+a,AAM7,,,
+a,AAM8,,,
+a,AAMV2,,,

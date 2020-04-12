@@ -43,14 +43,19 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 
 	or.removeAgencyOrphans(feed)
 
-	fmt.Fprintf(os.Stdout, "done. (-%d trips, -%d stops, -%d shapes, -%d services, -%d routes, -%d agencies)\n",
+	fmt.Fprintf(os.Stdout, "done. (-%d trips [-%.2f%%], -%d stops [-%.2f%%], -%d shapes [-%.2f%%], -%d services [-%.2f%%], -%d routes [-%.2f%%], -%d agencies [-%.2f%%])\n",
 		(tripsB - len(feed.Trips)),
+		100.0*float64(tripsB-len(feed.Trips))/(float64(tripsB)+0.001),
 		(stopsB - len(feed.Stops)),
+		100.0*float64(stopsB-len(feed.Stops))/(float64(stopsB)+0.001),
 		(shapesB - len(feed.Shapes)),
+		100.0*float64(shapesB-len(feed.Shapes))/(float64(shapesB)+0.001),
 		(serviceB - len(feed.Services)),
+		100.0*float64(serviceB-len(feed.Services))/(float64(serviceB)+0.001),
 		(routesB - len(feed.Routes)),
+		100.0*float64(routesB-len(feed.Routes))/(float64(routesB)+0.001),
 		(agenciesB - len(feed.Agencies)),
-	)
+		100.0*float64(agenciesB-len(feed.Agencies))/(float64(agenciesB)+0.001))
 }
 
 // Remove stop orphans

@@ -80,7 +80,15 @@ func (sm ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 		calsSign = "+"
 	}
 
-	fmt.Fprintf(os.Stdout, "done. (%s%d calendar_dates.txt entries, %s%d calendar.txt entries)\n", datesSign, datesAfter-datesBefore, calsSign, calAfter-calBefore)
+	fmt.Fprintf(os.Stdout, "done. (%s%d calendar_dates.txt entries [%s%.2f%%], %s%d calendar.txt entries [%s%.2f%%])\n",
+		datesSign,
+		datesAfter-datesBefore,
+		datesSign,
+		100.0*(float64(datesAfter-datesBefore))/float64(datesBefore),
+		calsSign,
+		calAfter-calBefore,
+		calsSign,
+		100.0*(float64(calAfter-calBefore))/float64(calBefore))
 }
 
 func (sm ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
@@ -268,7 +276,13 @@ func (sm ServiceMinimizer) getActiveOnMap(startTimeAm time.Time, endTimeAm time.
 }
 
 func (sm ServiceMinimizer) updateService(service *gtfs.Service, bestMap uint, bestA int, bestB int, startTime time.Time, endTime time.Time, start gtfs.Date, end gtfs.Date) {
-	newMap := [7]bool{hasBit(bestMap, 0), hasBit(bestMap, 1), hasBit(bestMap, 2), hasBit(bestMap, 3), hasBit(bestMap, 4), hasBit(bestMap, 5), hasBit(bestMap, 6)}
+	newMap := [7]bool{hasBit(bestMap, 0),
+		hasBit(bestMap, 1),
+		hasBit(bestMap, 2),
+		hasBit(bestMap, 3),
+		hasBit(bestMap, 4),
+		hasBit(bestMap, 5),
+		hasBit(bestMap, 6)}
 	newBegin := startTime.AddDate(0, 0, bestA)
 	newEnd := startTime.AddDate(0, 0, bestB)
 	newExceptions := make([]*serviceException, 0)

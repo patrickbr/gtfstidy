@@ -7,11 +7,12 @@
 package processors
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/patrickbr/gtfsparser"
 	gtfs "github.com/patrickbr/gtfsparser/gtfs"
+	"hash/fnv"
 	"os"
-	"sort"
 )
 
 // ServiceDuplicateRemover removes duplicate services. Services are considered equal if they
@@ -19,88 +20,203 @@ import (
 type ServiceDuplicateRemover struct {
 }
 
-type serviceRanged struct {
-	Service *gtfs.Service
-	Range   DateRange
-	ActDays int
-}
-
-type serviceList []serviceRanged
-
-func (l serviceList) Len() int      { return len(l) }
-func (l serviceList) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
-func (l serviceList) Less(i, j int) bool {
-	return l[i].Range.Start.GetTime().Before(l[j].Range.Start.GetTime()) ||
-		(l[i].Range.Start == l[j].Range.Start && (l[i].Range.End.GetTime().Before(l[j].Range.End.GetTime()) ||
-			(l[i].Range.End == l[j].Range.End && l[i].ActDays < l[j].ActDays)))
+type ServiceCompressed struct {
+	start     gtfs.Date
+	end       gtfs.Date
+	activeMap []bool
+	hash      uint32
 }
 
 // Run this ServiceDuplicateRemover on some feed
 func (sdr ServiceDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing service duplicates... ")
-	list := make(serviceList, 0)
 	trips := make(map[*gtfs.Service][]*gtfs.Trip, len(feed.Services))
 	proced := make(map[*gtfs.Service]bool, len(feed.Services))
 	bef := len(feed.Services)
-
-	for _, s := range feed.Services {
-		list = append(list, serviceRanged{s, GetDateRange(s), GetActDays(s)})
-	}
 
 	for _, t := range feed.Trips {
 		trips[t.Service] = append(trips[t.Service], t)
 	}
 
-	// cluster equivalent services
-	sort.Sort(list)
+	amaps := sdr.getActiveMaps(feed)
+	chunks := sdr.getServiceChunks(feed, amaps)
 
-	chunks := make([]serviceList, 1)
-	chunkP := 0
-
-	for i := 0; i < len(list); i++ {
-		if len(chunks[chunkP]) > 0 &&
-			(chunks[chunkP][len(chunks[chunkP])-1].Range.Start != list[i].Range.Start ||
-				chunks[chunkP][len(chunks[chunkP])-1].Range.End != list[i].Range.End ||
-				chunks[chunkP][len(chunks[chunkP])-1].ActDays != list[i].ActDays) {
-			chunkP++
-			chunks = append(chunks, make(serviceList, 0))
+	for _, s := range feed.Services {
+		if _, ok := proced[s]; ok {
+			continue
 		}
 
-		chunks[chunkP] = append(chunks[chunkP], list[i])
-	}
+		sc := amaps[s]
+		eqServices := sdr.getEquivalentServices(s, amaps, feed, chunks[sc.hash])
 
-	for _, c := range chunks {
-		for _, t := range c {
-			if _, ok := proced[t.Service]; ok {
-				continue
+		if len(eqServices) > 0 {
+			sdr.combineServices(feed, append(eqServices, s), trips)
+
+			for _, s := range eqServices {
+				proced[s] = true
 			}
-			eqServices := sdr.getEquivalentServices(t.Service, c)
-
-			if len(eqServices) > 0 {
-				sdr.combineServices(feed, append(eqServices, t.Service), trips)
-
-				for _, s := range eqServices {
-					proced[s] = true
-				}
-				proced[t.Service] = true
-			}
+			proced[s] = true
 		}
 	}
 
-	fmt.Fprintf(os.Stdout, "done. (-%d services)\n", (bef - len(feed.Services)))
+	fmt.Fprintf(os.Stdout, "done. (-%d services [-%.2f%%])\n",
+		bef-len(feed.Services),
+		100.0*float64(bef-len(feed.Services))/(float64(bef)+0.001))
 }
 
 // Return the services that are equivalent to service
-func (sdr ServiceDuplicateRemover) getEquivalentServices(service *gtfs.Service, cands serviceList) []*gtfs.Service {
+func (m ServiceDuplicateRemover) getEquivalentServices(serv *gtfs.Service, amaps map[*gtfs.Service]ServiceCompressed, feed *gtfsparser.Feed, chunks [][]*gtfs.Service) []*gtfs.Service {
+	rets := make([][]*gtfs.Service, len(chunks))
+	sem := make(chan empty, len(chunks))
+
+	for i, c := range chunks {
+		go func(j int, chunk []*gtfs.Service) {
+			for _, s := range chunk {
+				if s != serv && m.servEqual(amaps[s], amaps[serv]) {
+					rets[j] = append(rets[j], s)
+				}
+			}
+			sem <- empty{}
+		}(i, c)
+	}
+
+	// wait for goroutines to finish
+	for i := 0; i < len(chunks); i++ {
+		<-sem
+	}
+
+	// combine results
 	ret := make([]*gtfs.Service, 0)
 
-	for _, c := range cands {
-		if c.Service != service && service.Equals(c.Service) {
-			ret = append(ret, c.Service)
+	for _, r := range rets {
+		ret = append(ret, r...)
+	}
+
+	return ret
+}
+
+func (m ServiceDuplicateRemover) getActiveMaps(feed *gtfsparser.Feed) map[*gtfs.Service]ServiceCompressed {
+	numchunks := MaxParallelism()
+
+	chunksize := (len(feed.Services) + numchunks - 1) / numchunks
+	chunks := make([][]*gtfs.Service, numchunks)
+	curchunk := 0
+
+	for _, s := range feed.Services {
+		chunks[curchunk] = append(chunks[curchunk], s)
+		if len(chunks[curchunk]) == chunksize {
+			curchunk++
+		}
+	}
+
+	ret := make(map[*gtfs.Service]ServiceCompressed)
+	rets := make([]map[*gtfs.Service]ServiceCompressed, len(chunks))
+	sem := make(chan empty, len(chunks))
+
+	sm := ServiceMinimizer{}
+
+	for i, c := range chunks {
+		rets[i] = make(map[*gtfs.Service]ServiceCompressed)
+		go func(j int, chunk []*gtfs.Service) {
+			for _, s := range chunk {
+				first := s.GetFirstActiveDate()
+				last := s.GetLastActiveDate()
+
+				cur := ServiceCompressed{}
+
+				cur.start = first
+				cur.end = last
+				cur.activeMap = sm.getActiveOnMap(first.GetTime(), last.GetTime(), s)
+				cur.hash = m.serviceHash(cur.activeMap, first, last, s)
+
+				rets[j][s] = cur
+			}
+			sem <- empty{}
+		}(i, c)
+	}
+
+	// wait for goroutines to finish
+	for i := 0; i < len(chunks); i++ {
+		<-sem
+	}
+
+	// combine results
+	for _, r := range rets {
+		for k, v := range r {
+			ret[k] = v
 		}
 	}
 
 	return ret
+}
+
+func (m ServiceDuplicateRemover) getServiceChunks(feed *gtfsparser.Feed, amaps map[*gtfs.Service]ServiceCompressed) map[uint32][][]*gtfs.Service {
+	numchunks := MaxParallelism()
+
+	services := make(map[uint32][]*gtfs.Service)
+	chunks := make(map[uint32][][]*gtfs.Service)
+
+	for _, s := range feed.Services {
+		hash := amaps[s].hash
+		services[hash] = append(services[hash], s)
+	}
+
+	for hash, _ := range services {
+		chunksize := (len(services[hash]) + numchunks - 1) / numchunks
+		chunks[hash] = make([][]*gtfs.Service, numchunks)
+		curchunk := 0
+
+		for _, t := range services[hash] {
+			chunks[hash][curchunk] = append(chunks[hash][curchunk], t)
+			if len(chunks[hash][curchunk]) == chunksize {
+				curchunk++
+			}
+		}
+	}
+
+	return chunks
+}
+
+func (m ServiceDuplicateRemover) serviceHash(active []bool, first gtfs.Date, last gtfs.Date, s *gtfs.Service) uint32 {
+	h := fnv.New32a()
+
+	bls := boolsToBytes(active)
+
+	h.Write(bls)
+
+	b := make([]byte, 8)
+
+	binary.LittleEndian.PutUint64(b, uint64(first.Day))
+	h.Write(b)
+	binary.LittleEndian.PutUint64(b, uint64(first.Month))
+	h.Write(b)
+	binary.LittleEndian.PutUint64(b, uint64(first.Year))
+	h.Write(b)
+	binary.LittleEndian.PutUint64(b, uint64(last.Day))
+	h.Write(b)
+	binary.LittleEndian.PutUint64(b, uint64(last.Month))
+	h.Write(b)
+	binary.LittleEndian.PutUint64(b, uint64(last.Year))
+	h.Write(b)
+
+	return h.Sum32()
+}
+
+func (sdr ServiceDuplicateRemover) servEqual(a ServiceCompressed, b ServiceCompressed) bool {
+	if a.start != b.start || a.end != b.end {
+		return false
+	}
+
+	if len(a.activeMap) != len(b.activeMap) {
+		return false
+	}
+
+	for i, v := range a.activeMap {
+		if v != b.activeMap[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Combine a slice of equivalent services into a single service

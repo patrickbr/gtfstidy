@@ -1,5 +1,6 @@
 // Copyright 2016 Patrick Brosi
 // Authors: info@patrickbrosi.de
+
 //
 // Use of this source code is governed by a GPL v2
 // license that can be found in the LICENSE file
@@ -14,11 +15,20 @@ import (
 	flag "github.com/spf13/pflag"
 	"os"
 	"path"
+	"strconv"
 )
+
+type ByBlubb []int
+
+func (a ByBlubb) Len() int      { return len(a) }
+func (a ByBlubb) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByBlubb) Less(i, j int) bool {
+	return a[i] < a[j]
+}
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "gtfstidy - 2016 by P. Brosi\n\nUsage:\n\n  %s [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "gtfstidy - (C) 2016-2020 by P. Brosi <info@patrickbrosi.de>\n\nUsage:\n\n  %s [<options>] [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
@@ -27,8 +37,10 @@ func main() {
 	outputPath := flag.StringP("output", "o", "gtfs-out", "gtfs output directory or zip file (must end with .zip)")
 
 	fixShortHand := flag.BoolP("fix", "", false, "shorthand for -eDnz -p '-'")
-	compressShortHand := flag.BoolP("compress", "", false, "shorthand for -OSRCc")
-	minimizeShortHand := flag.BoolP("Compress", "", false, "shorthand for -OSRCcdT, like --compress, but additionally compress stop times into frequencies and use dense character ids. The latter destroys any existing external references (like in GTFS realtime streams)")
+	compressShortHand := flag.BoolP("compress", "", false, "shorthand for -OSRCcIAP")
+	minimizeShortHand := flag.BoolP("Compress", "", false, "shorthand for -OSRCcIAPdT --red-trips-fuzzy, like --compress, but additionally compress stop times into frequencies, use fuzzy matching for redundant trip removal and use dense character ids. The latter destroys any existing external references (like in GTFS realtime streams)")
+	mergeShortHand := flag.BoolP("merge", "", false, "shorthand for -ARPICO")
+	fuzzyMergeShortHand := flag.BoolP("Merge", "", false, "shorthand for -EARPICO --red-trips-fuzzy")
 
 	useDefaultValuesOnError := flag.BoolP("default-on-errs", "e", false, "if non-required fields have errors, fall back to the default values")
 	fixZip := flag.BoolP("fix-zip", "z", false, "try to fix some errors in the ZIP file directory hierarchy")
@@ -49,6 +61,11 @@ func main() {
 	useCalDatesRemover := flag.BoolP("remove-cal-dates", "", false, "don't use calendar_dates.txt")
 	explicitCals := flag.BoolP("explicit-calendar", "", false, "add calendar.txt entry for every service, even irregular ones")
 	keepColOrder := flag.BoolP("keep-col-order", "", false, "keep the original column ordering of the input feed")
+	useRedStopMinimizer := flag.BoolP("remove-red-stops", "P", false, "remove stops duplicates")
+	useRedTripMinimizer := flag.BoolP("remove-red-trips", "I", false, "remove trip duplicates")
+	useRedTripMinimizerFuzzyRoute := flag.BoolP("red-trips-fuzzy", "", false, "only check MOT of routes for trip duplicate removal")
+	useRedAgencyMinimizer := flag.BoolP("remove-red-agencies", "A", false, "remove agency duplicates")
+	useStopReclusterer := flag.BoolP("recluster-stops", "E", false, "recluster stops")
 	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
@@ -58,9 +75,9 @@ func main() {
 		return
 	}
 
-	gtfsPath := flag.Arg(0)
+	gtfsPaths := flag.Args()
 
-	if len(gtfsPath) == 0 {
+	if len(gtfsPaths) == 0 {
 		fmt.Fprintln(os.Stderr, "No GTFS location specified, see --help")
 		os.Exit(1)
 	}
@@ -79,10 +96,26 @@ func main() {
 		*emptyStrRepl = "-"
 	}
 
+	if *fuzzyMergeShortHand {
+		*mergeShortHand = true
+		*useRedTripMinimizerFuzzyRoute = true
+		*useStopReclusterer = true
+	}
+
+	if *mergeShortHand {
+		*useRedServiceMinimizer = true
+		*useRedTripMinimizer = true
+		*useRedAgencyMinimizer = true
+		*useRedStopMinimizer = true
+		*useRedRouteMinimizer = true
+		*useOrphanDeleter = true
+	}
+
 	if *minimizeShortHand {
 		*compressShortHand = true
 		*useIDMinimizerChar = true
 		*useFrequencyMinimizer = true
+		*useRedTripMinimizerFuzzyRoute = true
 	}
 
 	if *compressShortHand {
@@ -91,7 +124,10 @@ func main() {
 		*useRedShapeRemover = true
 		*useRedRouteMinimizer = true
 		*useRedServiceMinimizer = true
+		*useRedStopMinimizer = true
 		*useServiceMinimizer = true
+		*useRedTripMinimizer = true
+		*useRedAgencyMinimizer = true
 	}
 
 	feed := gtfsparser.NewFeed()
@@ -103,22 +139,63 @@ func main() {
 	opts.ZipFix = *fixZip
 	feed.SetParseOpts(opts)
 
-	fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
-	e := feed.Parse(gtfsPath)
+	var e error
+
+	if *onlyValidate {
+		for _, gtfsPath := range gtfsPaths {
+			locFeed := gtfsparser.NewFeed()
+			fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
+			e = locFeed.Parse(gtfsPath)
+
+			if e != nil {
+				fmt.Fprintf(os.Stderr, "\nError while parsing GTFS feed:\n")
+				fmt.Fprintln(os.Stderr, e.Error())
+				os.Exit(1)
+			}
+			fmt.Fprintf(os.Stdout, " done.\n")
+		}
+		fmt.Fprintln(os.Stdout, "No errors.")
+		os.Exit(0)
+	}
+
+	for i, gtfsPath := range gtfsPaths {
+		fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
+		if len(gtfsPaths) > 1 {
+			e = feed.PrefixParse(gtfsPath, strconv.FormatInt(int64(i), 10)+"::")
+		} else {
+			e = feed.Parse(gtfsPath)
+		}
+		if e != nil {
+			break
+		}
+		fmt.Fprintf(os.Stdout, " done.\n")
+	}
 
 	if e != nil {
 		fmt.Fprintf(os.Stderr, "\nError while parsing GTFS feed:\n")
 		fmt.Fprintln(os.Stderr, e.Error())
-		if !*onlyValidate {
-			fmt.Fprintln(os.Stdout, "\nYou may want to try running gtfstidy with --fix for error fixing / skipping. See --help for details.")
-		}
+		fmt.Fprintln(os.Stdout, "\nYou may want to try running gtfstidy with --fix for error fixing / skipping. See --help for details.")
 		os.Exit(1)
 	} else {
-		fmt.Fprintf(os.Stdout, " done.\n")
 		minzers := make([]processors.Processor, 0)
 
 		if *useOrphanDeleter {
 			minzers = append(minzers, processors.OrphanRemover{})
+		}
+
+		if *useRedAgencyMinimizer {
+			minzers = append(minzers, processors.AgencyDuplicateRemover{})
+		}
+
+		if *useRedStopMinimizer {
+			minzers = append(minzers, processors.StopDuplicateRemover{})
+		}
+
+		if *useStopReclusterer {
+			minzers = append(minzers, processors.StopReclusterer{
+				DistThreshold:     75,
+				NameSimiThreshold: 0.55,
+			})
 		}
 
 		if *useShapeRemeasurer || *useShapeMinimizer || *useRedShapeRemover {
@@ -135,6 +212,15 @@ func main() {
 
 		if *useRedRouteMinimizer {
 			minzers = append(minzers, processors.RouteDuplicateRemover{})
+		}
+
+		if *useRedTripMinimizer {
+			minzers = append(minzers, processors.TripDuplicateRemover{Fuzzy: *useRedTripMinimizerFuzzyRoute})
+
+			// may have created route and stop orphans
+			if *useOrphanDeleter {
+				minzers = append(minzers, processors.OrphanRemover{})
+			}
 		}
 
 		if *useRedServiceMinimizer {
@@ -159,36 +245,31 @@ func main() {
 			minzers = append(minzers, processors.IDMinimizer{Base: 36})
 		}
 
-		if *onlyValidate {
-			fmt.Fprintln(os.Stdout, "No errors.")
-			os.Exit(0)
-		} else {
-			// do processing
-			for _, m := range minzers {
-				m.Run(feed)
-			}
-
-			fmt.Fprintf(os.Stdout, "Outputting GTFS feed to '%s'...", *outputPath)
-
-			if _, err := os.Stat(*outputPath); os.IsNotExist(err) {
-				if path.Ext(*outputPath) == ".zip" {
-					os.Create(*outputPath)
-				} else {
-					os.Mkdir(*outputPath, os.ModePerm)
-				}
-			}
-
-			// write feed back to output
-			w := gtfswriter.Writer{ZipCompressionLevel: 9, Sorted: true, ExplicitCalendar: *explicitCals, KeepColOrder: *keepColOrder}
-			e := w.Write(feed, *outputPath)
-
-			if e != nil {
-				fmt.Fprintf(os.Stderr, "\nError while writing GTFS feed in '%s':\n ", *outputPath)
-				fmt.Fprintln(os.Stderr, e.Error())
-				os.Exit(1)
-			}
-
-			fmt.Fprintf(os.Stdout, " done.\n")
+		// do processing
+		for _, m := range minzers {
+			m.Run(feed)
 		}
+
+		fmt.Fprintf(os.Stdout, "Outputting GTFS feed to '%s'...", *outputPath)
+
+		if _, err := os.Stat(*outputPath); os.IsNotExist(err) {
+			if path.Ext(*outputPath) == ".zip" {
+				os.Create(*outputPath)
+			} else {
+				os.Mkdir(*outputPath, os.ModePerm)
+			}
+		}
+
+		// write feed back to output
+		w := gtfswriter.Writer{ZipCompressionLevel: 9, Sorted: true, ExplicitCalendar: *explicitCals, KeepColOrder: *keepColOrder}
+		e := w.Write(feed, *outputPath)
+
+		if e != nil {
+			fmt.Fprintf(os.Stderr, "\nError while writing GTFS feed in '%s':\n ", *outputPath)
+			fmt.Fprintln(os.Stderr, e.Error())
+			os.Exit(1)
+		}
+
+		fmt.Fprintf(os.Stdout, " done.\n")
 	}
 }

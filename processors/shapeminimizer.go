@@ -25,6 +25,7 @@ func (sm ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 	chunksize := (len(feed.Shapes) + numchunks - 1) / numchunks
 	chunks := make([][]*gtfs.Shape, numchunks)
 	chunkgain := make([]int, numchunks)
+	chunknum := make([]int, numchunks)
 
 	curchunk := 0
 	for _, s := range feed.Shapes {
@@ -44,6 +45,7 @@ func (sm ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 					s.Points[i].Sequence = i
 				}
 				chunkgain[a] += bef - len(s.Points)
+				chunknum[a] += len(s.Points)
 			}
 			sem <- empty{}
 		}(c, i)
@@ -55,10 +57,16 @@ func (sm ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 	}
 
 	n := 0
+	orign := 0
 	for _, g := range chunkgain {
 		n = n + g
 	}
-	fmt.Fprintf(os.Stdout, "done. (-%d shape points)\n", n)
+	for _, g := range chunknum {
+		orign = orign + g
+	}
+	fmt.Fprintf(os.Stdout, "done. (-%d shape points [-%.2f%%])\n",
+		n,
+		100.0*float64(n)/(float64(orign)+0.001))
 }
 
 // Minimize a single shape using the Douglas-Peucker algorithm
