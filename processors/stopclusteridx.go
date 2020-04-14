@@ -120,7 +120,7 @@ func (gi *StopClusterIdx) GetNeighbors(excludeCid int, c *StopCluster, d float64
 
 	for _, st := range c.Parents {
 		neighs := gi.GetNeighborsByLatLon(float64(st.Lat), float64(st.Lon), d)
-		for cid, _ := range neighs {
+		for cid := range neighs {
 			if cid == excludeCid {
 				continue
 			}
@@ -130,7 +130,7 @@ func (gi *StopClusterIdx) GetNeighbors(excludeCid int, c *StopCluster, d float64
 
 	for _, st := range c.Childs {
 		neighs := gi.GetNeighborsByLatLon(float64(st.Lat), float64(st.Lon), d)
-		for cid, _ := range neighs {
+		for cid := range neighs {
 			if cid == excludeCid {
 				continue
 			}

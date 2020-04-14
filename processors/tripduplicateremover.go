@@ -541,7 +541,7 @@ func (m *TripDuplicateRemover) getTripChunks(feed *gtfsparser.Feed) map[uint32][
 		trips[hash] = append(trips[hash], t)
 	}
 
-	for hash, _ := range trips {
+	for hash := range trips {
 		chunksize := (len(trips[hash]) + numchunks - 1) / numchunks
 		chunks[hash] = make([][]*gtfs.Trip, numchunks)
 		curchunk := 0

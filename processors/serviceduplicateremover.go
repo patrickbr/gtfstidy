@@ -161,7 +161,7 @@ func (m ServiceDuplicateRemover) getServiceChunks(feed *gtfsparser.Feed, amaps m
 		services[hash] = append(services[hash], s)
 	}
 
-	for hash, _ := range services {
+	for hash := range services {
 		chunksize := (len(services[hash]) + numchunks - 1) / numchunks
 		chunks[hash] = make([][]*gtfs.Service, numchunks)
 		curchunk := 0

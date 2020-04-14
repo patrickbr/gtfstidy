@@ -139,7 +139,7 @@ func (adr *AgencyDuplicateRemover) getAgencyChunks(feed *gtfsparser.Feed) map[ui
 		agencies[hash] = append(agencies[hash], a)
 	}
 
-	for hash, _ := range agencies {
+	for hash := range agencies {
 		chunksize := (len(agencies[hash]) + numchunks - 1) / numchunks
 		chunks[hash] = make([][]*gtfs.Agency, numchunks)
 		curchunk := 0

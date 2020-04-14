@@ -137,7 +137,7 @@ func (m StopReclusterer) Run(feed *gtfsparser.Feed) {
 	neighs := make([][]ClusterCand, len(clusters))
 
 	// init the pq from the clusters
-	for cId, _ := range clusters {
+	for cId := range clusters {
 		neighs[cId] = m.getNearestClusters(cId, clusters)
 		sort.Sort(BySimi(neighs[cId]))
 
@@ -406,7 +406,7 @@ func (m *StopReclusterer) getNearestClusters(cId int, clusters []*StopCluster) [
 
 	neighs := m.idx.GetNeighbors(cId, clusters[cId], maxDist)
 
-	for ncId, _ := range neighs {
+	for ncId := range neighs {
 		ret = append(ret, ClusterCand{ncId, m.clusterSimi(clusters[cId], clusters[ncId])})
 	}
 
@@ -475,7 +475,7 @@ func (m *StopReclusterer) buildTfIdfScores(stops map[string]*gtfs.Stop) {
 	for _, st := range stops {
 		tokens := m.tokenize(st.Name)
 		dl := 0
-		for token, _ := range tokens {
+		for token := range tokens {
 			dl++
 
 			if id, ok := m.wordmap[token]; ok {
@@ -487,7 +487,7 @@ func (m *StopReclusterer) buildTfIdfScores(stops map[string]*gtfs.Stop) {
 		}
 	}
 
-	for tid, _ := range m.wordscores {
+	for tid := range m.wordscores {
 		m.wordscores[tid] = float32(math.Log(float64(float32(len(stops)) / m.wordscores[tid])))
 	}
 }

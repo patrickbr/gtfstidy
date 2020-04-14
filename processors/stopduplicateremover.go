@@ -203,7 +203,7 @@ func (sdr StopDuplicateRemover) getStopChunks(feed *gtfsparser.Feed) map[uint32]
 		stops[hash] = append(stops[hash], r)
 	}
 
-	for hash, _ := range stops {
+	for hash := range stops {
 		chunksize := (len(stops[hash]) + numchunks - 1) / numchunks
 		chunks[hash] = make([][]*gtfs.Stop, numchunks)
 		curchunk := 0

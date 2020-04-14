@@ -227,7 +227,7 @@ func (rdr RouteDuplicateRemover) getRouteChunks(feed *gtfsparser.Feed) map[uint3
 		routes[hash] = append(routes[hash], r)
 	}
 
-	for hash, _ := range routes {
+	for hash := range routes {
 		chunksize := (len(routes[hash]) + numchunks - 1) / numchunks
 		chunks[hash] = make([][]*gtfs.Route, numchunks)
 		curchunk := 0
