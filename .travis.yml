@@ -32,10 +32,15 @@ deploy:
   skip_cleanup: true
   api_key:
     secure: nNwbPyV0SVS/y6IKnXu9RUFDmxpMZmi1WGY+6/J9C4S2ete1k6GVv8jiG4a/EHddqw7SlemFBzumj7aLCSJ/G2m70OqJeO4U9VpaKy4uweYyfOCTrXDg7Zn1gzp8eNlg+St9dCVpJM78qjWRPUbWoUx1x/l/fbqBZwSeREj70IfQMpu3BsCAclJz/Fl418Jg4MHFaMpODuixZxevYlgQZ13jvQtGIXPqaK06x9rX9ioAGMhwi/zk5zHaDUXYy8hK+z6WAdOCGtsZiJrMhx8nf1KAvicI7uzBdWREqi4e10BVt4fSXhLOU1UYZuoK/xSghnBWKlnOlTHMiSv+5rpFlwUs7y0Qmlao9SCbZUoJxR+EzEWIqxtRG5hWoitSmSvodM2HyE9xNk3lEPCOeEKlrD6zL507/D/Ca+9GPc/AfZ4B9GaQEMuVd7JyEMK9NMmgeuuiKzjQ96JbkxG51Vv8zL6okfTr2/P0xGpDMz3U6ciIEv1+6do5BzxjoD4HPyPrU9DN5W9Q8dbkSlz3qrTSiNYryPZ9SD7K39WKvsxQnfQf8iF49sitUnZZsoB5mlTIXS9fut649lJjymtDbD2hr45eKDQTtjaRiLwx4NlUXARk/2UKaLR4HogxJpkRK5Qse7i/2UaDLDytn8CCZKMIgMVBHJMKYTLHjKexoJgKV38=
+  file_glob: true
   file:
-  - gtfstidy.windows.amd64.exe
-  - gtfstidy.darwin.amd64
-  - gtfstidy.linux.amd64
+  - gtfstidy.*.windows.*.exe
+  - gtfstidy.*.darwin.*
+  - gtfstidy.*.linux.*
+  - gtfstidy.*.freebsd.*
+  - gtfstidy.*.openbds.*
+  - gtfstidy.*.netbsd.*
+  - gtfstidy.*.plan9.*
   on:
     repo: patrickbr/gtfstidy
     tags: true
