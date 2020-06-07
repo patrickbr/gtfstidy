@@ -38,7 +38,7 @@ deploy:
   - gtfstidy.*.darwin.*
   - gtfstidy.*.linux.*
   - gtfstidy.*.freebsd.*
-  - gtfstidy.*.openbds.*
+  - gtfstidy.*.openbsd.*
   - gtfstidy.*.netbsd.*
   - gtfstidy.*.plan9.*
   on:
