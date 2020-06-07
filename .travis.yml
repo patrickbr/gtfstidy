@@ -20,8 +20,6 @@ install:
   - make install
 
 script:
-  - go get -t -v ./...
-  - diff -u <(echo -n) <(gofmt -d .)
   - make lint
   - make vet
   - make test
