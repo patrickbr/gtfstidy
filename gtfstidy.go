@@ -18,14 +18,6 @@ import (
 	"strconv"
 )
 
-type ByBlubb []int
-
-func (a ByBlubb) Len() int      { return len(a) }
-func (a ByBlubb) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByBlubb) Less(i, j int) bool {
-	return a[i] < a[j]
-}
-
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "gtfstidy - (C) 2016-2020 by P. Brosi <info@patrickbrosi.de>\n\nUsage:\n\n  %s [<options>] [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
