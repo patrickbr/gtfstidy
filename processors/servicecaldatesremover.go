@@ -113,7 +113,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 
 			// add a single day span
 			service_ex := new(gtfs.Service)
-			service_ex.Id = sm.freeServiceId(feed, s.Id+"_block_")
+			service_ex.Id = sm.freeServiceId(feed, s.Id)
 			service_ex.Exceptions = make(map[gtfs.Date]int8, 0)
 			service_ex.Daymap = [7]bool{false, false, false, false, false, false, false}
 
@@ -131,7 +131,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 			if first.GetTime() != curBlockStart.GetTime() {
 				service := new(gtfs.Service)
 
-				service.Id = sm.freeServiceId(feed, s.Id+"_block_")
+				service.Id = sm.freeServiceId(feed, s.Id)
 				service.Exceptions = make(map[gtfs.Date]int8, 0)
 
 				service.Daymap = s.Daymap
@@ -155,7 +155,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 	// add last block, if open
 	if (s.Daymap[0] || s.Daymap[1] || s.Daymap[2] || s.Daymap[3] || s.Daymap[4] || s.Daymap[5] || s.Daymap[6]) && (curBlockStart.GetTime().Before(last.GetTime()) || curBlockStart.GetTime() == last.GetTime()) {
 		service := new(gtfs.Service)
-		service.Id = sm.freeServiceId(feed, s.Id+"_block_")
+		service.Id = sm.freeServiceId(feed, s.Id)
 		service.Exceptions = make(map[gtfs.Date]int8, 0)
 
 		service.Daymap = s.Daymap
@@ -186,7 +186,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 		// special case: service was empty, re-add empty
 
 		service := new(gtfs.Service)
-		service.Id = sm.freeServiceId(feed, s.Id+"_block_")
+		service.Id = sm.freeServiceId(feed, s.Id)
 		service.Exceptions = make(map[gtfs.Date]int8, 0)
 
 		service.Daymap = [7]bool{false, false, false, false, false, false, false}
