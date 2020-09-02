@@ -145,7 +145,6 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 
 			// new block start is the next day
 			curBlockStart = first.GetOffsettedDate(1)
-
 		}
 
 		// if map and exception say the same, do nothing
@@ -168,6 +167,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 	}
 
 	// remove dates not in span from map
+	ret2 := make([]*gtfs.Service, 0)
 	for _, s := range ret {
 		newmap := [7]bool{false, false, false, false, false, false, false}
 		start := s.Start_date
@@ -179,10 +179,15 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 			}
 			start = start.GetOffsettedDate(1)
 		}
+
 		s.Daymap = newmap
+
+		if newmap[0] || newmap[1] || newmap[2] || newmap[3] || newmap[4] || newmap[5] || newmap[6] {
+			ret2 = append(ret2, s)
+		}
 	}
 
-	if len(ret) == 0 {
+	if len(ret2) == 0 {
 		// special case: service was empty, re-add empty
 
 		service := new(gtfs.Service)
@@ -193,10 +198,10 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 		service.Start_date = s.GetFirstDefinedDate()
 		service.End_date = s.GetLastDefinedDate()
 
-		ret = append(ret, service)
+		ret2 = append(ret, service)
 	}
 
-	return ret
+	return ret2
 }
 
 // get a free trip id with the given prefix

@@ -206,6 +206,10 @@ func main() {
 			minzers = append(minzers, processors.RouteDuplicateRemover{})
 		}
 
+		if *useRedServiceMinimizer {
+			minzers = append(minzers, processors.ServiceDuplicateRemover{})
+		}
+
 		if *useRedTripMinimizer {
 			minzers = append(minzers, processors.TripDuplicateRemover{Fuzzy: *useRedTripMinimizerFuzzyRoute})
 
@@ -213,10 +217,6 @@ func main() {
 			if *useOrphanDeleter {
 				minzers = append(minzers, processors.OrphanRemover{})
 			}
-		}
-
-		if *useRedServiceMinimizer {
-			minzers = append(minzers, processors.ServiceDuplicateRemover{})
 		}
 
 		if *useServiceMinimizer {

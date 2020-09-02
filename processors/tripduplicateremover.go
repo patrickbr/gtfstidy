@@ -217,7 +217,6 @@ func (m *TripDuplicateRemover) getOverlapTrips(trip *gtfs.Trip, feed *gtfsparser
 				if t != trip && m.tripAttrEq(t, trip) && m.tripStEq(t, trip) {
 					overlaps := m.tripCalOverlap(t, trip)
 					if len(overlaps) > 0 {
-						// fmt.Println("\n", chunk[t].Id, trip.Id, len(overlaps))
 						rets[j] = append(rets[j], Overlap{t, overlaps})
 					}
 				}
@@ -464,11 +463,16 @@ func (m *TripDuplicateRemover) tripAttrEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 		a.Block_id == b.Block_id)
 }
 
-// Check if trip child is contained in trip parent calendar-wise
+// Check if trip child is equivalent to trip parent calendar-wise
 func (m *TripDuplicateRemover) tripCalEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 	if a.Service == b.Service {
 		// shortcut
 		return true
+	}
+
+	if !m.Fuzzy {
+		return false
+		// we only merge in fuzzy mode if the services are not the same, but equal
 	}
 
 	aDList := m.serviceList[a.Service]
@@ -478,16 +482,12 @@ func (m *TripDuplicateRemover) tripCalEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 		return false
 	}
 
-	if m.Fuzzy {
-		for i, v := range aDList {
-			if v != bDList[i] {
-				return false
-			}
+	for i, v := range aDList {
+		if v != bDList[i] {
+			return false
 		}
-		return true
 	}
-
-	return false
+	return true
 }
 
 // Check if trip child is contained in trip parent calendar-wise
@@ -498,6 +498,7 @@ func (m *TripDuplicateRemover) tripCalContained(child *gtfs.Trip, parent *gtfs.T
 	lenParent := len(parentDList)
 
 	if len(childDList) == 0 {
+		fmt.Println(child.Service)
 		// if the child has no service day, we trivially say it is contained
 		return true
 	}
@@ -560,25 +561,27 @@ func (m *TripDuplicateRemover) getTripChunks(feed *gtfsparser.Feed) map[uint32][
 func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint32 {
 	h := fnv.New32a()
 
-	start := m.getParent(t.StopTimes[0].Stop)
-	end := m.getParent(t.StopTimes[len(t.StopTimes)-1].Stop)
-
 	b := make([]byte, 8)
 
-	binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(start))))
-	h.Write(b)
+	if len(t.StopTimes) > 0 {
+		start := m.getParent(t.StopTimes[0].Stop)
+		end := m.getParent(t.StopTimes[len(t.StopTimes)-1].Stop)
 
-	binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(end))))
-	h.Write(b)
+		binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(start))))
+		h.Write(b)
 
-	binary.LittleEndian.PutUint64(b, uint64(t.StopTimes[0].Departure_time.SecondsSinceMidnight()))
-	h.Write(b)
+		binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(end))))
+		h.Write(b)
 
-	binary.LittleEndian.PutUint64(b, uint64(t.StopTimes[len(t.StopTimes)-1].Arrival_time.SecondsSinceMidnight()))
-	h.Write(b)
+		binary.LittleEndian.PutUint64(b, uint64(t.StopTimes[0].Departure_time.SecondsSinceMidnight()))
+		h.Write(b)
 
-	binary.LittleEndian.PutUint64(b, uint64(gtfs.GetTypeFromExtended(t.Route.Type)))
-	h.Write(b)
+		binary.LittleEndian.PutUint64(b, uint64(t.StopTimes[len(t.StopTimes)-1].Arrival_time.SecondsSinceMidnight()))
+		h.Write(b)
+
+		binary.LittleEndian.PutUint64(b, uint64(gtfs.GetTypeFromExtended(t.Route.Type)))
+		h.Write(b)
+	}
 
 	if !m.Fuzzy {
 		binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(t.Route))))
