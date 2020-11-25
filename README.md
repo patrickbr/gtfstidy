@@ -23,6 +23,8 @@ Output feeds are **semantically equivalent** to the input feed. In this context,
 * **Extensive feed validation**. Validation includes for example checking stop time progressions, id references, id collisions,  missing required fields, shape measurements, timezone strings, general field value range validity, URLs, mail adresses, ISO language codes, timepoint validity ...
 * **Entropy-minimizing heuristics**. Sort lines prior to writing them to keep the entropy of the resulting CSV files small. This often leads to better compression results (see below).
 
+For more features, see the help page (`--help`).
+
 ## 1. Installation
     $ go get github.com/patrickbr/gtfstidy
 
