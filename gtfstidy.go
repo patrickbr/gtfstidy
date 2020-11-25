@@ -136,6 +136,7 @@ func main() {
 	if *onlyValidate {
 		for _, gtfsPath := range gtfsPaths {
 			locFeed := gtfsparser.NewFeed()
+			locFeed.SetParseOpts(opts)
 			fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
 			e = locFeed.Parse(gtfsPath)
 
