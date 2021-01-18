@@ -66,10 +66,7 @@ func (sdr ShapeDuplicateRemover) Run(feed *gtfsparser.Feed) {
 
 	bef := len(feed.Shapes)
 
-	i := 0
-
 	for _, s := range feed.Shapes {
-		i = i + 1
 		if sdr.deleted[s] {
 			continue
 		}

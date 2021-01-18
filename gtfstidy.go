@@ -8,21 +8,57 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/patrickbr/gtfsparser"
 	"github.com/patrickbr/gtfstidy/processors"
 	"github.com/patrickbr/gtfswriter"
 	flag "github.com/spf13/pflag"
+	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
+
+func parseCoords(s string) ([][]float64, error) {
+	coords := strings.Split(s, ",")
+
+	if len(coords)%2 != 0 {
+		return nil, errors.New("Uneven number of coordinates")
+	}
+
+	ret := make([][]float64, 0)
+	for i := 0; i < len(coords)/2; i++ {
+		var x, y float64
+		var err error
+		y, err = strconv.ParseFloat(strings.Trim(coords[i*2], "\n "), 64)
+		if err == nil {
+			x, err = strconv.ParseFloat(strings.Trim(coords[i*2+1], "\n "), 64)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		coord := make([]float64, 2)
+		coord[0], coord[1] = x, y
+		ret = append(ret, coord)
+	}
+	return ret, nil
+}
 
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "gtfstidy - (C) 2016-2020 by P. Brosi <info@patrickbrosi.de>\n\nUsage:\n\n  %s [<options>] [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
+
+	polys := make([][][]float64, 0)
+
+	var bboxStrings []string
+	var polygonStrings []string
+	var polygonFiles []string
 
 	onlyValidate := flag.BoolP("validation-mode", "v", false, "only validate the feed, no processors will be called")
 
@@ -58,6 +94,10 @@ func main() {
 	useRedTripMinimizerFuzzyRoute := flag.BoolP("red-trips-fuzzy", "", false, "only check MOT of routes for trip duplicate removal")
 	useRedAgencyMinimizer := flag.BoolP("remove-red-agencies", "A", false, "remove agency duplicates")
 	useStopReclusterer := flag.BoolP("recluster-stops", "E", false, "recluster stops")
+	flag.StringArrayVar(&bboxStrings, "bounding-box", []string{}, "bounding box filter, as comma separated latitude,longitude pairs (multiple boxes allowed by defining --bounding-box multiple times)")
+	flag.StringArrayVar(&polygonStrings, "polygon", []string{}, "polygon filter, as comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon multiple times)")
+	flag.StringArrayVar(&polygonFiles, "polygon-file", []string{}, "polygon filter, as a file containing comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon-file multiple times)")
+	showWarnings := flag.BoolP("show-warnings", "W", false, "show warnings")
 	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
@@ -122,13 +162,86 @@ func main() {
 		*useRedAgencyMinimizer = true
 	}
 
+	for _, polyFile := range polygonFiles {
+		bytes, err := ioutil.ReadFile(polyFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "\nCould not parse polygon filter file: ")
+			fmt.Fprintf(os.Stderr, err.Error()+".\n")
+			os.Exit(1)
+		}
+
+		polygonStrings = append(polygonStrings, string(bytes))
+	}
+
+	for _, polyString := range polygonStrings {
+		poly := make([][]float64, 0)
+
+		if len(polyString) > 0 {
+			var err error
+			poly, err = parseCoords(polyString)
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "\nCould not parse polygon filter: ")
+				fmt.Fprintf(os.Stderr, err.Error()+".\n")
+				os.Exit(1)
+			}
+		}
+
+		// ensure polygon is closed
+		if len(poly) > 1 && (poly[0][0] != poly[len(poly)-1][0] || poly[0][0] != poly[len(poly)-1][0]) {
+			poly = append(poly, make([]float64, 2))
+			poly[len(poly)-1][0], poly[len(poly)-1][1] = poly[0][0], poly[0][1]
+		}
+
+		polys = append(polys, poly)
+	}
+
+	for _, bboxString := range bboxStrings {
+		bbox := make([][]float64, 0)
+		bboxString = strings.Trim(bboxString, " ")
+
+		if len(bboxString) > 0 {
+			var err error
+			bbox, err = parseCoords(bboxString)
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "\nCould not parse bounding box filter: ")
+				fmt.Fprintf(os.Stderr, err.Error()+".\n")
+				os.Exit(1)
+			}
+		}
+
+		if len(bbox) == 2 {
+			poly := make([][]float64, 4)
+
+			poly[0] = make([]float64, 2)
+			poly[1] = make([]float64, 2)
+			poly[2] = make([]float64, 2)
+			poly[3] = make([]float64, 2)
+
+			poly[0][0], poly[0][1] = bbox[0][0], bbox[0][1]
+			poly[1][0], poly[1][1] = bbox[0][0], bbox[1][1]
+			poly[2][0], poly[2][1] = bbox[1][0], bbox[1][1]
+			poly[3][0], poly[3][1] = bbox[1][0], bbox[0][1]
+
+			// ensure polygon is closed
+			if len(poly) > 1 && (poly[0][0] != poly[len(poly)-1][0] || poly[0][0] != poly[len(poly)-1][0]) {
+				poly = append(poly, make([]float64, 2))
+				poly[len(poly)-1][0], poly[len(poly)-1][1] = poly[0][0], poly[0][1]
+			}
+
+			polys = append(polys, poly)
+		}
+	}
+
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, PolygonFilter: polys}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
 	opts.EmptyStringRepl = *emptyStrRepl
 	opts.ZipFix = *fixZip
+	opts.ShowWarnings = *showWarnings
 	feed.SetParseOpts(opts)
 
 	var e error
@@ -138,6 +251,9 @@ func main() {
 			locFeed := gtfsparser.NewFeed()
 			locFeed.SetParseOpts(opts)
 			fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
+			if opts.ShowWarnings {
+				fmt.Fprintf(os.Stdout, "\n")
+			}
 			e = locFeed.Parse(gtfsPath)
 
 			if e != nil {
@@ -145,7 +261,11 @@ func main() {
 				fmt.Fprintln(os.Stderr, e.Error())
 				os.Exit(1)
 			}
-			fmt.Fprintf(os.Stdout, " done.\n")
+			if opts.ShowWarnings {
+				fmt.Fprintf(os.Stdout, "... done.\n")
+			} else {
+				fmt.Fprintf(os.Stdout, " done.\n")
+			}
 		}
 		fmt.Fprintln(os.Stdout, "No errors.")
 		os.Exit(0)
@@ -153,6 +273,9 @@ func main() {
 
 	for i, gtfsPath := range gtfsPaths {
 		fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
+		if opts.ShowWarnings {
+			fmt.Fprintf(os.Stdout, "\n")
+		}
 		if len(gtfsPaths) > 1 {
 			e = feed.PrefixParse(gtfsPath, strconv.FormatInt(int64(i), 10)+"::")
 		} else {
@@ -161,7 +284,38 @@ func main() {
 		if e != nil {
 			break
 		}
-		fmt.Fprintf(os.Stdout, " done.\n")
+
+		if opts.DropErroneous {
+			s := feed.ErrorStats
+			if opts.ShowWarnings {
+				fmt.Fprintf(os.Stdout, "... done.")
+			} else {
+				fmt.Fprintf(os.Stdout, " done.")
+			}
+			fmt.Fprintf(os.Stdout, " (%d trips [%.2f%%], %d stops [%.2f%%], %d shapes [%.2f%%], %d services [%.2f%%], %d routes [%.2f%%], %d agencies [%.2f%%], %d transfers [%.2f%%], %d pathways [%.2f%%], %d levels [%.2f%%], %d fare attributes [%.2f%%] dropped due to errors. Use -W to display them.)\n",
+				s.DroppedTrips,
+				100.0*float64(s.DroppedTrips)/(float64(s.DroppedTrips+len(feed.Trips))+0.001),
+				s.DroppedStops,
+				100.0*float64(s.DroppedStops)/(float64(s.DroppedStops+len(feed.Stops))+0.001),
+				s.DroppedShapes,
+				100.0*float64(s.DroppedShapes)/(float64(s.DroppedShapes+feed.NumShpPoints)+0.001),
+				s.DroppedServices,
+				100.0*float64(s.DroppedServices)/(float64(s.DroppedServices+len(feed.Services))+0.001),
+				s.DroppedRoutes,
+				100.0*float64(s.DroppedRoutes)/(float64(s.DroppedRoutes+len(feed.Routes))+0.001),
+				s.DroppedAgencies,
+				100.0*float64(s.DroppedAgencies)/(float64(s.DroppedAgencies+len(feed.Agencies))+0.001),
+				s.DroppedTransfers,
+				100.0*float64(s.DroppedTransfers)/(float64(s.DroppedTransfers+len(feed.Transfers))+0.001),
+				s.DroppedPathways,
+				100.0*float64(s.DroppedPathways)/(float64(s.DroppedPathways+len(feed.Pathways))+0.001),
+				s.DroppedLevels,
+				100.0*float64(s.DroppedLevels)/(float64(s.DroppedLevels+len(feed.Levels))+0.001),
+				s.DroppedFareAttributes,
+				100.0*float64(s.DroppedFareAttributes)/(float64(s.DroppedFareAttributes+len(feed.FareAttributes))+0.001))
+		} else {
+			fmt.Fprintf(os.Stdout, " done.\n")
+		}
 	}
 
 	if e != nil {
