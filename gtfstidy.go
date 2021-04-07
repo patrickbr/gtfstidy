@@ -148,8 +148,8 @@ func main() {
 		}
 	}()
 
-	startDate := gtfs.Date{0, 0, 0}
-	endDate := gtfs.Date{0, 0, 0}
+	startDate := gtfs.Date{Day: 0, Month: 0, Year: 0}
+	endDate := gtfs.Date{Day: 0, Month: 0, Year: 0}
 
 	if len(*startDateFilter) > 0 {
 		startDate = parseDate(*startDateFilter)

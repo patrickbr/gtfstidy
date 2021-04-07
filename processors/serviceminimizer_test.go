@@ -40,11 +40,11 @@ func TestServiceMinimizer(t *testing.T) {
 		Daymap:     [7]bool{true, true, true, true, true, true, true},
 		Start_date: gtfs.Date{Day: 1, Month: 1, Year: 2017},
 		End_date:   gtfs.Date{Day: 1, Month: 2, Year: 2027},
-		Exceptions: make(map[gtfs.Date]int8, 0),
+		Exceptions: make(map[gtfs.Date]bool, 0),
 	}
 
-	testa.Exceptions[gtfs.Date{Day: 1, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 2, Month: 1, Year: 2017}] = 1
+	testa.Exceptions[gtfs.Date{Day: 1, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 2, Month: 1, Year: 2017}] = true
 
 	proc.perfectMinimize(&testa)
 
@@ -61,15 +61,15 @@ func TestServiceMinimizer(t *testing.T) {
 		Daymap:     [7]bool{false, false, false, false, false, false, false},
 		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2013},
 		End_date:   gtfs.Date{Day: 8, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]int8, 0),
+		Exceptions: make(map[gtfs.Date]bool, 0),
 	}
 
-	testa.Exceptions[gtfs.Date{Day: 2, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 3, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 4, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 5, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 6, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 7, Month: 1, Year: 2017}] = 1
+	testa.Exceptions[gtfs.Date{Day: 2, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 3, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 4, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 5, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 6, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 7, Month: 1, Year: 2017}] = true
 
 	proc.perfectMinimize(&testa)
 
@@ -94,15 +94,15 @@ func TestServiceMinimizer(t *testing.T) {
 		Daymap:     [7]bool{false, false, false, false, false, false, false},
 		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2013},
 		End_date:   gtfs.Date{Day: 8, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]int8, 0),
+		Exceptions: make(map[gtfs.Date]bool, 0),
 	}
 
-	testa.Exceptions[gtfs.Date{Day: 3, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 4, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 5, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 6, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 7, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 8, Month: 1, Year: 2017}] = 1
+	testa.Exceptions[gtfs.Date{Day: 3, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 4, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 5, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 6, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 7, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 8, Month: 1, Year: 2017}] = true
 
 	proc.perfectMinimize(&testa)
 
@@ -144,13 +144,13 @@ func TestServiceMinimizer(t *testing.T) {
 		Daymap:     [7]bool{false, true, true, false, true, false, false},
 		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2017},
 		End_date:   gtfs.Date{Day: 29, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]int8, 0),
+		Exceptions: make(map[gtfs.Date]bool, 0),
 	}
 
-	testa.Exceptions[gtfs.Date{Day: 30, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 31, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 7, Month: 2, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 14, Month: 2, Year: 2017}] = 1
+	testa.Exceptions[gtfs.Date{Day: 30, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 31, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 7, Month: 2, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 14, Month: 2, Year: 2017}] = true
 
 	proc.perfectMinimize(&testa)
 
@@ -175,13 +175,13 @@ func TestServiceMinimizer(t *testing.T) {
 		Daymap:     [7]bool{false, true, true, false, true, false, false},
 		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2017},
 		End_date:   gtfs.Date{Day: 29, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]int8, 0),
+		Exceptions: make(map[gtfs.Date]bool, 0),
 	}
 
-	testa.Exceptions[gtfs.Date{Day: 30, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 31, Month: 1, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 7, Month: 2, Year: 2017}] = 1
-	testa.Exceptions[gtfs.Date{Day: 14, Month: 2, Year: 2017}] = 1
+	testa.Exceptions[gtfs.Date{Day: 30, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 31, Month: 1, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 7, Month: 2, Year: 2017}] = true
+	testa.Exceptions[gtfs.Date{Day: 14, Month: 2, Year: 2017}] = true
 
 	proc.perfectMinimize(&testa)
 
@@ -206,10 +206,10 @@ func TestServiceMinimizer(t *testing.T) {
 		Daymap:     [7]bool{true, true, true, true, true, true, true},
 		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2017},
 		End_date:   gtfs.Date{Day: 8, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]int8, 0),
+		Exceptions: make(map[gtfs.Date]bool, 0),
 	}
 
-	testa.Exceptions[gtfs.Date{Day: 3, Month: 1, Year: 2017}] = 2
+	testa.Exceptions[gtfs.Date{Day: 3, Month: 1, Year: 2017}] = false
 
 	proc.perfectMinimize(&testa)
 
