@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/patrickbr/gtfsparser"
+	"github.com/patrickbr/gtfsparser/gtfs"
 	"github.com/patrickbr/gtfstidy/processors"
 	"github.com/patrickbr/gtfswriter"
 	flag "github.com/spf13/pflag"
@@ -20,6 +21,29 @@ import (
 	"strconv"
 	"strings"
 )
+
+func parseDate(str string) gtfs.Date {
+	var day, month, year int
+	var e error
+	if len(str) < 8 {
+		e = fmt.Errorf("only has %d characters, expected 8", len(str))
+	}
+	if e == nil {
+		day, e = strconv.Atoi(str[6:8])
+	}
+	if e == nil {
+		month, e = strconv.Atoi(str[4:6])
+	}
+	if e == nil {
+		year, e = strconv.Atoi(str[0:4])
+	}
+
+	if e != nil {
+		panic(fmt.Errorf("Expected YYYYMMDD date, found '%s' (%s)", str, e.Error()))
+	}
+
+	return gtfs.Date{Day: int8(day), Month: int8(month), Year: int16(year)}
+}
 
 func parseCoords(s string) ([][]float64, error) {
 	coords := strings.Split(s, ",")
@@ -64,6 +88,9 @@ func main() {
 
 	outputPath := flag.StringP("output", "o", "gtfs-out", "gtfs output directory or zip file (must end with .zip)")
 
+	startDateFilter := flag.StringP("date-start", "", "", "start date filter, as YYYYMMDD")
+	endDateFilter := flag.StringP("date-end", "", "", "end date filter, as YYYYMMDD")
+
 	fixShortHand := flag.BoolP("fix", "", false, "shorthand for -eDnz -p '-'")
 	compressShortHand := flag.BoolP("compress", "", false, "shorthand for -OSRCcIAP")
 	minimizeShortHand := flag.BoolP("Compress", "", false, "shorthand for -OSRCcIAPdT --red-trips-fuzzy, like --compress, but additionally compress stop times into frequencies, use fuzzy matching for redundant trip removal and use dense character ids. The latter destroys any existing external references (like in GTFS realtime streams)")
@@ -94,6 +121,7 @@ func main() {
 	useRedTripMinimizerFuzzyRoute := flag.BoolP("red-trips-fuzzy", "", false, "only check MOT of routes for trip duplicate removal")
 	useRedAgencyMinimizer := flag.BoolP("remove-red-agencies", "A", false, "remove agency duplicates")
 	useStopReclusterer := flag.BoolP("recluster-stops", "E", false, "recluster stops")
+	dropShapes := flag.BoolP("drop-shapes", "", false, "drop shapes")
 	flag.StringArrayVar(&bboxStrings, "bounding-box", []string{}, "bounding box filter, as comma separated latitude,longitude pairs (multiple boxes allowed by defining --bounding-box multiple times)")
 	flag.StringArrayVar(&polygonStrings, "polygon", []string{}, "polygon filter, as comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon multiple times)")
 	flag.StringArrayVar(&polygonFiles, "polygon-file", []string{}, "polygon filter, as a file containing comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon-file multiple times)")
@@ -119,6 +147,17 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Error:", r)
 		}
 	}()
+
+	startDate := gtfs.Date{0, 0, 0}
+	endDate := gtfs.Date{0, 0, 0}
+
+	if len(*startDateFilter) > 0 {
+		startDate = parseDate(*startDateFilter)
+	}
+
+	if len(*endDateFilter) > 0 {
+		endDate = parseDate(*endDateFilter)
+	}
 
 	if *fixShortHand {
 		*useDefaultValuesOnError = true
@@ -242,6 +281,9 @@ func main() {
 	opts.EmptyStringRepl = *emptyStrRepl
 	opts.ZipFix = *fixZip
 	opts.ShowWarnings = *showWarnings
+	opts.DropShapes = *dropShapes
+	opts.DateFilterStart = startDate
+	opts.DateFilterEnd = endDate
 	feed.SetParseOpts(opts)
 
 	var e error

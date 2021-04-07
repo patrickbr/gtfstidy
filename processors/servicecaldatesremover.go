@@ -37,7 +37,7 @@ func (sm ServiceCalDatesRem) Run(feed *gtfsparser.Feed) {
 			s.Start_date = blocks[0].Start_date
 			s.End_date = blocks[0].End_date
 			s.Daymap = blocks[0].Daymap
-			s.Exceptions = make(map[gtfs.Date]int8, 0)
+			s.Exceptions = make(map[gtfs.Date]bool, 0)
 		} else {
 			newServices[s] = blocks
 		}
@@ -114,7 +114,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 			// add a single day span
 			service_ex := new(gtfs.Service)
 			service_ex.Id = sm.freeServiceId(feed, s.Id)
-			service_ex.Exceptions = make(map[gtfs.Date]int8, 0)
+			service_ex.Exceptions = make(map[gtfs.Date]bool, 0)
 			service_ex.Daymap = [7]bool{false, false, false, false, false, false, false}
 
 			service_ex.Daymap[first.GetTime().Weekday()] = true
@@ -132,7 +132,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 				service := new(gtfs.Service)
 
 				service.Id = sm.freeServiceId(feed, s.Id)
-				service.Exceptions = make(map[gtfs.Date]int8, 0)
+				service.Exceptions = make(map[gtfs.Date]bool, 0)
 
 				service.Daymap = s.Daymap
 				service.Start_date = curBlockStart
@@ -155,7 +155,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 	if (s.Daymap[0] || s.Daymap[1] || s.Daymap[2] || s.Daymap[3] || s.Daymap[4] || s.Daymap[5] || s.Daymap[6]) && (curBlockStart.GetTime().Before(last.GetTime()) || curBlockStart.GetTime() == last.GetTime()) {
 		service := new(gtfs.Service)
 		service.Id = sm.freeServiceId(feed, s.Id)
-		service.Exceptions = make(map[gtfs.Date]int8, 0)
+		service.Exceptions = make(map[gtfs.Date]bool, 0)
 
 		service.Daymap = s.Daymap
 		service.Start_date = curBlockStart
@@ -192,7 +192,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 
 		service := new(gtfs.Service)
 		service.Id = sm.freeServiceId(feed, s.Id)
-		service.Exceptions = make(map[gtfs.Date]int8, 0)
+		service.Exceptions = make(map[gtfs.Date]bool, 0)
 
 		service.Daymap = [7]bool{false, false, false, false, false, false, false}
 		service.Start_date = s.GetFirstDefinedDate()

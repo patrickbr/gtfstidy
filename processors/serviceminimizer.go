@@ -328,10 +328,10 @@ func (sm ServiceMinimizer) updateService(service *gtfs.Service, bestMap uint, be
 		}
 	}
 
-	service.Exceptions = make(map[gtfs.Date]int8, 0)
+	service.Exceptions = make(map[gtfs.Date]bool, 0)
 
 	for _, e := range newExceptions {
-		service.Exceptions[e.Date] = e.Type
+		service.SetExceptionTypeOn(e.Date, e.Type)
 	}
 
 	service.Start_date = sm.getGtfsDateFromTime(newBegin)

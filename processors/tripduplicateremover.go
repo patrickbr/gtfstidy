@@ -352,7 +352,7 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 		for _, o := range overlaps {
 			for _, d := range o.Dates {
 				date := m.getDateFromRefDay(d)
-				ref.Service.Exceptions[date] = 2
+				ref.Service.SetExceptionTypeOn(date, 2)
 			}
 		}
 
@@ -382,7 +382,7 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 		for _, o := range overlaps {
 			for _, d := range o.Dates {
 				date := m.getDateFromRefDay(d)
-				newService.Exceptions[date] = 2
+				newService.SetExceptionTypeOn(date, 2)
 			}
 		}
 
@@ -498,7 +498,6 @@ func (m *TripDuplicateRemover) tripCalContained(child *gtfs.Trip, parent *gtfs.T
 	lenParent := len(parentDList)
 
 	if len(childDList) == 0 {
-		fmt.Println(child.Service)
 		// if the child has no service day, we trivially say it is contained
 		return true
 	}
