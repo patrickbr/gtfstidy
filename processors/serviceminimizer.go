@@ -84,11 +84,11 @@ func (sm ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 		datesSign,
 		datesAfter-datesBefore,
 		datesSign,
-		100.0*(float64(datesAfter-datesBefore))/float64(datesBefore),
+		100.0*(float64(datesAfter-datesBefore))/(float64(datesBefore)+0.001),
 		calsSign,
 		calAfter-calBefore,
 		calsSign,
-		100.0*(float64(calAfter-calBefore))/float64(calBefore))
+		100.0*(float64(calAfter-calBefore))/(float64(calBefore)+0.001))
 }
 
 func (sm ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
@@ -285,13 +285,16 @@ func (sm ServiceMinimizer) updateService(service *gtfs.Service, bestMap uint, be
 		hasBit(bestMap, 6)}
 	newBegin := startTime.AddDate(0, 0, bestA)
 	newEnd := startTime.AddDate(0, 0, bestB)
+	fmt.Println(newBegin, newEnd)
 	newExceptions := make([]*serviceException, 0)
 
-	for !newBegin.After(newEnd) && !service.IsActiveOn(sm.getGtfsDateFromTime(newBegin)) {
+	// crop at the beginning
+	for newEnd.After(newBegin) && !service.IsActiveOn(sm.getGtfsDateFromTime(newBegin)) {
 		newBegin = sm.getNextDateTime(newBegin)
 	}
 
-	for !newEnd.Before(newBegin) && !service.IsActiveOn(sm.getGtfsDateFromTime(newEnd)) {
+	// crop at the end
+	for newBegin.Before(newEnd) && !service.IsActiveOn(sm.getGtfsDateFromTime(newEnd)) {
 		newEnd = sm.getPrevDateTime(newEnd)
 	}
 
