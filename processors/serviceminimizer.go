@@ -285,7 +285,6 @@ func (sm ServiceMinimizer) updateService(service *gtfs.Service, bestMap uint, be
 		hasBit(bestMap, 6)}
 	newBegin := startTime.AddDate(0, 0, bestA)
 	newEnd := startTime.AddDate(0, 0, bestB)
-	fmt.Println(newBegin, newEnd)
 	newExceptions := make([]*serviceException, 0)
 
 	// crop at the beginning
