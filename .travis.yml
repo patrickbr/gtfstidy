@@ -23,7 +23,7 @@ script:
   - make lint
   - make vet
   - make test
-  - if [ "${LATEST}" = "true" ]; then gox -os="linux windows netbsd freebsd openbsd plan9" -arch="amd64 386" -output="gtfstidy.`git describe --abbrev=0 --tags --match 'v[0-9.]*'`.{{.OS}}.{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
+  - if [ "${LATEST}" = "true" ]; then gox -os="linux windows netbsd freebsd openbsd plan9 osx" -arch="amd64 386" -output="gtfstidy.`git describe --abbrev=0 --tags --match 'v[0-9.]*'`.{{.OS}}.{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
 
 deploy:
   provider: releases
@@ -33,7 +33,7 @@ deploy:
   file_glob: true
   file:
   - gtfstidy.*.windows.*.exe
-  - gtfstidy.*.darwin.*
+  - gtfstidy.*.osx.*
   - gtfstidy.*.linux.*
   - gtfstidy.*.freebsd.*
   - gtfstidy.*.openbsd.*
