@@ -1,0 +1,8 @@
+/.git
+/.gitignore
+/.travis.yml
+
+/processors/testfeed
+/processors/testfeed-*
+/**/*_test.go
+/gtfstidy
