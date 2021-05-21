@@ -1,0 +1,6 @@
+github.com/patrickbr/gtfsparser v0.0.0-20210503211936-d06c485ba62b h1:C9TB1Jd8i2Q+Mii0VufGWRY/70n+9UUfslAd/Spz4yU=
+github.com/patrickbr/gtfsparser v0.0.0-20210503211936-d06c485ba62b/go.mod h1:L88c76QEIfk3Z5pr1S715jfv1EIEVZ7BvNiefxz4o3o=
+github.com/patrickbr/gtfswriter v0.0.0-20210407163711-6625630376c8 h1:rennEshiJjXDi7r9FTZjz1yUY0jFxWWGNVuNCdSsnVw=
+github.com/patrickbr/gtfswriter v0.0.0-20210407163711-6625630376c8/go.mod h1:zYAfZRXtDhc4Tq+LYrvyksefggNiViL2pKMRUrGvUbE=
+github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
+github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
