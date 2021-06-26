@@ -324,7 +324,6 @@ func (m *StopReclusterer) createParent(stops []*gtfs.Stop, feed *gtfsparser.Feed
 	}
 
 	ret.Desc = ""
-	ret.Has_LatLon = true
 	ret.Lat = avgLat / float32(len(stops))
 	ret.Lon = avgLon / float32(len(stops))
 	ret.Location_type = 1

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/patrickbr/gtfsparser"
 	gtfs "github.com/patrickbr/gtfsparser/gtfs"
+	"math"
 	"os"
 )
 
@@ -58,8 +59,7 @@ func (s ShapeRemeasurer) remeasure(shape *gtfs.Shape) {
 	} else {
 		// no avg measurement found, null all values
 		for i := range shape.Points {
-			shape.Points[i].Dist_traveled = 0
-			shape.Points[i].Has_dist = false
+			shape.Points[i].Dist_traveled = float32(math.NaN())
 		}
 	}
 }
@@ -132,6 +132,5 @@ func (s ShapeRemeasurer) remeasureBetween(i int, end int, mPUnit float64, lastMe
 			d = d + distP(&shape.Points[i-1], &shape.Points[i])
 		}
 		shape.Points[i].Dist_traveled = float32(lastMeasure) + float32(d*mPUnit)
-		shape.Points[i].Has_dist = true
 	}
 }
