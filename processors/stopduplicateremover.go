@@ -25,7 +25,7 @@ func (sdr StopDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing redundant stops... ")
 	bef := len(feed.Stops)
 
-	// run two times to catch parent equivalencies
+	// run multiple times to catch parent equivalencies
 	for i := 0; i < 3; i++ {
 		stoptimes := make(map[*gtfs.Stop][]*gtfs.StopTime, len(feed.Stops))
 		stops := make(map[*gtfs.Stop][]*gtfs.Stop, len(feed.Stops))
@@ -259,5 +259,5 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop) bool {
 		a.Wheelchair_boarding == b.Wheelchair_boarding &&
 		a.Level == b.Level &&
 		a.Platform_code == b.Platform_code &&
-		distSApprox(a, b) <= 1.0
+		(distSApprox(a, b) <= 2.0 || (a.Location_type == 1 && distSApprox(a, b) <= 50.0))
 }
