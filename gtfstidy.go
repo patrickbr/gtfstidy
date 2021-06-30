@@ -377,13 +377,17 @@ func main() {
 		}
 
 		if *useRedStopMinimizer {
-			minzers = append(minzers, processors.StopDuplicateRemover{})
+			minzers = append(minzers, processors.StopDuplicateRemover{
+				DistThresholdStop:    2.0,
+				DistThresholdStation: 50,
+			})
 		}
 
 		if *useStopReclusterer {
 			minzers = append(minzers, processors.StopReclusterer{
 				DistThreshold:     75,
 				NameSimiThreshold: 0.55,
+				GridCellSize:      10000,
 			})
 		}
 

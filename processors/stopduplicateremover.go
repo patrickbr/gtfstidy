@@ -18,6 +18,8 @@ import (
 
 // StopDuplicateRemover merges semantically equivalent stops
 type StopDuplicateRemover struct {
+	DistThresholdStop    float64
+	DistThresholdStation float64
 }
 
 // Run this StopDuplicateRemover on some feed
@@ -259,5 +261,5 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop) bool {
 		a.Wheelchair_boarding == b.Wheelchair_boarding &&
 		a.Level == b.Level &&
 		a.Platform_code == b.Platform_code &&
-		(distSApprox(a, b) <= 2.0 || (a.Location_type == 1 && distSApprox(a, b) <= 50.0))
+		(distSApprox(a, b) <= sdr.DistThresholdStop || (a.Location_type == 1 && distSApprox(a, b) <= sdr.DistThresholdStation))
 }

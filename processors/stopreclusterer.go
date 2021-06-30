@@ -62,6 +62,7 @@ func (a BySimi) Less(i, j int) bool {
 type StopReclusterer struct {
 	DistThreshold     float64
 	NameSimiThreshold float64
+	GridCellSize      float64
 	splitregex        *regexp.Regexp
 
 	// TF-IDF stuff
@@ -127,7 +128,7 @@ func (m StopReclusterer) Run(feed *gtfsparser.Feed) {
 	}
 
 	// geographical grid for faster merge cluster candidate retrieval
-	m.idx = NewStopClusterIdx(clusters, 1000, 1000)
+	m.idx = NewStopClusterIdx(clusters, m.GridCellSize, m.GridCellSize)
 
 	// build TF-IDF score from all stops
 	m.buildTfIdfScores(feed.Stops)
