@@ -139,6 +139,10 @@ func (m *TripDuplicateRemover) getEqualTrips(trip *gtfs.Trip, feed *gtfsparser.F
 	for i, c := range chunks {
 		go func(j int, chunk []*gtfs.Trip) {
 			for _, t := range chunk {
+				if _, ok := feed.Trips[t.Id]; !ok {
+					// skip already deleted trips
+					continue
+				}
 				if t != trip && m.tripAttrEq(t, trip) && m.tripStEq(t, trip) {
 					if m.tripCalEq(t, trip) {
 						rets[j] = append(rets[j], t)
@@ -176,6 +180,10 @@ func (m *TripDuplicateRemover) getContainedTrips(trip *gtfs.Trip, feed *gtfspars
 	for i, c := range chunks {
 		go func(j int, chunk []*gtfs.Trip) {
 			for _, t := range chunk {
+				if _, ok := feed.Trips[t.Id]; !ok {
+					// skip already deleted trips
+					continue
+				}
 				if t != trip && m.tripAttrEq(t, trip) && m.tripStEq(t, trip) {
 					if m.tripCalContained(t, trip) {
 						rets[j] = append(rets[j], t)
@@ -200,7 +208,7 @@ func (m *TripDuplicateRemover) getContainedTrips(trip *gtfs.Trip, feed *gtfspars
 	return ret
 }
 
-// Returns the feed's routes that are equal and intersecting calendar-wise to trip
+// Returns the feed's trips that are equal and intersecting calendar-wise to trip
 func (m *TripDuplicateRemover) getOverlapTrips(trip *gtfs.Trip, feed *gtfsparser.Feed, chunks [][]*gtfs.Trip) []Overlap {
 	ret := make([]Overlap, 0)
 
@@ -214,6 +222,10 @@ func (m *TripDuplicateRemover) getOverlapTrips(trip *gtfs.Trip, feed *gtfsparser
 	for i, c := range chunks {
 		go func(j int, chunk []*gtfs.Trip) {
 			for _, t := range chunk {
+				if _, ok := feed.Trips[t.Id]; !ok {
+					// skip already deleted trips
+					continue
+				}
 				if t != trip && m.tripAttrEq(t, trip) && m.tripStEq(t, trip) {
 					overlaps := m.tripCalOverlap(t, trip)
 					if len(overlaps) > 0 {
@@ -334,6 +346,8 @@ func (m *TripDuplicateRemover) combineEqTrips(feed *gtfsparser.Feed, ref *gtfs.T
 
 // Exclude two equal trips
 func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Trip, overlaps []Overlap) {
+
+	return
 	for _, o := range overlaps {
 		if ref.Shape == nil && o.Trip.Shape != nil {
 			ref.Shape = o.Trip.Shape
@@ -352,6 +366,9 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 		for _, o := range overlaps {
 			for _, d := range o.Dates {
 				date := m.getDateFromRefDay(d)
+				if !o.Trip.Service.IsActiveOn(date) {
+					fmt.Println("FAIL")
+				}
 				ref.Service.SetExceptionTypeOn(date, 2)
 			}
 		}
@@ -440,7 +457,7 @@ func (m *TripDuplicateRemover) tripStEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 	return true
 }
 
-// Check if trip child is contained in trip parent calendar-wise
+// Check if trip child is attribute equal to another trip
 func (m *TripDuplicateRemover) tripAttrEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 	if !m.Fuzzy && a.Route != b.Route {
 		return false
@@ -495,14 +512,12 @@ func (m *TripDuplicateRemover) tripCalContained(child *gtfs.Trip, parent *gtfs.T
 	childDList := m.serviceList[child.Service]
 	parentDList := m.serviceList[parent.Service]
 
-	lenParent := len(parentDList)
-
 	if len(childDList) == 0 {
 		// if the child has no service day, we trivially say it is contained
 		return true
 	}
 
-	if lenParent == 0 {
+	if len(parentDList) == 0 {
 		return false
 	}
 
@@ -598,6 +613,8 @@ func (m *TripDuplicateRemover) getDateFromRefDay(d uint64) gtfs.Date {
 }
 
 func (m *TripDuplicateRemover) writeServiceList(s *gtfs.Service) {
+	// make sure service list is empty first
+	m.serviceList[s] = nil
 	start := s.GetFirstActiveDate()
 	end := s.GetLastActiveDate()
 	endT := end.GetTime()
