@@ -366,9 +366,6 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 		for _, o := range overlaps {
 			for _, d := range o.Dates {
 				date := m.getDateFromRefDay(d)
-				if !o.Trip.Service.IsActiveOn(date) {
-					fmt.Println("FAIL")
-				}
 				ref.Service.SetExceptionTypeOn(date, 2)
 			}
 		}
