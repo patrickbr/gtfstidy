@@ -172,7 +172,7 @@ func (m StopReclusterer) Run(feed *gtfsparser.Feed) {
 		neigh := neighs[top.value][len(neighs[top.value])-1]
 
 		// it might happen that the top neighbor is deleted, if that is the case push
-		// again with updated neighbores
+		// again with updated neighbours
 		if pq.Pqids[neigh.id] >= len(pq.Items) {
 			neighs[top.value] = neighs[top.value][:len(neighs[top.value])-1]
 
