@@ -62,6 +62,8 @@ type Overlap struct {
 // the service of A, we can do this in-place. If the service is shared by another trip, we copy the service and update
 // the copy. In both cases, the service is minimized subsequently using the service minimizer.
 
+// In the last round, matching trips which are adjacent calendar-wise are merged
+
 func (m TripDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing redundant trips... ")
 	bef := len(feed.Trips)
@@ -120,6 +122,28 @@ func (m TripDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
+	chunks = m.getTripChunks(feed)
+
+	MAX_DAY_DIST := 7
+
+	for i := 1; i <= MAX_DAY_DIST; i++ {
+		had := true
+
+		for had {
+			chunks = m.getTripChunks(feed)
+
+			had = false
+			for _, t := range feed.Trips {
+				hash := m.tripHash(t)
+				adjTrips := m.getAdjTrips(t, feed, chunks[hash], uint64(i))
+				if len(adjTrips) > 0 {
+					had = true
+					m.combineAdjTrips(feed, t, adjTrips)
+				}
+			}
+		}
+	}
+
 	fmt.Fprintf(os.Stdout, "done. (-%d trips [-%.2f%%])\n",
 		(bef - len(feed.Trips)),
 		100.0*float64(bef-len(feed.Trips))/(float64(bef)+0.001))
@@ -159,6 +183,48 @@ func (m *TripDuplicateRemover) getEqualTrips(trip *gtfs.Trip, feed *gtfsparser.F
 	}
 
 	// combine result s
+	for _, r := range rets {
+		ret = append(ret, r...)
+	}
+
+	return ret
+}
+
+// Returns the feed's routes that are equivalent and adjacent  calendar-wise
+func (m *TripDuplicateRemover) getAdjTrips(trip *gtfs.Trip, feed *gtfsparser.Feed, chunks [][]*gtfs.Trip, maxdist uint64) []*gtfs.Trip {
+	ret := make([]*gtfs.Trip, 0)
+
+	if len(trip.StopTimes) == 0 {
+		return ret
+	}
+
+	rets := make([][]*gtfs.Trip, len(chunks))
+	sem := make(chan empty, len(chunks))
+
+	for i, c := range chunks {
+		go func(j int, chunk []*gtfs.Trip) {
+			for _, t := range chunk {
+				if _, ok := feed.Trips[t.Id]; !ok {
+					// skip already deleted trips
+					continue
+				}
+				if t != trip && m.tripAttrEq(t, trip) && m.tripStEq(t, trip) {
+					if m.tripCalAdj(t, trip, maxdist) {
+						rets[j] = append(rets[j], t)
+					}
+				}
+			}
+			sem <- empty{}
+		}(i, c)
+	}
+
+	// wait for goroutines to finish
+	for i := 0; i < len(chunks); i++ {
+		<-sem
+	}
+
+	// combine results
+
 	for _, r := range rets {
 		ret = append(ret, r...)
 	}
@@ -270,6 +336,66 @@ func (m *TripDuplicateRemover) getParent(stop *gtfs.Stop) *gtfs.Stop {
 	return stop
 }
 
+// Combine a slice of adjacent trips into a single trip
+func (m *TripDuplicateRemover) combineAdjTrips(feed *gtfsparser.Feed, ref *gtfs.Trip, trips []*gtfs.Trip) {
+	if m.serviceRefs[ref.Service] != 1 {
+		newService := new(gtfs.Service)
+		newService.Exceptions = make(map[gtfs.Date]bool, 0)
+		newService.Start_date = ref.Service.Start_date
+		newService.End_date = ref.Service.End_date
+
+		for k, v := range ref.Service.Exceptions {
+			newService.Exceptions[k] = v
+		}
+		for k, v := range ref.Service.Daymap {
+			newService.Daymap[k] = v
+		}
+
+		for ; ; m.serviceIdC++ {
+			newService.Id = "merged" + strconv.Itoa(m.serviceIdC)
+			if _, ok := feed.Services[newService.Id]; !ok {
+				break
+			}
+		}
+
+		m.serviceRefs[ref.Service]--
+		ref.Service = newService
+		m.serviceRefs[ref.Service] = 1
+		m.writeServiceList(ref.Service)
+		feed.Services[ref.Service.Id] = ref.Service
+	}
+
+	combServices := make([]*gtfs.Service, 0)
+
+	for _, t := range trips {
+		combServices = append(combServices, t.Service)
+	}
+
+	m.combineServices(combServices, ref.Service)
+
+	for _, t := range trips {
+		if t == ref {
+			continue
+		}
+
+		if ref.Shape == nil && t.Shape != nil {
+			ref.Shape = t.Shape
+
+			// also update measurements
+			for i := 0; i < len(ref.StopTimes); i++ {
+				ref.StopTimes[i].Shape_dist_traveled = t.StopTimes[i].Shape_dist_traveled
+			}
+		}
+
+		for _, attr := range t.Attributions {
+			ref.Attributions = append(ref.Attributions, attr)
+		}
+
+		delete(feed.Trips, t.Id)
+		m.serviceRefs[t.Service]--
+	}
+}
+
 // Combine a slice of contained trips into a single trip
 func (m *TripDuplicateRemover) combineContTrips(feed *gtfsparser.Feed, ref *gtfs.Trip, trips []*gtfs.Trip) {
 	for _, t := range trips {
@@ -344,10 +470,8 @@ func (m *TripDuplicateRemover) combineEqTrips(feed *gtfsparser.Feed, ref *gtfs.T
 	}
 }
 
-// Exclude two equal trips
+// Exclude a list of overlaps from a trip
 func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Trip, overlaps []Overlap) {
-
-	return
 	for _, o := range overlaps {
 		if ref.Shape == nil && o.Trip.Shape != nil {
 			ref.Shape = o.Trip.Shape
@@ -372,13 +496,17 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 
 		m.writeServiceList(ref.Service)
 
+		// the service is now empty
 		if len(m.serviceList[ref.Service]) == 0 {
 			delete(feed.Trips, ref.Id)
 			m.serviceRefs[ref.Service]--
-			return
 		}
 	} else {
-		newService := *ref.Service
+		newService := new(gtfs.Service)
+		newService.Exceptions = make(map[gtfs.Date]bool, 0)
+		newService.Start_date = ref.Service.Start_date
+		newService.End_date = ref.Service.End_date
+
 		for k, v := range ref.Service.Exceptions {
 			newService.Exceptions[k] = v
 		}
@@ -400,20 +528,20 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 			}
 		}
 
-		m.writeServiceList(&newService)
+		m.writeServiceList(newService)
 
-		if len(m.serviceList[&newService]) == 0 {
+		// the service is empty
+		if len(m.serviceList[newService]) == 0 {
 			delete(feed.Trips, ref.Id)
 			m.serviceRefs[ref.Service]--
 			return
 		}
 
-		ref.Service = &newService
-		feed.Services[newService.Id] = &newService
-		if _, ok := m.serviceRefs[&newService]; !ok {
-			m.serviceRefs[&newService] = 0
-		}
-		m.serviceRefs[&newService]++
+		// otherwise, use the new service
+		m.serviceRefs[ref.Service]--
+		ref.Service = newService
+		feed.Services[newService.Id] = newService
+		m.serviceRefs[newService] = 1
 	}
 }
 
@@ -489,6 +617,11 @@ func (m *TripDuplicateRemover) tripCalEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 		// we only merge in fuzzy mode if the services are not the same, but equal
 	}
 
+	// shortcut
+	if a.Service.Start_date.Day > 0 && b.Service.Start_date.Day > 0 && len(a.Service.Exceptions) == 0 && len(b.Service.Exceptions) == 0 {
+		return a.Service.Start_date == b.Service.Start_date && a.Service.End_date == b.Service.End_date && a.Service.Daymap[0] == b.Service.Daymap[0] && a.Service.Daymap[1] == b.Service.Daymap[1] && a.Service.Daymap[2] == b.Service.Daymap[2] && a.Service.Daymap[3] == b.Service.Daymap[3] && a.Service.Daymap[4] == b.Service.Daymap[4] && a.Service.Daymap[5] == b.Service.Daymap[5] && a.Service.Daymap[6] == b.Service.Daymap[6]
+	}
+
 	aDList := m.serviceList[a.Service]
 	bDList := m.serviceList[b.Service]
 
@@ -518,13 +651,44 @@ func (m *TripDuplicateRemover) tripCalContained(child *gtfs.Trip, parent *gtfs.T
 		return false
 	}
 
-	for _, d := range childDList {
-		if !parent.Service.IsActiveOn(m.getDateFromRefDay(d)) {
+	if len(childDList) > len(parentDList) {
+		return false
+	}
+
+	is := intersect(childDList, parentDList)
+
+	if len(is) != len(childDList) {
+		return false
+	}
+
+	for i, d := range childDList {
+		if d != is[i] {
 			return false
 		}
 	}
 
 	return true
+}
+
+// Check if trip child is adjacent to trip parent calendar-wise
+func (m *TripDuplicateRemover) tripCalAdj(child *gtfs.Trip, parent *gtfs.Trip, maxdist uint64) bool {
+	// only merge if daymap is equal, to avoid creating complicated services
+
+	if !(child.Service.Start_date.Year > 0 && parent.Service.Start_date.Year > 0 && child.Service.Daymap[0] == parent.Service.Daymap[0] && child.Service.Daymap[1] == parent.Service.Daymap[1] && child.Service.Daymap[2] == parent.Service.Daymap[2] && child.Service.Daymap[3] == parent.Service.Daymap[3] && child.Service.Daymap[4] == parent.Service.Daymap[4] && child.Service.Daymap[5] == parent.Service.Daymap[5] && child.Service.Daymap[6] == parent.Service.Daymap[6]) {
+		return false
+	}
+
+	childList := m.serviceList[child.Service]
+	parentList := m.serviceList[parent.Service]
+
+	if len(childList) == 0 || len(parentList) == 0 {
+		return false
+	}
+
+	diffFront := parentList[0] - childList[len(childList)-1]
+	diffBack := childList[0] - parentList[len(parentList)-1]
+
+	return (diffFront > 0 && diffFront <= maxdist) || (diffBack > 0 && diffBack <= maxdist)
 }
 
 // Check if trip a is overlapping trip b calendar wise
@@ -607,6 +771,62 @@ func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint32 {
 
 func (m *TripDuplicateRemover) getDateFromRefDay(d uint64) gtfs.Date {
 	return gtfs.GetGtfsDateFromTime((m.refDate.AddDate(0, 0, int(d))))
+}
+
+func (m *TripDuplicateRemover) combineServices(services []*gtfs.Service, ref *gtfs.Service) {
+	dlist := m.serviceList[ref]
+
+	// first collect all active dates of the services
+	for _, serv := range services {
+		if serv == ref {
+			continue
+		}
+
+		dlist = merge(dlist, m.serviceList[serv])
+	}
+
+	if ref.Start_date.Year > 0 {
+		// extend range and delete wrong dates
+		for _, s := range services {
+			first := m.getDateFromRefDay(m.serviceList[s][0])
+			last := m.getDateFromRefDay(m.serviceList[s][len(m.serviceList[s])-1])
+
+			if first.GetTime().Before(ref.Start_date.GetTime()) {
+				ref.Start_date = first
+			}
+
+			if last.GetTime().After(ref.End_date.GetTime()) {
+				ref.End_date = last
+			}
+		}
+
+		// add all missing service dates
+		for _, d := range dlist {
+			date := m.getDateFromRefDay(d)
+			if !ref.IsActiveOn(date) {
+				ref.SetExceptionTypeOn(date, 1)
+			}
+		}
+
+		m.writeServiceList(ref)
+		dlistNew := m.serviceList[ref]
+
+		// delete all wrong service dates
+		for _, d := range diff(dlistNew, dlist) {
+			date := m.getDateFromRefDay(d)
+			ref.SetExceptionTypeOn(date, 2)
+		}
+	} else {
+		// add all missing service dates
+		for _, d := range dlist {
+			date := m.getDateFromRefDay(d)
+			if !ref.IsActiveOn(date) {
+				ref.SetExceptionTypeOn(date, 1)
+			}
+		}
+	}
+
+	m.writeServiceList(ref)
 }
 
 func (m *TripDuplicateRemover) writeServiceList(s *gtfs.Service) {

@@ -73,7 +73,7 @@ func parseCoords(s string) ([][]float64, error) {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "gtfstidy - (C) 2016-2020 by P. Brosi <info@patrickbrosi.de>\n\nUsage:\n\n  %s [<options>] [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "gtfstidy - (C) 2016-2021 by P. Brosi <info@patrickbrosi.de>\n\nUsage:\n\n  %s [<options>] [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
@@ -173,6 +173,7 @@ func main() {
 	}
 
 	if *mergeShortHand {
+		*useServiceMinimizer = true
 		*useRedServiceMinimizer = true
 		*useRedTripMinimizer = true
 		*useRedAgencyMinimizer = true
@@ -333,7 +334,7 @@ func main() {
 			} else {
 				fmt.Fprintf(os.Stdout, " done.")
 			}
-			fmt.Fprintf(os.Stdout, " (%d trips [%.2f%%], %d stops [%.2f%%], %d shapes [%.2f%%], %d services [%.2f%%], %d routes [%.2f%%], %d agencies [%.2f%%], %d transfers [%.2f%%], %d pathways [%.2f%%], %d levels [%.2f%%], %d fare attributes [%.2f%%] dropped due to errors. Use -W to display them.)\n",
+			fmt.Fprintf(os.Stdout, " (%d trips [%.2f%%], %d stops [%.2f%%], %d shapes [%.2f%%], %d services [%.2f%%], %d routes [%.2f%%], %d agencies [%.2f%%], %d transfers [%.2f%%], %d pathways [%.2f%%], %d levels [%.2f%%], %d fare attributes [%.2f%%] dropped due to errors.",
 				s.DroppedTrips,
 				100.0*float64(s.DroppedTrips)/(float64(s.DroppedTrips+len(feed.Trips))+0.001),
 				s.DroppedStops,
@@ -354,6 +355,10 @@ func main() {
 				100.0*float64(s.DroppedLevels)/(float64(s.DroppedLevels+len(feed.Levels))+0.001),
 				s.DroppedFareAttributes,
 				100.0*float64(s.DroppedFareAttributes)/(float64(s.DroppedFareAttributes+len(feed.FareAttributes))+0.001))
+			if !opts.ShowWarnings {
+				fmt.Fprintf(os.Stdout, " Use -W to display them.")
+			}
+			fmt.Print(")\n")
 		} else {
 			fmt.Fprintf(os.Stdout, " done.\n")
 		}
@@ -411,11 +416,22 @@ func main() {
 		}
 
 		if *useRedTripMinimizer {
+			// to convert calendar_dates based services into regular calendar.txt services
+			// before concatenating equivalent trips
+			if *useServiceMinimizer {
+				minzers = append(minzers, processors.ServiceMinimizer{})
+			}
+
 			minzers = append(minzers, processors.TripDuplicateRemover{Fuzzy: *useRedTripMinimizerFuzzyRoute})
 
 			// may have created route and stop orphans
 			if *useOrphanDeleter {
 				minzers = append(minzers, processors.OrphanRemover{})
+			}
+
+			// may have created service duplicates
+			if *useRedServiceMinimizer {
+				minzers = append(minzers, processors.ServiceDuplicateRemover{})
 			}
 		}
 

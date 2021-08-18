@@ -141,6 +141,93 @@ func cosSimi(a []float64, b []float64) float64 {
 	return sumA / (math.Sqrt(s1) * math.Sqrt(s2))
 }
 
+func merge(a []uint64, b []uint64) []uint64 {
+	lenA := len(a)
+	lenB := len(b)
+
+	i := 0
+	j := 0
+
+	ret := make([]uint64, 0)
+
+	for i < lenA && j < lenB {
+		if a[i] == b[j] {
+			if len(ret) == 0 || ret[len(ret)-1] != a[i] {
+				ret = append(ret, a[i])
+			}
+			i++
+			j++
+		} else if a[i] < b[j] {
+			if len(ret) == 0 || ret[len(ret)-1] != a[i] {
+				ret = append(ret, a[i])
+			}
+			i++
+		} else {
+			if len(ret) == 0 || ret[len(ret)-1] != b[j] {
+				ret = append(ret, b[j])
+			}
+			j++
+		}
+	}
+
+	for i < lenA {
+		if len(ret) == 0 || ret[len(ret)-1] != a[i] {
+			ret = append(ret, a[i])
+		}
+		i++
+	}
+
+	for j < lenB {
+		if len(ret) == 0 || ret[len(ret)-1] != b[j] {
+			ret = append(ret, b[j])
+		}
+		j++
+	}
+
+	return ret
+}
+
+func diff(a []uint64, b []uint64) []uint64 {
+	lenA := len(a)
+	lenB := len(b)
+	if lenA == 0 {
+		return b
+	}
+
+	if lenB == 0 {
+		return a
+	}
+
+	i := 0
+	j := 0
+
+	ret := make([]uint64, 0)
+	for i < lenA && j < lenB {
+		if a[i] == b[j] {
+			i++
+			j++
+		} else if a[i] < b[j] {
+			ret = append(ret, a[i])
+			i++
+		} else {
+			ret = append(ret, a[i])
+			j++
+		}
+	}
+
+	for i < lenA {
+		ret = append(ret, a[i])
+		i++
+	}
+
+	for j < lenB {
+		ret = append(ret, b[j])
+		j++
+	}
+
+	return ret
+}
+
 func intersect(a []uint64, b []uint64) []uint64 {
 	lenA := len(a)
 	lenB := len(b)
