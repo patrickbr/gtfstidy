@@ -98,6 +98,11 @@ func (sm ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
 	 *  but I am not 100% sure and have no proof / reduction method atm
 	 **/
 
+	if len(service.Exceptions) == 0 {
+		// already minimal
+		return
+	}
+
 	dRange := GetDateRange(service)
 
 	start := dRange.Start
@@ -120,6 +125,7 @@ func (sm ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
 	daysNotMatched := sm.getDaysNotMatched(service)
 	l := len(activeOn)
 
+out:
 	for a := 0; a < l; a = a + 7 {
 		for b := l - 1; b > a; b = b - 7 {
 			for d := uint(1); d < 128; d++ {
@@ -131,11 +137,17 @@ func (sm ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
 				}
 
 				c := sm.countExceptions(service, activeOn, d, startTime, endTime, startTimeAm, a, b, e)
+
 				if c < e {
 					e = c
 					bestMap = d
 					bestA = a
 					bestB = b
+
+					if c == 0 {
+						// early stop if optimal
+						break out
+					}
 				}
 			}
 		}

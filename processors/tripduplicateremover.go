@@ -629,6 +629,10 @@ func (m *TripDuplicateRemover) tripCalEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 		return false
 	}
 
+	if aDList[len(aDList)-1] != bDList[len(bDList)-1] {
+		return false
+	}
+
 	for i, v := range aDList {
 		if v != bDList[i] {
 			return false
