@@ -22,6 +22,7 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing unreferenced entries... ")
 
 	tripsB := len(feed.Trips)
+	transfersB := len(feed.Transfers)
 	stopsB := len(feed.Stops)
 	shapesB := len(feed.Shapes)
 	serviceB := len(feed.Services)
@@ -45,7 +46,7 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 
 	or.removeAgencyOrphans(feed)
 
-	fmt.Fprintf(os.Stdout, "done. (-%d trips [-%.2f%%], -%d stops [-%.2f%%], -%d shapes [-%.2f%%], -%d services [-%.2f%%], -%d routes [-%.2f%%], -%d agencies [-%.2f%%])\n",
+	fmt.Fprintf(os.Stdout, "done. (-%d trips [-%.2f%%], -%d stops [-%.2f%%], -%d shapes [-%.2f%%], -%d services [-%.2f%%], -%d routes [-%.2f%%], -%d agencies [-%.2f%%], -%d transfers [-%.2f%%])\n",
 		(tripsB - len(feed.Trips)),
 		100.0*float64(tripsB-len(feed.Trips))/(float64(tripsB)+0.001),
 		(stopsB - len(feed.Stops)),
@@ -57,7 +58,9 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 		(routesB - len(feed.Routes)),
 		100.0*float64(routesB-len(feed.Routes))/(float64(routesB)+0.001),
 		(agenciesB - len(feed.Agencies)),
-		100.0*float64(agenciesB-len(feed.Agencies))/(float64(agenciesB)+0.001))
+		100.0*float64(agenciesB-len(feed.Agencies))/(float64(agenciesB)+0.001),
+		(transfersB - len(feed.Transfers)),
+		100.0*float64(transfersB-len(feed.Transfers))/(float64(transfersB)+0.001))
 }
 
 // Remove transfer orphans
