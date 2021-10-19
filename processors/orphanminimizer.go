@@ -30,6 +30,8 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 
 	or.removeTripOrphans(feed)
 
+	or.removeTransferOrphans(feed)
+
 	or.removeStopOrphans(feed)
 
 	// do this 2 times, because stop deletion can create new stop orphans (parent_station)
@@ -56,6 +58,32 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 		100.0*float64(routesB-len(feed.Routes))/(float64(routesB)+0.001),
 		(agenciesB - len(feed.Agencies)),
 		100.0*float64(agenciesB-len(feed.Agencies))/(float64(agenciesB)+0.001))
+}
+
+// Remove transfer orphans
+func (or OrphanRemover) removeTransferOrphans(feed *gtfsparser.Feed) {
+	referenced := make(map[*gtfs.Stop]empty, 0)
+	for _, t := range feed.Trips {
+		for _, st := range t.StopTimes {
+			referenced[st.Stop] = empty{}
+		}
+	}
+
+	i := 0
+	for _, t := range feed.Transfers {
+		_, inFrom := referenced[t.From_stop]
+		_, inTo := referenced[t.To_stop]
+
+		if inFrom && inTo {
+			feed.Transfers[i] = t
+			i++
+		}
+	}
+
+	for j := i; j < len(feed.Transfers); j++ {
+		feed.Transfers[j] = nil
+	}
+	feed.Transfers = feed.Transfers[:i]
 }
 
 // Remove stop orphans
