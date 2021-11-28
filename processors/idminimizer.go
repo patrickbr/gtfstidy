@@ -16,7 +16,8 @@ import (
 
 // IDMinimizer minimizes IDs by replacing them be continuous integer
 type IDMinimizer struct {
-	Base int
+	Base         int
+	KeepStations bool
 }
 
 // Run this IDMinimizer on a feed
@@ -28,10 +29,12 @@ func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
 		minimizer.minimizeTripIds(feed)
 		sem <- empty{}
 	}()
-	go func() {
-		minimizer.minimizeStopIds(feed)
-		sem <- empty{}
-	}()
+	if !minimizer.KeepStations {
+		go func() {
+			minimizer.minimizeStopIds(feed)
+			sem <- empty{}
+		}()
+	}
 	go func() {
 		minimizer.minimizeRouteIds(feed)
 		sem <- empty{}

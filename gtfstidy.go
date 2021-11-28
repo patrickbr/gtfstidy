@@ -102,6 +102,7 @@ func main() {
 	dropErroneousEntities := flag.BoolP("drop-errs", "D", false, "drop erroneous entries from feed")
 	checkNullCoords := flag.BoolP("check-null-coords", "n", false, "check for (0, 0) coordinates")
 
+	keepStationIds := flag.BoolP("keep-station-ids", "", false, "keep station IDs during ID minimization")
 	useOrphanDeleter := flag.BoolP("delete-orphans", "O", false, "remove entities that are not referenced anywhere")
 	useShapeMinimizer := flag.BoolP("min-shapes", "s", false, "minimize shapes (using Douglas-Peucker)")
 	useShapeRemeasurer := flag.BoolP("remeasure-shapes", "m", false, "remeasure shapes (filling measurement-holes)")
@@ -448,9 +449,9 @@ func main() {
 		}
 
 		if *useIDMinimizerNum {
-			minzers = append(minzers, processors.IDMinimizer{Base: 10})
+			minzers = append(minzers, processors.IDMinimizer{Base: 10, KeepStations: *keepStationIds})
 		} else if *useIDMinimizerChar {
-			minzers = append(minzers, processors.IDMinimizer{Base: 36})
+			minzers = append(minzers, processors.IDMinimizer{Base: 36, KeepStations: *keepStationIds})
 		}
 
 		// do processing
