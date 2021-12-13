@@ -116,7 +116,7 @@ func main() {
 	useCalDatesRemover := flag.BoolP("remove-cal-dates", "", false, "don't use calendar_dates.txt")
 	explicitCals := flag.BoolP("explicit-calendar", "", false, "add calendar.txt entry for every service, even irregular ones")
 	keepColOrder := flag.BoolP("keep-col-order", "", false, "keep the original column ordering of the input feed")
-	useRedStopMinimizer := flag.BoolP("remove-red-stops", "P", false, "remove stops duplicates")
+	useRedStopMinimizer := flag.BoolP("remove-red-stops", "P", false, "remove stop and level duplicates")
 	useRedTripMinimizer := flag.BoolP("remove-red-trips", "I", false, "remove trip duplicates")
 	useRedTripMinimizerFuzzyRoute := flag.BoolP("red-trips-fuzzy", "", false, "only check MOT of routes for trip duplicate removal")
 	useRedAgencyMinimizer := flag.BoolP("remove-red-agencies", "A", false, "remove agency duplicates")
@@ -314,13 +314,17 @@ func main() {
 		os.Exit(0)
 	}
 
+	prefixes := make(map[string]bool, 0)
+
 	for i, gtfsPath := range gtfsPaths {
 		fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
 		if opts.ShowWarnings {
 			fmt.Fprintf(os.Stdout, "\n")
 		}
 		if len(gtfsPaths) > 1 {
-			e = feed.PrefixParse(gtfsPath, strconv.FormatInt(int64(i), 10)+"::")
+			prefix := strconv.FormatInt(int64(i), 10) + "::"
+			prefixes[prefix] = true
+			e = feed.PrefixParse(gtfsPath, prefix)
 		} else {
 			e = feed.Parse(gtfsPath)
 		}
@@ -457,6 +461,23 @@ func main() {
 		// do processing
 		for _, m := range minzers {
 			m.Run(feed)
+		}
+
+		// restore stop IDs, if requested
+		if *keepStationIds && len(prefixes) > 0 {
+			for id, s := range feed.Stops {
+				for prefix := range prefixes {
+					if strings.HasPrefix(id, prefix) {
+						oldId := strings.TrimPrefix(id, prefix)
+						if _, ok := feed.Stops[oldId]; !ok {
+							feed.Stops[oldId] = s
+							feed.Stops[oldId].Id = oldId
+							delete(feed.Stops, id)
+						}
+						break
+					}
+				}
+			}
 		}
 
 		fmt.Fprintf(os.Stdout, "Outputting GTFS feed to '%s'...", *outputPath)

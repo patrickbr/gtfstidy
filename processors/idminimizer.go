@@ -22,8 +22,12 @@ type IDMinimizer struct {
 
 // Run this IDMinimizer on a feed
 func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
+	j := 9
+	if minimizer.KeepStations {
+		j = j - 1
+	}
 	fmt.Fprintf(os.Stdout, "Minimizing ids... ")
-	sem := make(chan empty, 9)
+	sem := make(chan empty, j)
 
 	go func() {
 		minimizer.minimizeTripIds(feed)
@@ -64,7 +68,7 @@ func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
 		sem <- empty{}
 	}()
 
-	for i := 0; i < 9; i++ {
+	for i := 0; i < j; i++ {
 		<-sem
 	}
 

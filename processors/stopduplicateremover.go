@@ -27,6 +27,35 @@ func (sdr StopDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing redundant stops... ")
 	bef := len(feed.Stops)
 
+	levels := make(map[*gtfs.Level][]*gtfs.Stop, len(feed.Levels))
+	procedLvls := make(map[*gtfs.Level]bool, len(feed.Levels))
+
+	// collect levels that use stops as parents
+	for _, s := range feed.Stops {
+		if s.Level != nil {
+			levels[s.Level] = append(levels[s.Level], s)
+		}
+	}
+
+	// first, remove level duplicates
+	for _, l := range feed.Levels {
+		if _, ok := procedLvls[l]; ok {
+			continue
+		}
+
+		eqLevels := sdr.getEquivalentLevels(l, feed)
+
+		if len(eqLevels) > 0 {
+			sdr.combineLevels(feed, append(eqLevels, l), levels)
+
+			for _, l := range eqLevels {
+				procedLvls[l] = true
+			}
+
+			procedLvls[l] = true
+		}
+	}
+
 	// run multiple times to catch parent equivalencies
 	for i := 0; i < 3; i++ {
 		stoptimes := make(map[*gtfs.Stop][]*gtfs.StopTime, len(feed.Stops))
@@ -246,6 +275,52 @@ func (sdr StopDuplicateRemover) stopHash(s *gtfs.Stop) uint32 {
 	h.Write([]byte(s.Platform_code))
 
 	return h.Sum32()
+}
+
+// Returns the feed's levels that are equivalent to level
+func (sdr StopDuplicateRemover) getEquivalentLevels(lvl *gtfs.Level, feed *gtfsparser.Feed) []*gtfs.Level {
+	ret := make([]*gtfs.Level, 0)
+
+	for _, l := range feed.Levels {
+		if l == lvl {
+			continue
+		}
+		if _, ok := feed.Levels[l.Id]; !ok {
+			continue
+		}
+		if l.Index == lvl.Index && l.Name == lvl.Name {
+			ret = append(ret, l)
+		}
+	}
+
+	return ret
+}
+
+// Combine a slice of equal levels into a single stop
+func (sdr StopDuplicateRemover) combineLevels(feed *gtfsparser.Feed, levels []*gtfs.Level, stops map[*gtfs.Level][]*gtfs.Stop) {
+	// heuristic: use the level with the shortest ID as 'reference'
+	ref := levels[0]
+
+	for _, l := range levels {
+		if len(l.Id) < len(ref.Id) {
+			ref = l
+		}
+	}
+
+	for _, l := range levels {
+		if l == ref {
+			continue
+		}
+
+		for i, s := range stops[l] {
+			if s.Level == l {
+				stops[l][i].Level = ref
+				stops[ref] = append(stops[ref], stops[l][i])
+			}
+		}
+
+		delete(feed.Levels, l.Id)
+	}
 }
 
 // Check if two stops are equal, distances under 1 m count as equal
