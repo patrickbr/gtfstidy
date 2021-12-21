@@ -40,12 +40,12 @@ func (sm ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 		go func(chunk []*gtfs.Shape, a int) {
 			for _, s := range chunk {
 				bef := len(s.Points)
+				chunknum[a] += len(s.Points)
 				s.Points = sm.minimizeShape(s.Points, sm.Epsilon)
 				for i := 0; i < len(s.Points); i++ {
 					s.Points[i].Sequence = i
 				}
 				chunkgain[a] += bef - len(s.Points)
-				chunknum[a] += len(s.Points)
 			}
 			sem <- empty{}
 		}(c, i)
