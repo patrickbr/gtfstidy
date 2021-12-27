@@ -52,10 +52,10 @@ func (s ShapeRemeasurer) Run(feed *gtfsparser.Feed) {
 
 // Remeasure a single shape
 func (s ShapeRemeasurer) remeasure(shape *gtfs.Shape) {
-	avgMeasure, nulled := s.remasureKnown(shape)
+	avgMeasure, nulled := s.remeasureKnown(shape)
 
 	if !nulled {
-		s.remasureUnknown(shape, avgMeasure)
+		s.remeasureUnknown(shape, avgMeasure)
 	} else {
 		// no avg measurement found, null all values
 		for i := range shape.Points {
@@ -66,7 +66,7 @@ func (s ShapeRemeasurer) remeasure(shape *gtfs.Shape) {
 
 // Remeasure parts of the shape we could not guess the correct measurement by using
 // the average measurement
-func (s ShapeRemeasurer) remasureUnknown(shape *gtfs.Shape, avgMeasure float64) {
+func (s ShapeRemeasurer) remeasureUnknown(shape *gtfs.Shape, avgMeasure float64) {
 	lastUMIndex := -1
 	lastM := 0.0
 
@@ -86,7 +86,7 @@ func (s ShapeRemeasurer) remasureUnknown(shape *gtfs.Shape, avgMeasure float64) 
 }
 
 // Remeasure parts of the shape we can guess by using surrounding points
-func (s ShapeRemeasurer) remasureKnown(shape *gtfs.Shape) (float64, bool) {
+func (s ShapeRemeasurer) remeasureKnown(shape *gtfs.Shape) (float64, bool) {
 	c := 0
 	m := 0.0
 
@@ -131,6 +131,6 @@ func (s ShapeRemeasurer) remeasureBetween(i int, end int, mPUnit float64, lastMe
 		if i > 0 {
 			d = d + distP(&shape.Points[i-1], &shape.Points[i])
 		}
-		shape.Points[i].Dist_traveled = float32(lastMeasure) + float32(d*mPUnit)
+		shape.Points[i].Dist_traveled = float32(lastMeasure + (d * mPUnit))
 	}
 }
