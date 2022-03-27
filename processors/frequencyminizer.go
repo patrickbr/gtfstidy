@@ -81,7 +81,7 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 		}
 
 		// trips time-independent equal to the current trip
-		eqs := m.getTimeIndependentEquivalentTrips(t, tripsSl[t.Route][t.Service])
+		eqs := m.getTimeIndependentEquivalentTrips(t, tripsSl[t.Route][t.Service], feed)
 		for _, t := range eqs.trips {
 			processed[t.Trip] = empty{}
 		}
@@ -128,6 +128,15 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 					}
 				}
 
+				// copy additional header
+				for h, _ := range feed.TripsAddFlds {
+					feed.TripsAddFlds[h][newID] = feed.TripsAddFlds[h][t.Id]
+				}
+
+				for h, _ := range feed.StopTimesAddFlds {
+					feed.StopTimesAddFlds[h][newID] = feed.StopTimesAddFlds[h][t.Id]
+				}
+
 				curTrip.Id = newID
 				feed.Trips[curTrip.Id] = curTrip
 				processed[curTrip] = empty{}
@@ -145,7 +154,7 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 			} else {
 				curTrip = t
 			}
-			curTrip.Frequencies = make([]gtfs.Frequency, 0)
+			curTrip.Frequencies = make([]*gtfs.Frequency, 0)
 
 			suffixC++
 
@@ -163,7 +172,7 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 				if smallestStartTime.SecondsSinceMidnight() > eqs.trips[p.matches[0]].t.SecondsSinceMidnight() {
 					smallestStartTime = eqs.trips[p.matches[0]].t
 				}
-				a := gtfs.Frequency{}
+				a := new(gtfs.Frequency)
 
 				if eqs.trips[p.matches[0]].sourceFreq != nil {
 					a.Exact_times = eqs.trips[p.matches[0]].sourceFreq.Exact_times
@@ -182,7 +191,7 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 		for _, trip := range eqs.trips {
 			if trip.Id != t.Id {
 				// don't delete the trip with the original id, we have used it again!
-				delete(feed.Trips, trip.Id)
+				feed.DeleteTrip(trip.Id)
 			}
 		}
 	}
@@ -366,7 +375,7 @@ func (m FrequencyMinimizer) getPossibleFreqs(tws tripWrappers) map[int]empty {
 }
 
 // Get trips that are equal to trip without considering the absolute time values
-func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, trips []*gtfs.Trip) tripWrappers {
+func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, trips []*gtfs.Trip, feed *gtfsparser.Feed) tripWrappers {
 	ret := tripWrappers{make([]tripWrapper, 0), make(map[*gtfs.Trip]empty, 0)}
 
 	chunks := MaxParallelism()
@@ -379,7 +388,7 @@ func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, t
 			for i := workload * j; i < workload*(j+1) && i < len(trips); i++ {
 				t := trips[i]
 
-				if t.Id == trip.Id || m.isTimeIndependentEqual(t, trip) {
+				if t.Id == trip.Id || m.isTimeIndependentEqual(t, trip, feed) {
 					if len(t.Frequencies) == 0 {
 						mutex.Lock()
 						ret.trips = append(ret.trips, tripWrapper{t, t.StopTimes[0].Arrival_time, false, nil})
@@ -390,7 +399,7 @@ func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, t
 						for _, f := range t.Frequencies {
 							for s := f.Start_time.SecondsSinceMidnight(); s < f.End_time.SecondsSinceMidnight(); s = s + f.Headway_secs {
 								mutex.Lock()
-								ret.trips = append(ret.trips, tripWrapper{t, m.getGtfsTimeFromSec(s), false, &f})
+								ret.trips = append(ret.trips, tripWrapper{t, m.getGtfsTimeFromSec(s), false, f})
 								ret.coveredTrips[t] = empty{}
 								mutex.Unlock()
 							}
@@ -414,11 +423,19 @@ func (m FrequencyMinimizer) getGtfsTimeFromSec(s int) gtfs.Time {
 }
 
 // Check if two trips are equal without considering absolute stop times
-func (m FrequencyMinimizer) isTimeIndependentEqual(a *gtfs.Trip, b *gtfs.Trip) bool {
-	return a.Route == b.Route && a.Service == b.Service && a.Headsign == b.Headsign &&
+func (m FrequencyMinimizer) isTimeIndependentEqual(a *gtfs.Trip, b *gtfs.Trip, feed *gtfsparser.Feed) bool {
+	addFldsEq := true
+
+	for _, v := range feed.TripsAddFlds {
+		if v[a.Id] != v[b.Id] {
+			addFldsEq = false
+			break
+		}
+	}
+	return addFldsEq && a.Route == b.Route && a.Service == b.Service && a.Headsign == b.Headsign &&
 		a.Short_name == b.Short_name && a.Direction_id == b.Direction_id && a.Block_id == b.Block_id &&
 		a.Shape == b.Shape && a.Wheelchair_accessible == b.Wheelchair_accessible &&
-		a.Bikes_allowed == b.Bikes_allowed && m.hasSameRelStopTimes(a, b)
+		a.Bikes_allowed == b.Bikes_allowed && m.hasSameRelStopTimes(a, b, feed)
 }
 
 // Remeasure a trips stop times by taking their relative values and changing the sequence to
@@ -441,7 +458,7 @@ func (m FrequencyMinimizer) remeasureStopTimes(t *gtfs.Trip, time gtfs.Time) {
 
 // true if two trips share the same stops in the same order with the same
 // relative stop times
-func (m FrequencyMinimizer) hasSameRelStopTimes(a *gtfs.Trip, b *gtfs.Trip) bool {
+func (m FrequencyMinimizer) hasSameRelStopTimes(a *gtfs.Trip, b *gtfs.Trip, feed *gtfsparser.Feed) bool {
 	// handle trivial cases
 	if len(a.StopTimes) != len(b.StopTimes) {
 		return false
@@ -455,10 +472,19 @@ func (m FrequencyMinimizer) hasSameRelStopTimes(a *gtfs.Trip, b *gtfs.Trip) bool
 	var bPrev *gtfs.StopTime
 
 	for i := range a.StopTimes {
-		if !(a.StopTimes[i].Stop == b.StopTimes[i].Stop &&
+		addFldsEq := true
+
+		for _, v := range feed.StopTimesAddFlds {
+			if v[a.Id][a.StopTimes[i].Sequence] != v[b.Id][a.StopTimes[i].Sequence] {
+				addFldsEq = false
+				break
+			}
+		}
+
+		if !(addFldsEq && a.StopTimes[i].Stop == b.StopTimes[i].Stop &&
 			a.StopTimes[i].Headsign == b.StopTimes[i].Headsign &&
-			a.StopTimes[i].Pickup_type == b.StopTimes[i].Pickup_type && a.StopTimes[i].Drop_off_type == b.StopTimes[i].Drop_off_type &&
-			FloatEquals(a.StopTimes[i].Shape_dist_traveled, b.StopTimes[i].Shape_dist_traveled, 0.01) && a.StopTimes[i].Timepoint == b.StopTimes[i].Timepoint) {
+			a.StopTimes[i].Pickup_type == b.StopTimes[i].Pickup_type && a.StopTimes[i].Drop_off_type == b.StopTimes[i].Drop_off_type && a.StopTimes[i].Continuous_drop_off == b.StopTimes[i].Continuous_drop_off && a.StopTimes[i].Continuous_pickup == b.StopTimes[i].Continuous_pickup &&
+			((math.IsNaN(float64(a.StopTimes[i].Shape_dist_traveled)) && math.IsNaN(float64(b.StopTimes[i].Shape_dist_traveled))) || FloatEquals(a.StopTimes[i].Shape_dist_traveled, b.StopTimes[i].Shape_dist_traveled, 0.01)) && a.StopTimes[i].Timepoint == b.StopTimes[i].Timepoint) {
 			return false
 		}
 		if i != 0 {

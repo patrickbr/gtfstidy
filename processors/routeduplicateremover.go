@@ -68,7 +68,7 @@ func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gt
 	for i, c := range chunks {
 		go func(j int, chunk []*gtfs.Route) {
 			for _, r := range chunk {
-				if r != route && rdr.routeEquals(r, route) && rdr.checkFareEquality(feed, route, r) {
+				if r != route && rdr.routeEquals(r, route, feed) && rdr.checkFareEquality(feed, route, r) {
 					rets[j] = append(rets[j], r)
 				}
 			}
@@ -207,11 +207,11 @@ func (rdr RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*
 			 * delete the attribute
 			 */
 			if len(fa.Rules) == 0 && !emptyBef {
-				delete(feed.FareAttributes, fa.Id)
+				feed.DeleteFareAttribute(fa.Id)
 			}
 		}
 
-		delete(feed.Routes, r.Id)
+		feed.DeleteRoute(r.Id)
 	}
 }
 
@@ -265,12 +265,23 @@ func (rdr RouteDuplicateRemover) routeHash(r *gtfs.Route) uint32 {
 }
 
 // Check if two routes are equal
-func (rdr RouteDuplicateRemover) routeEquals(a *gtfs.Route, b *gtfs.Route) bool {
-	return a.Agency == b.Agency &&
+func (rdr RouteDuplicateRemover) routeEquals(a *gtfs.Route, b *gtfs.Route, feed *gtfsparser.Feed) bool {
+	addFldsEq := true
+
+	for _, v := range feed.RoutesAddFlds {
+		if v[a.Id] != v[b.Id] {
+			addFldsEq = false
+			break
+		}
+	}
+
+	return addFldsEq && a.Agency == b.Agency &&
 		a.Short_name == b.Short_name &&
 		a.Long_name == b.Long_name &&
 		a.Desc == b.Desc &&
 		a.Type == b.Type &&
+		a.Continuous_drop_off == b.Continuous_drop_off &&
+		a.Continuous_pickup == b.Continuous_pickup &&
 		((a.Url != nil && b.Url != nil && a.Url.String() == b.Url.String()) || a.Url == b.Url) &&
 		a.Color == b.Color &&
 		a.Text_color == b.Text_color

@@ -133,7 +133,7 @@ func (sdr StopDuplicateRemover) getEquivalentStops(stop *gtfs.Stop, feed *gtfspa
 				if _, ok := feed.Stops[s.Id]; !ok {
 					continue
 				}
-				if sdr.stopEquals(s, stop) {
+				if sdr.stopEquals(s, stop, feed) {
 					rets[j] = append(rets[j], s)
 				}
 			}
@@ -218,7 +218,7 @@ func (sdr StopDuplicateRemover) combineStops(feed *gtfsparser.Feed, stops []*gtf
 			}
 		}
 
-		delete(feed.Stops, s.Id)
+		feed.DeleteStop(s.Id)
 	}
 }
 
@@ -288,7 +288,17 @@ func (sdr StopDuplicateRemover) getEquivalentLevels(lvl *gtfs.Level, feed *gtfsp
 		if _, ok := feed.Levels[l.Id]; !ok {
 			continue
 		}
-		if l.Index == lvl.Index && l.Name == lvl.Name {
+
+		addFldsEq := true
+
+		for _, v := range feed.LevelsAddFlds {
+			if v[l.Id] != v[lvl.Id] {
+				addFldsEq = false
+				break
+			}
+		}
+
+		if addFldsEq && l.Index == lvl.Index && l.Name == lvl.Name {
 			ret = append(ret, l)
 		}
 	}
@@ -319,13 +329,22 @@ func (sdr StopDuplicateRemover) combineLevels(feed *gtfsparser.Feed, levels []*g
 			}
 		}
 
-		delete(feed.Levels, l.Id)
+		feed.DeleteLevel(l.Id)
 	}
 }
 
 // Check if two stops are equal, distances under 1 m count as equal
-func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop) bool {
-	return a.Code == b.Code &&
+func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtfsparser.Feed) bool {
+	addFldsEq := true
+
+	for _, v := range feed.StopsAddFlds {
+		if v[a.Id] != v[b.Id] {
+			addFldsEq = false
+			break
+		}
+	}
+
+	return addFldsEq && a.Code == b.Code &&
 		a.Name == b.Name &&
 		a.Desc == b.Desc &&
 		a.Zone_id == b.Zone_id &&

@@ -121,7 +121,7 @@ func (or OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
 	// delete unreferenced
 	for id, s := range feed.Stops {
 		if _, in := referenced[s]; !in {
-			delete(feed.Stops, id)
+			feed.DeleteStop(id)
 		}
 	}
 }
@@ -138,7 +138,7 @@ func (or OrphanRemover) removeShapeOrphans(feed *gtfsparser.Feed) {
 	// delete unreferenced
 	for id, s := range feed.Shapes {
 		if _, in := referenced[s]; !in {
-			delete(feed.Shapes, id)
+			feed.DeleteShape(id)
 		}
 	}
 }
@@ -153,7 +153,7 @@ func (or OrphanRemover) removeServiceOrphans(feed *gtfsparser.Feed) {
 	// delete unreferenced
 	for id, s := range feed.Services {
 		if _, in := referenced[s]; !in {
-			delete(feed.Services, id)
+			feed.DeleteService(id)
 		}
 	}
 }
@@ -162,7 +162,7 @@ func (or OrphanRemover) removeServiceOrphans(feed *gtfsparser.Feed) {
 func (or OrphanRemover) removeTripOrphans(feed *gtfsparser.Feed) {
 	for id, s := range feed.Trips {
 		if len(s.StopTimes) == 0 && len(s.Frequencies) == 0 {
-			delete(feed.Trips, id)
+			feed.DeleteTrip(id)
 		}
 	}
 }
@@ -185,7 +185,7 @@ func (or OrphanRemover) removeRouteOrphans(feed *gtfsparser.Feed) {
 	// delete unreferenced
 	for id, r := range feed.Routes {
 		if _, in := referenced[r]; !in {
-			delete(feed.Routes, id)
+			feed.DeleteRoute(id)
 		}
 	}
 }
@@ -208,7 +208,7 @@ func (or OrphanRemover) removeAgencyOrphans(feed *gtfsparser.Feed) {
 	// delete unreferenced
 	for id, a := range feed.Agencies {
 		if _, in := referenced[a]; !in {
-			delete(feed.Agencies, id)
+			feed.DeleteAgency(id)
 		}
 	}
 }

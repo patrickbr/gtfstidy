@@ -210,6 +210,6 @@ func (sdr *ShapeDuplicateRemover) combineShapes(feed *gtfsparser.Feed, shps []*g
 		}
 
 		sdr.deleted[s] = true
-		delete(feed.Shapes, s.Id)
+		feed.DeleteShape(s.Id)
 	}
 }

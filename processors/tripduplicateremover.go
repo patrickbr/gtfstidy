@@ -167,7 +167,7 @@ func (m *TripDuplicateRemover) getEqualTrips(trip *gtfs.Trip, feed *gtfsparser.F
 					// skip already deleted trips
 					continue
 				}
-				if t != trip && m.tripAttrEq(t, trip) && m.tripStEq(t, trip) {
+				if t != trip && m.tripAttrEq(t, trip, feed) && m.tripStEq(t, trip) {
 					if m.tripCalEq(t, trip) {
 						rets[j] = append(rets[j], t)
 					}
@@ -208,7 +208,7 @@ func (m *TripDuplicateRemover) getAdjTrips(trip *gtfs.Trip, feed *gtfsparser.Fee
 					// skip already deleted trips
 					continue
 				}
-				if t != trip && m.tripAttrEq(t, trip) && m.tripStEq(t, trip) {
+				if t != trip && m.tripAttrEq(t, trip, feed) && m.tripStEq(t, trip) {
 					if m.tripCalAdj(t, trip, maxdist) {
 						rets[j] = append(rets[j], t)
 					}
@@ -250,7 +250,7 @@ func (m *TripDuplicateRemover) getContainedTrips(trip *gtfs.Trip, feed *gtfspars
 					// skip already deleted trips
 					continue
 				}
-				if t != trip && m.tripAttrEq(t, trip) && m.tripStEq(t, trip) {
+				if t != trip && m.tripAttrEq(t, trip, feed) && m.tripStEq(t, trip) {
 					if m.tripCalContained(t, trip) {
 						rets[j] = append(rets[j], t)
 					}
@@ -292,7 +292,7 @@ func (m *TripDuplicateRemover) getOverlapTrips(trip *gtfs.Trip, feed *gtfsparser
 					// skip already deleted trips
 					continue
 				}
-				if t != trip && m.tripAttrEq(t, trip) && m.tripStEq(t, trip) {
+				if t != trip && m.tripAttrEq(t, trip, feed) && m.tripStEq(t, trip) {
 					overlaps := m.tripCalOverlap(t, trip)
 					if len(overlaps) > 0 {
 						rets[j] = append(rets[j], Overlap{t, overlaps})
@@ -391,7 +391,7 @@ func (m *TripDuplicateRemover) combineAdjTrips(feed *gtfsparser.Feed, ref *gtfs.
 			ref.Attributions = append(ref.Attributions, attr)
 		}
 
-		delete(feed.Trips, t.Id)
+		feed.DeleteTrip(t.Id)
 		m.serviceRefs[t.Service]--
 	}
 }
@@ -416,7 +416,7 @@ func (m *TripDuplicateRemover) combineContTrips(feed *gtfsparser.Feed, ref *gtfs
 			ref.Attributions = append(ref.Attributions, attr)
 		}
 
-		delete(feed.Trips, t.Id)
+		feed.DeleteTrip(t.Id)
 		m.serviceRefs[t.Service]--
 	}
 }
@@ -465,7 +465,7 @@ func (m *TripDuplicateRemover) combineEqTrips(feed *gtfsparser.Feed, ref *gtfs.T
 			ref.Short_name = t.Short_name
 		}
 
-		delete(feed.Trips, t.Id)
+		feed.DeleteTrip(t.Id)
 		m.serviceRefs[t.Service]--
 	}
 }
@@ -498,7 +498,7 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 
 		// the service is now empty
 		if len(m.serviceList[ref.Service]) == 0 {
-			delete(feed.Trips, ref.Id)
+			feed.DeleteTrip(ref.Id)
 			m.serviceRefs[ref.Service]--
 		}
 	} else {
@@ -532,7 +532,7 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 
 		// the service is empty
 		if len(m.serviceList[newService]) == 0 {
-			delete(feed.Trips, ref.Id)
+			feed.DeleteTrip(ref.Id)
 			m.serviceRefs[ref.Service]--
 			return
 		}
@@ -558,6 +558,7 @@ func (m *TripDuplicateRemover) tripStEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 
 	// check departure times
 	for i, aSt := range a.StopTimes {
+		// NOTE: we don't check for the additional stop time attributes here
 		bSt := b.StopTimes[i]
 
 		if !m.stopEq(aSt.Stop, bSt.Stop) {
@@ -583,7 +584,7 @@ func (m *TripDuplicateRemover) tripStEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 }
 
 // Check if trip child is attribute equal to another trip
-func (m *TripDuplicateRemover) tripAttrEq(a *gtfs.Trip, b *gtfs.Trip) bool {
+func (m *TripDuplicateRemover) tripAttrEq(a *gtfs.Trip, b *gtfs.Trip, feed *gtfsparser.Feed) bool {
 	if !m.Fuzzy && a.Route != b.Route {
 		return false
 	}
@@ -598,11 +599,24 @@ func (m *TripDuplicateRemover) tripAttrEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 		return false
 	}
 
-	return m.Fuzzy || (a.Wheelchair_accessible == b.Wheelchair_accessible &&
+	if m.Fuzzy {
+		return true
+	}
+
+	addFldsEq := true
+
+	for _, v := range feed.TripsAddFlds {
+		if v[a.Id] != v[b.Id] {
+			addFldsEq = false
+			break
+		}
+	}
+
+	return addFldsEq && a.Wheelchair_accessible == b.Wheelchair_accessible &&
 		a.Bikes_allowed == b.Bikes_allowed &&
 		a.Short_name == b.Short_name &&
 		a.Headsign == b.Headsign &&
-		a.Block_id == b.Block_id)
+		a.Block_id == b.Block_id
 }
 
 // Check if trip child is equivalent to trip parent calendar-wise

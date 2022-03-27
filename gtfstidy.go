@@ -116,6 +116,7 @@ func main() {
 	useCalDatesRemover := flag.BoolP("remove-cal-dates", "", false, "don't use calendar_dates.txt")
 	explicitCals := flag.BoolP("explicit-calendar", "", false, "add calendar.txt entry for every service, even irregular ones")
 	keepColOrder := flag.BoolP("keep-col-order", "", false, "keep the original column ordering of the input feed")
+	keepFields := flag.BoolP("keep-additional-fields", "F", false, "keep all non-GTFS fields from the input")
 	useRedStopMinimizer := flag.BoolP("remove-red-stops", "P", false, "remove stop and level duplicates")
 	useRedTripMinimizer := flag.BoolP("remove-red-trips", "I", false, "remove trip duplicates")
 	useRedTripMinimizerFuzzyRoute := flag.BoolP("red-trips-fuzzy", "", false, "only check MOT of routes for trip duplicate removal")
@@ -283,6 +284,7 @@ func main() {
 	opts.ZipFix = *fixZip
 	opts.ShowWarnings = *showWarnings
 	opts.DropShapes = *dropShapes
+	opts.KeepAddFlds = *keepFields
 	opts.DateFilterStart = startDate
 	opts.DateFilterEnd = endDate
 	feed.SetParseOpts(opts)
@@ -472,7 +474,14 @@ func main() {
 						if _, ok := feed.Stops[oldId]; !ok {
 							feed.Stops[oldId] = s
 							feed.Stops[oldId].Id = oldId
-							delete(feed.Stops, id)
+
+							// update additional fields
+							for k, _ := range feed.StopsAddFlds {
+								feed.StopsAddFlds[k][oldId] = feed.StopsAddFlds[k][id]
+								delete(feed.StopsAddFlds[k], id)
+							}
+
+							feed.DeleteStop(id)
 						}
 						break
 					}

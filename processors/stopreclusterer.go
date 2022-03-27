@@ -271,7 +271,7 @@ func (m *StopReclusterer) writeCluster(cl *StopCluster, feed *gtfsparser.Feed) {
 			}
 		}
 
-		delete(feed.Stops, st.Id)
+		feed.DeleteStop(st.Id)
 	}
 }
 

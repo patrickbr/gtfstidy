@@ -68,7 +68,7 @@ func (adr *AgencyDuplicateRemover) getEquivalentAgencies(agency *gtfs.Agency, fe
 	for i, c := range chunks {
 		go func(j int, chunk []*gtfs.Agency) {
 			for _, a := range chunk {
-				if a != agency && adr.agencyEquals(a, agency) {
+				if a != agency && adr.agencyEquals(a, agency, feed) {
 					rets[j] = append(rets[j], a)
 				}
 			}
@@ -123,7 +123,7 @@ func (adr *AgencyDuplicateRemover) combineAgencies(feed *gtfsparser.Feed, agenci
 			}
 		}
 
-		delete(feed.Agencies, a.Id)
+		feed.DeleteAgency(a.Id)
 	}
 }
 
@@ -164,8 +164,17 @@ func (adr *AgencyDuplicateRemover) agencyHash(a *gtfs.Agency) uint32 {
 }
 
 // Check if two routes are equal
-func (adr *AgencyDuplicateRemover) agencyEquals(a *gtfs.Agency, b *gtfs.Agency) bool {
-	return a.Name == b.Name &&
+func (adr *AgencyDuplicateRemover) agencyEquals(a *gtfs.Agency, b *gtfs.Agency, feed *gtfsparser.Feed) bool {
+	addFldsEq := true
+
+	for _, v := range feed.AgenciesAddFlds {
+		if v[a.Id] != v[b.Id] {
+			addFldsEq = false
+			break
+		}
+	}
+
+	return addFldsEq && a.Name == b.Name &&
 		(a.Url == b.Url || (a.Url != nil && b.Url != nil && *a.Url == *b.Url)) &&
 		a.Timezone == b.Timezone &&
 		a.Lang == b.Lang &&
