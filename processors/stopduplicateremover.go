@@ -160,11 +160,13 @@ func (sdr StopDuplicateRemover) getEquivalentStops(stop *gtfs.Stop, feed *gtfspa
 func (sdr StopDuplicateRemover) combineStops(feed *gtfsparser.Feed, stops []*gtfs.Stop, stoptimes map[*gtfs.Stop][]*gtfs.StopTime, pstops map[*gtfs.Stop][]*gtfs.Stop,
 	transfers map[*gtfs.Stop][]*gtfs.Transfer,
 	pathways map[*gtfs.Stop][]*gtfs.Pathway) {
-	// heuristic: use the stop with the shortest ID as 'reference'
+	// heuristic: use the stop with the most colons as the reference stop, to prefer
+	// stops with global ID of the form de:54564:345:3 over something like 5542, and to
+	// also prefer more specific global IDs
 	ref := stops[0]
 
 	for _, s := range stops {
-		if len(s.Id) < len(ref.Id) {
+		if sdr.numColons(s.Id) > sdr.numColons(ref.Id) {
 			ref = s
 		}
 	}
@@ -331,6 +333,17 @@ func (sdr StopDuplicateRemover) combineLevels(feed *gtfsparser.Feed, levels []*g
 
 		feed.DeleteLevel(l.Id)
 	}
+}
+
+// count number of colons in a string
+func (sdr StopDuplicateRemover) numColons(str string) int {
+	count := 0
+	for _, c := range str {
+		if c == ':' {
+			count += 1
+		}
+	}
+	return count
 }
 
 // Check if two stops are equal, distances under 1 m count as equal
