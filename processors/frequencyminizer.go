@@ -19,6 +19,8 @@ import (
 
 // FrequencyMinimizer minimizes trips, stop_times and frequencies by searching optimal covers for trip times.
 type FrequencyMinimizer struct {
+	MinHeadway int
+	MaxHeadway int
 }
 
 type freqCandidate struct {
@@ -366,7 +368,7 @@ func (m FrequencyMinimizer) getPossibleFreqs(tws tripWrappers) map[int]empty {
 	for i := range tws.trips {
 		for ii := i + 1; ii < len(tws.trips); ii++ {
 			fre := tws.trips[ii].t.SecondsSinceMidnight() - tws.trips[i].t.SecondsSinceMidnight()
-			if fre != 0 {
+			if fre != 0 && fre <= m.MaxHeadway && fre >= m.MinHeadway {
 				ret[fre] = empty{}
 			}
 		}

@@ -127,6 +127,8 @@ func main() {
 	flag.StringArrayVar(&polygonStrings, "polygon", []string{}, "polygon filter, as comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon multiple times)")
 	flag.StringArrayVar(&polygonFiles, "polygon-file", []string{}, "polygon filter, as a file containing comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon-file multiple times)")
 	showWarnings := flag.BoolP("show-warnings", "W", false, "show warnings")
+	minHeadway := flag.IntP("min-headway", "", 1, "min allowed headway (in seconds) for frequency found with -T")
+	maxHeadway := flag.IntP("max-headway", "", 3600*24, "min allowed headway (in seconds) for frequency found with -T")
 	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
@@ -341,7 +343,7 @@ func main() {
 			} else {
 				fmt.Fprintf(os.Stdout, " done.")
 			}
-			fmt.Fprintf(os.Stdout, " (%d trips [%.2f%%], %d stops [%.2f%%], %d shapes [%.2f%%], %d services [%.2f%%], %d routes [%.2f%%], %d agencies [%.2f%%], %d transfers [%.2f%%], %d pathways [%.2f%%], %d levels [%.2f%%], %d fare attributes [%.2f%%] dropped due to errors.",
+			fmt.Fprintf(os.Stdout, " (%d trips [%.2f%%], %d stops [%.2f%%], %d shapes [%.2f%%], %d services [%.2f%%], %d routes [%.2f%%], %d agencies [%.2f%%], %d transfers [%.2f%%], %d pathways [%.2f%%], %d levels [%.2f%%], %d fare attributes [%.2f%%], %d translations [%.2f%%] dropped due to errors.",
 				s.DroppedTrips,
 				100.0*float64(s.DroppedTrips)/(float64(s.DroppedTrips+len(feed.Trips))+0.001),
 				s.DroppedStops,
@@ -361,7 +363,9 @@ func main() {
 				s.DroppedLevels,
 				100.0*float64(s.DroppedLevels)/(float64(s.DroppedLevels+len(feed.Levels))+0.001),
 				s.DroppedFareAttributes,
-				100.0*float64(s.DroppedFareAttributes)/(float64(s.DroppedFareAttributes+len(feed.FareAttributes))+0.001))
+				100.0*float64(s.DroppedFareAttributes)/(float64(s.DroppedFareAttributes+len(feed.FareAttributes))+0.001),
+				s.DroppedTranslations,
+				100.0*float64(s.DroppedTranslations)/(float64(s.DroppedTranslations+s.NumTranslations)+0.001))
 			if !opts.ShowWarnings {
 				fmt.Fprintf(os.Stdout, " Use -W to display them.")
 			}
@@ -447,7 +451,7 @@ func main() {
 		}
 
 		if *useFrequencyMinimizer {
-			minzers = append(minzers, processors.FrequencyMinimizer{})
+			minzers = append(minzers, processors.FrequencyMinimizer{*minHeadway, *maxHeadway})
 		}
 
 		if *useCalDatesRemover {
