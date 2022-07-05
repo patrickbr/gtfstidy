@@ -326,7 +326,7 @@ func main() {
 			fmt.Fprintf(os.Stdout, "\n")
 		}
 		if len(gtfsPaths) > 1 {
-			prefix := strconv.FormatInt(int64(i), 10) + "::"
+			prefix := strconv.FormatInt(int64(i), 10) + "#"
 			prefixes[prefix] = true
 			e = feed.PrefixParse(gtfsPath, prefix)
 		} else {
@@ -393,7 +393,7 @@ func main() {
 
 		if *useRedStopMinimizer {
 			minzers = append(minzers, processors.StopDuplicateRemover{
-				DistThresholdStop:    2.0,
+				DistThresholdStop:    5.0,
 				DistThresholdStation: 50,
 			})
 		}

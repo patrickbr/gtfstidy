@@ -97,7 +97,7 @@ func (m StopReclusterer) Run(feed *gtfsparser.Feed) {
 	// maps from stops to the cluster map where they appear as a child
 	childClusterMap := make(map[*gtfs.Stop]int, 0)
 
-	// iterate over stops which arent stations (location_type = 1) or
+	// iterate over stops which aren't stations (location_type = 1) or
 	// boarding areas (location_type = 4), the latter don't have a
 	// station as parents
 	for _, s := range feed.Stops {
