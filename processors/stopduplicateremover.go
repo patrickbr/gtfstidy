@@ -169,7 +169,7 @@ func (sdr StopDuplicateRemover) combineStops(feed *gtfsparser.Feed, stops []*gtf
 	for _, s := range stops {
 		numColsS := sdr.numColons(s.Id)
 		numColsRef := sdr.numColons(ref.Id)
-		if numColsS > numColsRef || (numColsS == numColsRef && len(ref.Id) < len(s.Id)) {
+		if numColsS > numColsRef || (numColsS == numColsRef && len(ref.Id) > len(s.Id)) {
 			ref = s
 		}
 	}
