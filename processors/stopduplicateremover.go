@@ -162,11 +162,14 @@ func (sdr StopDuplicateRemover) combineStops(feed *gtfsparser.Feed, stops []*gtf
 	pathways map[*gtfs.Stop][]*gtfs.Pathway) {
 	// heuristic: use the stop with the most colons as the reference stop, to prefer
 	// stops with global ID of the form de:54564:345:3 over something like 5542, and to
-	// also prefer more specific global IDs
+	// also prefer more specific global IDs. If the number of colons is equivalent,
+	// user the shorter id
 	ref := stops[0]
 
 	for _, s := range stops {
-		if sdr.numColons(s.Id) > sdr.numColons(ref.Id) {
+		numColsS := sdr.numColons(s.Id)
+		numColsRef := sdr.numColons(ref.Id)
+		if numColsS > numColsRef || (numColsS == numColsRef && len(ref.Id) < len(s.Id)) {
 			ref = s
 		}
 	}

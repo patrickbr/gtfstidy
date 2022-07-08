@@ -457,7 +457,7 @@ func (m *TripDuplicateRemover) combineEqTrips(feed *gtfsparser.Feed, ref *gtfs.T
 			}
 		}
 
-		if len(ref.Headsign) == 0 {
+		if len(*ref.Headsign) == 0 {
 			ref.Headsign = t.Headsign
 		}
 
@@ -781,7 +781,7 @@ func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint32 {
 		h.Write(b)
 
 		h.Write([]byte(t.Short_name))
-		h.Write([]byte(t.Headsign))
+		h.Write([]byte(*t.Headsign))
 	}
 
 	return h.Sum32()
