@@ -94,7 +94,7 @@ func main() {
 	compressShortHand := flag.BoolP("compress", "", false, "shorthand for -OSRCcIAP")
 	minimizeShortHand := flag.BoolP("Compress", "", false, "shorthand for -OSRCcIAPdT --red-trips-fuzzy, like --compress, but additionally compress stop times into frequencies, use fuzzy matching for redundant trip removal and use dense character ids. The latter destroys any existing external references (like in GTFS realtime streams)")
 	mergeShortHand := flag.BoolP("merge", "", false, "shorthand for -ARPICO")
-	fuzzyMergeShortHand := flag.BoolP("Merge", "", false, "shorthand for -EARPICO --red-trips-fuzzy")
+	fuzzyMergeShortHand := flag.BoolP("Merge", "", false, "shorthand for -EARPICO --red-trips-fuzzy --red-stops-fuzzy")
 
 	useDefaultValuesOnError := flag.BoolP("default-on-errs", "e", false, "if non-required fields have errors, fall back to the default values")
 	fixZip := flag.BoolP("fix-zip", "z", false, "try to fix some errors in the ZIP file directory hierarchy")
@@ -120,6 +120,7 @@ func main() {
 	useRedStopMinimizer := flag.BoolP("remove-red-stops", "P", false, "remove stop and level duplicates")
 	useRedTripMinimizer := flag.BoolP("remove-red-trips", "I", false, "remove trip duplicates")
 	useRedTripMinimizerFuzzyRoute := flag.BoolP("red-trips-fuzzy", "", false, "only check MOT of routes for trip duplicate removal")
+	useRedStopsMinimizerFuzzy := flag.BoolP("red-stops-fuzzy", "", false, "fuzzy station match for station duplicate removal")
 	useRedAgencyMinimizer := flag.BoolP("remove-red-agencies", "A", false, "remove agency duplicates")
 	useStopReclusterer := flag.BoolP("recluster-stops", "E", false, "recluster stops")
 	dropShapes := flag.BoolP("drop-shapes", "", false, "drop shapes")
@@ -174,6 +175,7 @@ func main() {
 		*mergeShortHand = true
 		*useRedTripMinimizerFuzzyRoute = true
 		*useStopReclusterer = true
+		*useRedStopsMinimizerFuzzy = true
 	}
 
 	if *mergeShortHand {
@@ -395,6 +397,7 @@ func main() {
 			minzers = append(minzers, processors.StopDuplicateRemover{
 				DistThresholdStop:    5.0,
 				DistThresholdStation: 50,
+				Fuzzy:                *useRedStopsMinimizerFuzzy,
 			})
 		}
 
