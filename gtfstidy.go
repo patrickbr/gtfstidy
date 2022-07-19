@@ -92,7 +92,7 @@ func main() {
 
 	fixShortHand := flag.BoolP("fix", "", false, "shorthand for -eDnz -p '-'")
 	compressShortHand := flag.BoolP("compress", "", false, "shorthand for -OSRCcIAP")
-	minimizeShortHand := flag.BoolP("Compress", "", false, "shorthand for -OSRCcIAPdT --red-trips-fuzzy, like --compress, but additionally compress stop times into frequencies, use fuzzy matching for redundant trip removal and use dense character ids. The latter destroys any existing external references (like in GTFS realtime streams)")
+	minimizeShortHand := flag.BoolP("Compress", "", false, "shorthand for -OSRCcIAPdT --red-stops-fuzzy --red-trips-fuzzy, like --compress, but additionally compress stop times into frequencies, use fuzzy matching for redundant trip and stop removal and use dense character ids. The latter destroys any existing external references (like in GTFS realtime streams)")
 	mergeShortHand := flag.BoolP("merge", "", false, "shorthand for -ARPICO")
 	fuzzyMergeShortHand := flag.BoolP("Merge", "", false, "shorthand for -EARPICO --red-trips-fuzzy --red-stops-fuzzy")
 
@@ -193,6 +193,7 @@ func main() {
 		*useIDMinimizerChar = true
 		*useFrequencyMinimizer = true
 		*useRedTripMinimizerFuzzyRoute = true
+		*useRedStopsMinimizerFuzzy = true
 	}
 
 	if *compressShortHand {

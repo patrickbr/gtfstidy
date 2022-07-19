@@ -264,8 +264,10 @@ func (sdr StopDuplicateRemover) stopHash(s *gtfs.Stop) uint32 {
 	binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(s.Parent_station))))
 	h.Write(b)
 
-	binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(s.Level))))
-	h.Write(b)
+	if !sdr.Fuzzy {
+		binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(s.Level))))
+		h.Write(b)
+	}
 
 	binary.LittleEndian.PutUint64(b, uint64(s.Location_type))
 	h.Write(b)
@@ -273,12 +275,18 @@ func (sdr StopDuplicateRemover) stopHash(s *gtfs.Stop) uint32 {
 	binary.LittleEndian.PutUint64(b, uint64(s.Wheelchair_boarding))
 	h.Write(b)
 
-	h.Write([]byte(s.Code))
+	if !sdr.Fuzzy {
+		h.Write([]byte(s.Code))
+	}
+
 	h.Write([]byte(s.Name))
 	h.Write([]byte(s.Desc))
 	h.Write([]byte(s.Zone_id))
 	h.Write([]byte(s.Timezone.GetTzString()))
-	h.Write([]byte(s.Platform_code))
+
+	if !sdr.Fuzzy {
+		h.Write([]byte(s.Platform_code))
+	}
 
 	return h.Sum32()
 }
@@ -362,7 +370,7 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtf
 	}
 
 	if sdr.Fuzzy {
-		return addFldsEq && (a.Code == b.Code || len(a.Code) == 0 || len(b.Code) == 0) &&
+		return (a.Code == b.Code || len(a.Code) == 0 || len(b.Code) == 0) &&
 			a.Name == b.Name &&
 			a.Desc == b.Desc &&
 			a.Zone_id == b.Zone_id &&
