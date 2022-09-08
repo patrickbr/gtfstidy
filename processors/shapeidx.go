@@ -204,8 +204,19 @@ func (gi *ShapeIdx) GetNeighbors(shp [][]float64, d float64) map[*gtfs.Shape]boo
 	urx := math.Max(ax, bx)
 	ury := math.Max(ay, by)
 
-	swX := max(0, gi.getCellXFromX(llx)-xPerm)
-	swY := max(0, gi.getCellYFromY(lly)-yPerm)
+	cellX := gi.getCellXFromX(llx)
+	cellY := gi.getCellYFromY(lly)
+
+	swX := uint(0)
+	swY := uint(0)
+
+	if (cellX > xPerm) {
+		swX = cellX - xPerm
+	}
+
+	if (cellY > yPerm) {
+		swY = cellY - yPerm
+	}
 
 	neX := min(gi.xWidth-1, gi.getCellXFromX(urx)+xPerm)
 	neY := min(gi.yHeight-1, gi.getCellYFromY(ury)+yPerm)
