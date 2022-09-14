@@ -102,7 +102,17 @@ func main() {
 	dropErroneousEntities := flag.BoolP("drop-errs", "D", false, "drop erroneous entries from feed")
 	checkNullCoords := flag.BoolP("check-null-coords", "n", false, "check for (0, 0) coordinates")
 
-	keepStationIds := flag.BoolP("keep-station-ids", "", false, "keep station IDs during ID minimization")
+	keepIds := flag.BoolP("keep-ids", "", false, "preserve station, fare, shape, route, trip, level, agency, pathway, and service IDs")
+	keepStationIds := flag.BoolP("keep-station-ids", "", false, "preserve station IDs")
+	keepBlockIds := flag.BoolP("keep-block-ids", "", false, "preserve block IDs")
+	keepFareIds := flag.BoolP("keep-fare-ids", "", false, "preserve fare IDs")
+	keepShapeIds := flag.BoolP("keep-shape-ids", "", false, "preserve shape IDs")
+	keepRouteIds := flag.BoolP("keep-route-ids", "", false, "preserve route IDs")
+	keepTripIds := flag.BoolP("keep-trip-ids", "", false, "preserve trip IDs")
+	keepLevelIds := flag.BoolP("keep-level-ids", "", false, "preserve level IDs")
+	keepPathwayIds := flag.BoolP("keep-pathway-ids", "", false, "preserve pathway IDs")
+	keepServiceIds := flag.BoolP("keep-service-ids", "", false, "preserve service IDs in calendar.txt and calendar_dates.txt")
+	keepAgencyIds := flag.BoolP("keep-agency-ids", "", false, "preserve agency IDs")
 	useOrphanDeleter := flag.BoolP("delete-orphans", "O", false, "remove entities that are not referenced anywhere")
 	useShapeMinimizer := flag.BoolP("min-shapes", "s", false, "minimize shapes (using Douglas-Peucker)")
 	useShapeRemeasurer := flag.BoolP("remeasure-shapes", "m", false, "remeasure shapes (filling measurement-holes)")
@@ -161,6 +171,19 @@ func main() {
 
 	if len(*endDateFilter) > 0 {
 		endDate = parseDate(*endDateFilter)
+	}
+
+	if *keepIds {
+		*keepStationIds = true
+		*keepFareIds = true
+		*keepShapeIds = true
+		*keepRouteIds = true
+		*keepTripIds = true
+		*keepLevelIds = true
+		*keepServiceIds = true
+		*keepAgencyIds = true
+		*keepBlockIds = true
+		*keepPathwayIds = true
 	}
 
 	if *fixShortHand {
@@ -455,7 +478,7 @@ func main() {
 		}
 
 		if *useFrequencyMinimizer {
-			minzers = append(minzers, processors.FrequencyMinimizer{*minHeadway, *maxHeadway})
+			minzers = append(minzers, processors.FrequencyMinimizer{MinHeadway: *minHeadway, MaxHeadway: *maxHeadway})
 		}
 
 		if *useCalDatesRemover {
@@ -463,9 +486,9 @@ func main() {
 		}
 
 		if *useIDMinimizerNum {
-			minzers = append(minzers, processors.IDMinimizer{Base: 10, KeepStations: *keepStationIds})
+			minzers = append(minzers, processors.IDMinimizer{Base: 10, KeepStations: *keepStationIds, KeepBlocks: *keepBlockIds, KeepFares: *keepFareIds, KeepShapes: *keepShapeIds, KeepRoutes: *keepRouteIds, KeepTrips: *keepTripIds, KeepLevels: *keepLevelIds, KeepServices: *keepServiceIds, KeepAgencies: *keepAgencyIds, KeepPathways: *keepPathwayIds})
 		} else if *useIDMinimizerChar {
-			minzers = append(minzers, processors.IDMinimizer{Base: 36, KeepStations: *keepStationIds})
+			minzers = append(minzers, processors.IDMinimizer{Base: 36, KeepStations: *keepStationIds, KeepBlocks: *keepBlockIds, KeepFares: *keepFareIds, KeepShapes: *keepShapeIds, KeepRoutes: *keepRouteIds, KeepTrips: *keepTripIds, KeepLevels: *keepLevelIds, KeepServices: *keepServiceIds, KeepAgencies: *keepAgencyIds, KeepPathways: *keepPathwayIds})
 		}
 
 		// do processing
@@ -490,6 +513,237 @@ func main() {
 							}
 
 							feed.DeleteStop(id)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// restore block IDs, if requested
+		if *keepBlockIds && len(prefixes) > 0 {
+			// build set of existing block ids
+			existingBlockIds := make(map[string]bool)
+			oldToNewBlockIds := make(map[string]string)
+			for _, t := range feed.Trips {
+				if t.Block_id != "" {
+					existingBlockIds[t.Block_id] = true
+				}
+			}
+
+			for _, s := range feed.Trips {
+				for prefix := range prefixes {
+					if strings.HasPrefix(s.Block_id, prefix) {
+						oldId := strings.TrimPrefix(s.Block_id, prefix)
+						if _, ok := existingBlockIds[oldId]; !ok {
+							oldToNewBlockIds[s.Block_id] = oldId
+							s.Block_id = oldId
+
+							existingBlockIds[s.Block_id] = true
+
+						} else if newId, ok := oldToNewBlockIds[s.Block_id]; ok && newId == oldId {
+							s.Block_id = oldId
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// restore agency IDs, if requested
+		if *keepAgencyIds && len(prefixes) > 0 {
+			for id, s := range feed.Agencies {
+				for prefix := range prefixes {
+					if strings.HasPrefix(id, prefix) {
+						oldId := strings.TrimPrefix(id, prefix)
+						if _, ok := feed.Agencies[oldId]; !ok {
+							feed.Agencies[oldId] = s
+							feed.Agencies[oldId].Id = oldId
+
+							// update additional fields
+							for k, _ := range feed.AgenciesAddFlds {
+								feed.AgenciesAddFlds[k][oldId] = feed.AgenciesAddFlds[k][id]
+								delete(feed.AgenciesAddFlds[k], id)
+							}
+
+							feed.DeleteAgency(id)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// restore fare attribute IDs, if requested
+		if *keepFareIds && len(prefixes) > 0 {
+			for id, s := range feed.FareAttributes {
+				for prefix := range prefixes {
+					if strings.HasPrefix(id, prefix) {
+						oldId := strings.TrimPrefix(id, prefix)
+						if _, ok := feed.FareAttributes[oldId]; !ok {
+							feed.FareAttributes[oldId] = s
+							feed.FareAttributes[oldId].Id = oldId
+
+							// update additional fields
+							for k, _ := range feed.FareAttributesAddFlds {
+								feed.FareAttributesAddFlds[k][oldId] = feed.FareAttributesAddFlds[k][id]
+								delete(feed.FareAttributesAddFlds[k], id)
+							}
+
+							for k, _ := range feed.FareRulesAddFlds {
+								feed.FareRulesAddFlds[k][oldId] = feed.FareRulesAddFlds[k][id]
+								delete(feed.FareRulesAddFlds[k], id)
+							}
+
+							feed.DeleteFareAttribute(id)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// restore service IDs, if requested
+		if *keepServiceIds && len(prefixes) > 0 {
+			for id, s := range feed.Services {
+				for prefix := range prefixes {
+					if strings.HasPrefix(id, prefix) {
+						oldId := strings.TrimPrefix(id, prefix)
+						if _, ok := feed.Services[oldId]; !ok {
+							feed.Services[oldId] = s
+							feed.Services[oldId].Id = oldId
+
+							feed.DeleteService(id)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// restore route IDs, if requested
+		if *keepRouteIds && len(prefixes) > 0 {
+			for id, s := range feed.Routes {
+				for prefix := range prefixes {
+					if strings.HasPrefix(id, prefix) {
+						oldId := strings.TrimPrefix(id, prefix)
+						if _, ok := feed.Routes[oldId]; !ok {
+							feed.Routes[oldId] = s
+							feed.Routes[oldId].Id = oldId
+
+							// update additional fields
+							for k, _ := range feed.RoutesAddFlds {
+								feed.RoutesAddFlds[k][oldId] = feed.RoutesAddFlds[k][id]
+								delete(feed.RoutesAddFlds[k], id)
+							}
+
+							feed.DeleteRoute(id)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// restore shape IDs, if requested
+		if *keepShapeIds && len(prefixes) > 0 {
+			for id, s := range feed.Shapes {
+				for prefix := range prefixes {
+					if strings.HasPrefix(id, prefix) {
+						oldId := strings.TrimPrefix(id, prefix)
+						if _, ok := feed.Shapes[oldId]; !ok {
+							feed.Shapes[oldId] = s
+							feed.Shapes[oldId].Id = oldId
+
+							// update additional fields
+							for k, _ := range feed.ShapesAddFlds {
+								feed.ShapesAddFlds[k][oldId] = feed.ShapesAddFlds[k][id]
+								delete(feed.ShapesAddFlds[k], id)
+							}
+
+							feed.DeleteShape(id)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// restore trip IDs, if requested
+		if *keepTripIds && len(prefixes) > 0 {
+			for id, s := range feed.Trips {
+				for prefix := range prefixes {
+					if strings.HasPrefix(id, prefix) {
+						oldId := strings.TrimPrefix(id, prefix)
+						if _, ok := feed.Trips[oldId]; !ok {
+							feed.Trips[oldId] = s
+							feed.Trips[oldId].Id = oldId
+
+							// update additional fields
+							for k, _ := range feed.TripsAddFlds {
+								feed.TripsAddFlds[k][oldId] = feed.TripsAddFlds[k][id]
+								delete(feed.TripsAddFlds[k], id)
+							}
+
+							for k, _ := range feed.StopTimesAddFlds {
+								feed.StopTimesAddFlds[k][oldId] = feed.StopTimesAddFlds[k][id]
+								delete(feed.StopTimesAddFlds[k], id)
+							}
+
+							for k, _ := range feed.FrequenciesAddFlds {
+								feed.FrequenciesAddFlds[k][oldId] = feed.FrequenciesAddFlds[k][id]
+								delete(feed.FrequenciesAddFlds[k], id)
+							}
+
+							feed.DeleteTrip(id)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// restore level IDs, if requested
+		if *keepLevelIds && len(prefixes) > 0 {
+			for id, s := range feed.Levels {
+				for prefix := range prefixes {
+					if strings.HasPrefix(id, prefix) {
+						oldId := strings.TrimPrefix(id, prefix)
+						if _, ok := feed.Levels[oldId]; !ok {
+							feed.Levels[oldId] = s
+							feed.Levels[oldId].Id = oldId
+
+							// update additional fields
+							for k, _ := range feed.LevelsAddFlds {
+								feed.LevelsAddFlds[k][oldId] = feed.LevelsAddFlds[k][id]
+								delete(feed.LevelsAddFlds[k], id)
+							}
+
+							feed.DeleteLevel(id)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// restore pathway IDs, if requested
+		if *keepPathwayIds && len(prefixes) > 0 {
+			for id, s := range feed.Pathways {
+				for prefix := range prefixes {
+					if strings.HasPrefix(id, prefix) {
+						oldId := strings.TrimPrefix(id, prefix)
+						if _, ok := feed.Pathways[oldId]; !ok {
+							feed.Pathways[oldId] = s
+							feed.Pathways[oldId].Id = oldId
+
+							// update additional fields
+							for k, _ := range feed.PathwaysAddFlds {
+								feed.PathwaysAddFlds[k][oldId] = feed.PathwaysAddFlds[k][id]
+								delete(feed.PathwaysAddFlds[k], id)
+							}
+
+							feed.DeletePathway(id)
 						}
 						break
 					}

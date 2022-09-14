@@ -131,11 +131,11 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 				}
 
 				// copy additional header
-				for h, _ := range feed.TripsAddFlds {
+				for h := range feed.TripsAddFlds {
 					feed.TripsAddFlds[h][newID] = feed.TripsAddFlds[h][t.Id]
 				}
 
-				for h, _ := range feed.StopTimesAddFlds {
+				for h := range feed.StopTimesAddFlds {
 					feed.StopTimesAddFlds[h][newID] = feed.StopTimesAddFlds[h][t.Id]
 				}
 

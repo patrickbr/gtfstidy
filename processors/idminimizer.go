@@ -18,6 +18,15 @@ import (
 type IDMinimizer struct {
 	Base         int
 	KeepStations bool
+	KeepBlocks   bool
+	KeepTrips    bool
+	KeepRoutes   bool
+	KeepFares    bool
+	KeepShapes   bool
+	KeepLevels   bool
+	KeepServices bool
+	KeepAgencies bool
+	KeepPathways bool
 }
 
 // Run this IDMinimizer on a feed
@@ -26,47 +35,87 @@ func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
 	if minimizer.KeepStations {
 		j = j - 1
 	}
+	if minimizer.KeepTrips {
+		j = j - 1
+	}
+	if minimizer.KeepRoutes {
+		j = j - 1
+	}
+	if minimizer.KeepShapes {
+		j = j - 1
+	}
+	if minimizer.KeepAgencies {
+		j = j - 1
+	}
+	if minimizer.KeepServices {
+		j = j - 1
+	}
+	if minimizer.KeepFares {
+		j = j - 1
+	}
+	if minimizer.KeepLevels {
+		j = j - 1
+	}
+	if minimizer.KeepPathways {
+		j = j - 1
+	}
 	fmt.Fprintf(os.Stdout, "Minimizing ids... ")
 	sem := make(chan empty, j)
 
-	go func() {
-		minimizer.minimizeTripIds(feed)
-		sem <- empty{}
-	}()
+	if !minimizer.KeepTrips {
+		go func() {
+			minimizer.minimizeTripIds(feed)
+			sem <- empty{}
+		}()
+	}
 	if !minimizer.KeepStations {
 		go func() {
 			minimizer.minimizeStopIds(feed)
 			sem <- empty{}
 		}()
 	}
-	go func() {
-		minimizer.minimizeRouteIds(feed)
-		sem <- empty{}
-	}()
-	go func() {
-		minimizer.minimizeShapeIds(feed)
-		sem <- empty{}
-	}()
-	go func() {
-		minimizer.minimizeAgencyIds(feed)
-		sem <- empty{}
-	}()
-	go func() {
-		minimizer.minimizeServiceIds(feed)
-		sem <- empty{}
-	}()
-	go func() {
-		minimizer.minimizeFareIds(feed)
-		sem <- empty{}
-	}()
-	go func() {
-		minimizer.minimizePathwayIds(feed)
-		sem <- empty{}
-	}()
-	go func() {
-		minimizer.minimizeLevelIds(feed)
-		sem <- empty{}
-	}()
+	if !minimizer.KeepRoutes {
+		go func() {
+			minimizer.minimizeRouteIds(feed)
+			sem <- empty{}
+		}()
+	}
+	if !minimizer.KeepShapes {
+		go func() {
+			minimizer.minimizeShapeIds(feed)
+			sem <- empty{}
+		}()
+	}
+	if !minimizer.KeepAgencies {
+		go func() {
+			minimizer.minimizeAgencyIds(feed)
+			sem <- empty{}
+		}()
+	}
+	if !minimizer.KeepServices {
+		go func() {
+			minimizer.minimizeServiceIds(feed)
+			sem <- empty{}
+		}()
+	}
+	if !minimizer.KeepFares {
+		go func() {
+			minimizer.minimizeFareIds(feed)
+			sem <- empty{}
+		}()
+	}
+	if !minimizer.KeepPathways {
+		go func() {
+			minimizer.minimizePathwayIds(feed)
+			sem <- empty{}
+		}()
+	}
+	if !minimizer.KeepLevels {
+		go func() {
+			minimizer.minimizeLevelIds(feed)
+			sem <- empty{}
+		}()
+	}
 
 	for i := 0; i < j; i++ {
 		<-sem
@@ -88,12 +137,12 @@ func (minimizer IDMinimizer) minimizeTripIds(feed *gtfsparser.Feed) {
 		newMap[t.Id] = t
 
 		// update additional fields
-		for k, _ := range feed.TripsAddFlds {
+		for k := range feed.TripsAddFlds {
 			feed.TripsAddFlds[k][newId] = feed.TripsAddFlds[k][oldId]
 			delete(feed.TripsAddFlds[k], oldId)
 		}
 
-		for k, _ := range feed.StopTimesAddFlds {
+		for k := range feed.StopTimesAddFlds {
 			feed.StopTimesAddFlds[k][newId] = feed.StopTimesAddFlds[k][oldId]
 			delete(feed.StopTimesAddFlds[k], oldId)
 		}
@@ -115,7 +164,7 @@ func (minimizer IDMinimizer) minimizeShapeIds(feed *gtfsparser.Feed) {
 		newMap[s.Id] = s
 
 		// update additional fields
-		for k, _ := range feed.ShapesAddFlds {
+		for k := range feed.ShapesAddFlds {
 			feed.ShapesAddFlds[k][newId] = feed.ShapesAddFlds[k][oldId]
 			delete(feed.ShapesAddFlds[k], oldId)
 		}
@@ -137,7 +186,7 @@ func (minimizer IDMinimizer) minimizeRouteIds(feed *gtfsparser.Feed) {
 		newMap[r.Id] = r
 
 		// update additional fields
-		for k, _ := range feed.RoutesAddFlds {
+		for k := range feed.RoutesAddFlds {
 			feed.RoutesAddFlds[k][newId] = feed.RoutesAddFlds[k][oldId]
 			delete(feed.RoutesAddFlds[k], oldId)
 		}
@@ -173,7 +222,7 @@ func (minimizer IDMinimizer) minimizeStopIds(feed *gtfsparser.Feed) {
 		newMap[s.Id] = s
 
 		// update additional fields
-		for k, _ := range feed.StopsAddFlds {
+		for k := range feed.StopsAddFlds {
 			feed.StopsAddFlds[k][newId] = feed.StopsAddFlds[k][oldId]
 			delete(feed.StopsAddFlds[k], oldId)
 		}
@@ -195,7 +244,7 @@ func (minimizer IDMinimizer) minimizeAgencyIds(feed *gtfsparser.Feed) {
 		newMap[a.Id] = a
 
 		// update additional fields
-		for k, _ := range feed.AgenciesAddFlds {
+		for k := range feed.AgenciesAddFlds {
 			feed.AgenciesAddFlds[k][newId] = feed.AgenciesAddFlds[k][oldId]
 			delete(feed.AgenciesAddFlds[k], oldId)
 		}
@@ -217,7 +266,7 @@ func (minimizer IDMinimizer) minimizeFareIds(feed *gtfsparser.Feed) {
 		newMap[a.Id] = a
 
 		// update additional fields
-		for k, _ := range feed.FareAttributesAddFlds {
+		for k := range feed.FareAttributesAddFlds {
 			feed.FareAttributesAddFlds[k][newId] = feed.FareAttributesAddFlds[k][oldId]
 			delete(feed.FareAttributesAddFlds[k], oldId)
 		}
@@ -239,7 +288,7 @@ func (minimizer IDMinimizer) minimizePathwayIds(feed *gtfsparser.Feed) {
 		newMap[a.Id] = a
 
 		// update additional fields
-		for k, _ := range feed.PathwaysAddFlds {
+		for k := range feed.PathwaysAddFlds {
 			feed.PathwaysAddFlds[k][newId] = feed.PathwaysAddFlds[k][oldId]
 			delete(feed.PathwaysAddFlds[k], oldId)
 		}
@@ -261,7 +310,7 @@ func (minimizer IDMinimizer) minimizeLevelIds(feed *gtfsparser.Feed) {
 		newMap[a.Id] = a
 
 		// update additional fields
-		for k, _ := range feed.LevelsAddFlds {
+		for k := range feed.LevelsAddFlds {
 			feed.LevelsAddFlds[k][newId] = feed.LevelsAddFlds[k][oldId]
 			delete(feed.LevelsAddFlds[k], oldId)
 		}
