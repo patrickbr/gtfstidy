@@ -44,14 +44,14 @@ func parseDate(str string) gtfs.Date {
 	return gtfs.Date{Day: int8(day), Month: int8(month), Year: int16(year)}
 }
 
-func parseCoords(s string) ([][]float64, error) {
+func parseCoords(s string) ([][2]float64, error) {
 	coords := strings.Split(s, ",")
 
 	if len(coords)%2 != 0 {
 		return nil, errors.New("Uneven number of coordinates")
 	}
 
-	ret := make([][]float64, 0)
+	ret := make([][2]float64, 0)
 	for i := 0; i < len(coords)/2; i++ {
 		var x, y float64
 		var err error
@@ -64,8 +64,7 @@ func parseCoords(s string) ([][]float64, error) {
 			return nil, err
 		}
 
-		coord := make([]float64, 2)
-		coord[0], coord[1] = x, y
+		coord := [2]float64{x, y}
 		ret = append(ret, coord)
 	}
 	return ret, nil
@@ -77,7 +76,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	polys := make([][][]float64, 0)
+	polys := make([]gtfsparser.Polygon, 0)
 
 	var bboxStrings []string
 	var polygonStrings []string
@@ -243,7 +242,7 @@ func main() {
 	}
 
 	for _, polyString := range polygonStrings {
-		poly := make([][]float64, 0)
+		poly := make([][2]float64, 0)
 
 		if len(polyString) > 0 {
 			var err error
@@ -258,15 +257,14 @@ func main() {
 
 		// ensure polygon is closed
 		if len(poly) > 1 && (poly[0][0] != poly[len(poly)-1][0] || poly[0][0] != poly[len(poly)-1][0]) {
-			poly = append(poly, make([]float64, 2))
-			poly[len(poly)-1][0], poly[len(poly)-1][1] = poly[0][0], poly[0][1]
+			poly = append(poly, [2]float64{poly[0][0], poly[0][1]})
 		}
 
-		polys = append(polys, poly)
+		polys = append(polys, gtfsparser.NewPolygon(poly))
 	}
 
 	for _, bboxString := range bboxStrings {
-		bbox := make([][]float64, 0)
+		bbox := make([][2]float64, 0)
 		bboxString = strings.Trim(bboxString, " ")
 
 		if len(bboxString) > 0 {
@@ -281,25 +279,19 @@ func main() {
 		}
 
 		if len(bbox) == 2 {
-			poly := make([][]float64, 4)
+			poly := make([][2]float64, 4)
 
-			poly[0] = make([]float64, 2)
-			poly[1] = make([]float64, 2)
-			poly[2] = make([]float64, 2)
-			poly[3] = make([]float64, 2)
-
-			poly[0][0], poly[0][1] = bbox[0][0], bbox[0][1]
-			poly[1][0], poly[1][1] = bbox[0][0], bbox[1][1]
-			poly[2][0], poly[2][1] = bbox[1][0], bbox[1][1]
-			poly[3][0], poly[3][1] = bbox[1][0], bbox[0][1]
+			poly[0] = [2]float64{bbox[0][0], bbox[0][1]}
+			poly[1] = [2]float64{bbox[0][0], bbox[1][1]}
+			poly[2] = [2]float64{bbox[1][0], bbox[1][1]}
+			poly[3] = [2]float64{bbox[1][0], bbox[0][1]}
 
 			// ensure polygon is closed
 			if len(poly) > 1 && (poly[0][0] != poly[len(poly)-1][0] || poly[0][0] != poly[len(poly)-1][0]) {
-				poly = append(poly, make([]float64, 2))
-				poly[len(poly)-1][0], poly[len(poly)-1][1] = poly[0][0], poly[0][1]
+				poly = append(poly, [2]float64{poly[0][0], poly[0][1]})
 			}
 
-			polys = append(polys, poly)
+			polys = append(polys, gtfsparser.NewPolygon(poly))
 		}
 	}
 
