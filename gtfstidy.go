@@ -139,6 +139,8 @@ func main() {
 	showWarnings := flag.BoolP("show-warnings", "W", false, "show warnings")
 	minHeadway := flag.IntP("min-headway", "", 1, "min allowed headway (in seconds) for frequency found with -T")
 	maxHeadway := flag.IntP("max-headway", "", 3600*24, "min allowed headway (in seconds) for frequency found with -T")
+	zipCompressionLevel := flag.IntP("zip-compression-level", "", 9, "output ZIP file compression level, between 0 and 9")
+	dontSortZipFiles := flag.BoolP("unsorted-files", "", false, "don't sort the output ZIP files (might increase final ZIP size)")
 	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
@@ -754,7 +756,7 @@ func main() {
 		}
 
 		// write feed back to output
-		w := gtfswriter.Writer{ZipCompressionLevel: 9, Sorted: true, ExplicitCalendar: *explicitCals, KeepColOrder: *keepColOrder}
+		w := gtfswriter.Writer{ZipCompressionLevel: *zipCompressionLevel, Sorted: !*dontSortZipFiles, ExplicitCalendar: *explicitCals, KeepColOrder: *keepColOrder}
 		e := w.Write(feed, *outputPath)
 
 		if e != nil {
