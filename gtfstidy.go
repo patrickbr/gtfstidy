@@ -386,7 +386,7 @@ func main() {
 				100.0*float64(s.DroppedFareAttributes)/(float64(s.DroppedFareAttributes+len(feed.FareAttributes))+0.001),
 				s.DroppedTranslations,
 				100.0*float64(s.DroppedTranslations)/(float64(s.DroppedTranslations+s.NumTranslations)+0.001))
-			if !opts.ShowWarnings {
+			if !opts.ShowWarnings && (s.DroppedTrips + s.DroppedStops + s.DroppedShapes + s.DroppedServices + s.DroppedRoutes + s.DroppedAgencies + s.DroppedTransfers + s.DroppedPathways + s.DroppedLevels + s.DroppedFareAttributes + s.DroppedTranslations) > 0 {
 				fmt.Fprintf(os.Stdout, " Use -W to display them.")
 			}
 			fmt.Print(")\n")

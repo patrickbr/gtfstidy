@@ -89,231 +89,25 @@ func (m TripDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		m.writeServiceList(s)
 	}
 
-	chunks := m.getTripChunks(feed)
-
-	for _, t := range feed.Trips {
-		hash := m.tripHash(t)
-		eqTrips := m.getEqualTrips(t, feed, chunks[hash])
-
-		if len(eqTrips) > 0 {
-			m.combineEqTrips(feed, t, eqTrips)
-		}
+	for m.combineAllEqTrips(feed) {
 	}
 
-	chunks = m.getTripChunks(feed)
-
-	for _, t := range feed.Trips {
-		hash := m.tripHash(t)
-		contTrips := m.getContainedTrips(t, feed, chunks[hash])
-
-		if len(contTrips) > 0 {
-			m.combineContTrips(feed, t, contTrips)
-		}
+	for m.combineAllContainedTrips(feed) {
 	}
 
-	chunks = m.getTripChunks(feed)
-
-	for _, t := range feed.Trips {
-		hash := m.tripHash(t)
-		overlapTrips := m.getOverlapTrips(t, feed, chunks[hash])
-
-		if len(overlapTrips) > 0 {
-			m.excludeTrips(feed, t, overlapTrips)
-		}
+	for m.combineAllOverlapTrips(feed) {
 	}
-
-	chunks = m.getTripChunks(feed)
 
 	MAX_DAY_DIST := 7
 
 	for i := 1; i <= MAX_DAY_DIST; i++ {
-		had := true
-
-		for had {
-			chunks = m.getTripChunks(feed)
-
-			had = false
-			for _, t := range feed.Trips {
-				hash := m.tripHash(t)
-				adjTrips := m.getAdjTrips(t, feed, chunks[hash], uint64(i))
-				if len(adjTrips) > 0 {
-					had = true
-					m.combineAdjTrips(feed, t, adjTrips)
-				}
-			}
+		for m.combineAllAdjTrips(feed, uint64(i)) {
 		}
 	}
 
 	fmt.Fprintf(os.Stdout, "done. (-%d trips [-%.2f%%])\n",
 		(bef - len(feed.Trips)),
 		100.0*float64(bef-len(feed.Trips))/(float64(bef)+0.001))
-}
-
-// Returns the feed's routes that are equivalent calendar-wise to trip
-func (m *TripDuplicateRemover) getEqualTrips(trip *gtfs.Trip, feed *gtfsparser.Feed, chunks [][]*gtfs.Trip) []*gtfs.Trip {
-	ret := make([]*gtfs.Trip, 0)
-
-	if len(trip.StopTimes) == 0 {
-		return ret
-	}
-
-	rets := make([][]*gtfs.Trip, len(chunks))
-	sem := make(chan empty, len(chunks))
-
-	for i, c := range chunks {
-		go func(j int, chunk []*gtfs.Trip) {
-			for _, t := range chunk {
-				if _, ok := feed.Trips[t.Id]; !ok {
-					// skip already deleted trips
-					continue
-				}
-				if t != trip && m.tripAttrEq(t, trip, feed) && m.tripStEq(t, trip) {
-					if m.tripCalEq(t, trip) {
-						rets[j] = append(rets[j], t)
-					}
-				}
-			}
-			sem <- empty{}
-		}(i, c)
-	}
-
-	// wait for goroutines to finish
-	for i := 0; i < len(chunks); i++ {
-		<-sem
-	}
-
-	// combine result s
-	for _, r := range rets {
-		ret = append(ret, r...)
-	}
-
-	return ret
-}
-
-// Returns the feed's routes that are equivalent and adjacent  calendar-wise
-func (m *TripDuplicateRemover) getAdjTrips(trip *gtfs.Trip, feed *gtfsparser.Feed, chunks [][]*gtfs.Trip, maxdist uint64) []*gtfs.Trip {
-	ret := make([]*gtfs.Trip, 0)
-
-	if len(trip.StopTimes) == 0 {
-		return ret
-	}
-
-	rets := make([][]*gtfs.Trip, len(chunks))
-	sem := make(chan empty, len(chunks))
-
-	for i, c := range chunks {
-		go func(j int, chunk []*gtfs.Trip) {
-			for _, t := range chunk {
-				if _, ok := feed.Trips[t.Id]; !ok {
-					// skip already deleted trips
-					continue
-				}
-				if t != trip && m.tripAttrEq(t, trip, feed) && m.tripStEq(t, trip) {
-					if m.tripCalAdj(t, trip, maxdist) {
-						rets[j] = append(rets[j], t)
-					}
-				}
-			}
-			sem <- empty{}
-		}(i, c)
-	}
-
-	// wait for goroutines to finish
-	for i := 0; i < len(chunks); i++ {
-		<-sem
-	}
-
-	// combine results
-
-	for _, r := range rets {
-		ret = append(ret, r...)
-	}
-
-	return ret
-}
-
-// Returns the feed's routes that are equivalent and contained calendar-wise to trip
-func (m *TripDuplicateRemover) getContainedTrips(trip *gtfs.Trip, feed *gtfsparser.Feed, chunks [][]*gtfs.Trip) []*gtfs.Trip {
-	ret := make([]*gtfs.Trip, 0)
-
-	if len(trip.StopTimes) == 0 {
-		return ret
-	}
-
-	rets := make([][]*gtfs.Trip, len(chunks))
-	sem := make(chan empty, len(chunks))
-
-	for i, c := range chunks {
-		go func(j int, chunk []*gtfs.Trip) {
-			for _, t := range chunk {
-				if _, ok := feed.Trips[t.Id]; !ok {
-					// skip already deleted trips
-					continue
-				}
-				if t != trip && m.tripAttrEq(t, trip, feed) && m.tripStEq(t, trip) {
-					if m.tripCalContained(t, trip) {
-						rets[j] = append(rets[j], t)
-					}
-				}
-			}
-			sem <- empty{}
-		}(i, c)
-	}
-
-	// wait for goroutines to finish
-	for i := 0; i < len(chunks); i++ {
-		<-sem
-	}
-
-	// combine results
-
-	for _, r := range rets {
-		ret = append(ret, r...)
-	}
-
-	return ret
-}
-
-// Returns the feed's trips that are equal and intersecting calendar-wise to trip
-func (m *TripDuplicateRemover) getOverlapTrips(trip *gtfs.Trip, feed *gtfsparser.Feed, chunks [][]*gtfs.Trip) []Overlap {
-	ret := make([]Overlap, 0)
-
-	if len(trip.StopTimes) == 0 {
-		return ret
-	}
-
-	rets := make([][]Overlap, len(chunks))
-	sem := make(chan empty, len(chunks))
-
-	for i, c := range chunks {
-		go func(j int, chunk []*gtfs.Trip) {
-			for _, t := range chunk {
-				if _, ok := feed.Trips[t.Id]; !ok {
-					// skip already deleted trips
-					continue
-				}
-				if t != trip && m.tripAttrEq(t, trip, feed) && m.tripStEq(t, trip) {
-					overlaps := m.tripCalOverlap(t, trip)
-					if len(overlaps) > 0 {
-						rets[j] = append(rets[j], Overlap{t, overlaps})
-					}
-				}
-			}
-			sem <- empty{}
-		}(i, c)
-	}
-
-	// wait for goroutines to finish
-	for i := 0; i < len(chunks); i++ {
-		<-sem
-	}
-
-	// combine results
-	for _, r := range rets {
-		ret = append(ret, r...)
-	}
-
-	return ret
 }
 
 func (m *TripDuplicateRemover) getParent(stop *gtfs.Stop) *gtfs.Stop {
@@ -720,11 +514,10 @@ func (m *TripDuplicateRemover) typeComp(a int16, b int16) bool {
 	return gtfs.GetTypeFromExtended(a) == gtfs.GetTypeFromExtended(b)
 }
 
-func (m *TripDuplicateRemover) getTripChunks(feed *gtfsparser.Feed) map[uint32][][]*gtfs.Trip {
-	numchunks := MaxParallelism()
+func (m *TripDuplicateRemover) getTripChunks(feed *gtfsparser.Feed) [][][]*gtfs.Trip {
+	numChunks := MaxParallelism()
 
-	trips := make(map[uint32][]*gtfs.Trip)
-	chunks := make(map[uint32][][]*gtfs.Trip)
+	trips := make(map[uint64][]*gtfs.Trip)
 
 	for _, t := range feed.Trips {
 		if len(t.StopTimes) == 0 {
@@ -735,24 +528,27 @@ func (m *TripDuplicateRemover) getTripChunks(feed *gtfsparser.Feed) map[uint32][
 		trips[hash] = append(trips[hash], t)
 	}
 
+	chunksize := (len(trips) + numChunks - 1) / numChunks
+	chunks := make([][][]*gtfs.Trip, numChunks)
+	curchunk := 0
+
 	for hash := range trips {
-		chunksize := (len(trips[hash]) + numchunks - 1) / numchunks
-		chunks[hash] = make([][]*gtfs.Trip, numchunks)
-		curchunk := 0
+		chunks[curchunk] = append(chunks[curchunk], make([]*gtfs.Trip, 0))
 
 		for _, t := range trips[hash] {
-			chunks[hash][curchunk] = append(chunks[hash][curchunk], t)
-			if len(chunks[hash][curchunk]) == chunksize {
-				curchunk++
-			}
+			chunks[curchunk][len(chunks[curchunk]) - 1] = append(chunks[curchunk][len(chunks[curchunk]) - 1], t)
+		}
+
+		if len(chunks[curchunk]) == chunksize {
+			curchunk++
 		}
 	}
 
 	return chunks
 }
 
-func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint32 {
-	h := fnv.New32a()
+func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint64 {
+	h := fnv.New64a()
 
 	b := make([]byte, 8)
 
@@ -764,6 +560,9 @@ func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint32 {
 		h.Write(b)
 
 		binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(end))))
+		h.Write(b)
+
+		binary.LittleEndian.PutUint64(b, uint64(len(t.StopTimes)))
 		h.Write(b)
 
 		binary.LittleEndian.PutUint64(b, uint64(t.StopTimes[0].Departure_time.SecondsSinceMidnight()))
@@ -784,7 +583,7 @@ func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint32 {
 		h.Write([]byte(*t.Headsign))
 	}
 
-	return h.Sum32()
+	return h.Sum64()
 }
 
 func (m *TripDuplicateRemover) getDateFromRefDay(d uint64) gtfs.Date {
@@ -860,4 +659,261 @@ func (m *TripDuplicateRemover) writeServiceList(s *gtfs.Service) {
 			m.serviceList[s] = append(m.serviceList[s], day)
 		}
 	}
+}
+
+func (m *TripDuplicateRemover) combineAllContainedTrips(feed *gtfsparser.Feed) bool {
+		nchunks := m.getTripChunks(feed)
+
+		rets := make([][][]*gtfs.Trip, len(nchunks))
+		sem := make(chan empty, len(nchunks))
+
+		for i, c := range nchunks {
+			go func(j int, chunk [][]*gtfs.Trip) {
+				processed := make(map[*gtfs.Trip]bool)
+				for _, trips := range chunk {
+					for _, ta := range trips {
+						// skip already merged trips
+						if _, ok := processed[ta]; ok {
+							continue
+						}
+						written := false
+						for _, tb := range trips {
+							// skip equivalent trips
+							if ta == tb {
+								continue
+							}
+
+							// skip already merged trips
+							if _, ok := processed[tb]; ok {
+								continue
+							}
+
+							if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
+								if m.tripCalContained(tb, ta) {
+									if !written {
+										rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
+										rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], ta)
+										processed[ta] = true
+										written = true
+									}
+									rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], tb)
+									processed[tb] = true
+								}
+							}
+						}
+					}
+				}
+				sem <- empty{}
+			}(i, c)
+		}
+
+		// wait for goroutines to finish
+		for i := 0; i < len(nchunks); i++ {
+			<-sem
+		}
+
+		merged := false
+
+		// combine all results
+		for _, r := range rets {
+			for _, trips := range r {
+				m.combineContTrips(feed, trips[0], trips[1:])
+				merged = true
+			}
+		}
+
+		return merged
+}
+
+func (m *TripDuplicateRemover) combineAllEqTrips(feed *gtfsparser.Feed) bool {
+		nchunks := m.getTripChunks(feed)
+
+		rets := make([][][]*gtfs.Trip, len(nchunks))
+		sem := make(chan empty, len(nchunks))
+
+		for i, c := range nchunks {
+			go func(j int, chunk [][]*gtfs.Trip) {
+				processed := make(map[*gtfs.Trip]bool)
+				for _, trips := range chunk {
+					for _, ta := range trips {
+						// skip already merged trips
+						if _, ok := processed[ta]; ok {
+							continue
+						}
+						written := false
+						for _, tb := range trips {
+							// skip equivalent trips
+							if ta == tb {
+								continue
+							}
+
+							// skip already merged trips
+							if _, ok := processed[tb]; ok {
+								continue
+							}
+
+							if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
+								if m.tripCalEq(ta, tb) {
+									if !written {
+										rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
+										rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], ta)
+										processed[ta] = true
+										written = true
+									}
+									rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], tb)
+									processed[tb] = true
+								}
+							}
+						}
+					}
+				}
+				sem <- empty{}
+			}(i, c)
+		}
+
+		// wait for goroutines to finish
+		for i := 0; i < len(nchunks); i++ {
+			<-sem
+		}
+
+		merged := false
+
+		// combine all results
+		for _, r := range rets {
+			for _, trips := range r {
+				m.combineEqTrips(feed, trips[0], trips[1:])
+				merged = true
+			}
+		}
+
+		return merged
+}
+
+func (m *TripDuplicateRemover) combineAllOverlapTrips(feed *gtfsparser.Feed) bool {
+		nchunks := m.getTripChunks(feed)
+
+		rets := make([][][]Overlap, len(nchunks))
+		sem := make(chan empty, len(nchunks))
+
+		for i, c := range nchunks {
+			go func(j int, chunk [][]*gtfs.Trip) {
+				processed := make(map[*gtfs.Trip]bool)
+				for _, trips := range chunk {
+					for _, ta := range trips {
+						// skip already merged trips
+						if _, ok := processed[ta]; ok {
+							continue
+						}
+						written := false
+						for _, tb := range trips {
+							// skip equivalent trips
+							if ta == tb {
+								continue
+							}
+
+							// skip already merged trips
+							if _, ok := processed[tb]; ok {
+								continue
+							}
+
+							if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
+								overlaps := m.tripCalOverlap(tb, ta)
+								if len(overlaps) > 0 {
+									if !written {
+										rets[j] = append(rets[j], make([]Overlap, 0))
+										rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], Overlap{ta, overlaps})
+										processed[ta] = true
+										written = true
+									}
+									rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], Overlap{tb, overlaps})
+									processed[tb] = true
+								}
+							}
+						}
+					}
+				}
+				sem <- empty{}
+			}(i, c)
+		}
+
+		// wait for goroutines to finish
+		for i := 0; i < len(nchunks); i++ {
+			<-sem
+		}
+
+		merged := false
+
+		// combine all results
+		for _, r := range rets {
+			for _, trips := range r {
+				m.excludeTrips(feed, trips[0].Trip, trips[1:])
+				merged = true
+			}
+		}
+
+		return merged
+}
+
+func (m *TripDuplicateRemover) combineAllAdjTrips(feed *gtfsparser.Feed, maxDist uint64) bool {
+		nchunks := m.getTripChunks(feed)
+
+		rets := make([][][]*gtfs.Trip, len(nchunks))
+		sem := make(chan empty, len(nchunks))
+
+		for i, c := range nchunks {
+			go func(j int, chunk [][]*gtfs.Trip) {
+				processed := make(map[*gtfs.Trip]bool)
+				for _, trips := range chunk {
+					for _, ta := range trips {
+						// skip already merged trips
+						if _, ok := processed[ta]; ok {
+							continue
+						}
+						written := false
+						for _, tb := range trips {
+							// skip equivalent trips
+							if ta == tb {
+								continue
+							}
+
+							// skip already merged trips
+							if _, ok := processed[tb]; ok {
+								continue
+							}
+
+							if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
+								if m.tripCalAdj(tb, ta, maxDist) {
+									if !written {
+										rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
+										rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], ta)
+										processed[ta] = true
+										written = true
+									}
+									rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], tb)
+									processed[tb] = true
+								}
+							}
+						}
+					}
+				}
+				sem <- empty{}
+			}(i, c)
+		}
+
+		// wait for goroutines to finish
+		for i := 0; i < len(nchunks); i++ {
+			<-sem
+		}
+
+		merged := false
+
+		// combine all results
+		for _, r := range rets {
+			for _, trips := range r {
+				m.combineAdjTrips(feed, trips[0], trips[1:])
+				merged = true
+			}
+		}
+
+		return merged
 }
