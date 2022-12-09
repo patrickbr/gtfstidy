@@ -141,6 +141,7 @@ func main() {
 	maxHeadway := flag.IntP("max-headway", "", 3600*24, "min allowed headway (in seconds) for frequency found with -T")
 	zipCompressionLevel := flag.IntP("zip-compression-level", "", 9, "output ZIP file compression level, between 0 and 9")
 	dontSortZipFiles := flag.BoolP("unsorted-files", "", false, "don't sort the output ZIP files (might increase final ZIP size)")
+	useStandardRouteTypes := flag.BoolP("standard-route-types", "", false, "Always use standard route types")
 	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
@@ -298,7 +299,7 @@ func main() {
 	}
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, PolygonFilter: polys}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, PolygonFilter: polys, UseStandardRouteTypes: *useStandardRouteTypes}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
@@ -386,7 +387,7 @@ func main() {
 				100.0*float64(s.DroppedFareAttributes)/(float64(s.DroppedFareAttributes+len(feed.FareAttributes))+0.001),
 				s.DroppedTranslations,
 				100.0*float64(s.DroppedTranslations)/(float64(s.DroppedTranslations+s.NumTranslations)+0.001))
-			if !opts.ShowWarnings && (s.DroppedTrips + s.DroppedStops + s.DroppedShapes + s.DroppedServices + s.DroppedRoutes + s.DroppedAgencies + s.DroppedTransfers + s.DroppedPathways + s.DroppedLevels + s.DroppedFareAttributes + s.DroppedTranslations) > 0 {
+			if !opts.ShowWarnings && (s.DroppedTrips+s.DroppedStops+s.DroppedShapes+s.DroppedServices+s.DroppedRoutes+s.DroppedAgencies+s.DroppedTransfers+s.DroppedPathways+s.DroppedLevels+s.DroppedFareAttributes+s.DroppedTranslations) > 0 {
 				fmt.Fprintf(os.Stdout, " Use -W to display them.")
 			}
 			fmt.Print(")\n")
