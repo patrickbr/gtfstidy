@@ -1,3 +1,4 @@
-attribution_id,is_producer,is_operator,organization_name,agency_id
+attribution_id,is_producer,is_operator,organization_name,agency_id,route_id
 attribution001,1,0,Transit Feed Solutions USA,DTA
 attribution002,0,1,Transit Bus Operations USA,DTA
+attribution003,0,1,Transit Bus Operations USA,,AAM8

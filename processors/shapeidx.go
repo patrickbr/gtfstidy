@@ -210,11 +210,11 @@ func (gi *ShapeIdx) GetNeighbors(shp [][]float64, d float64) map[*gtfs.Shape]boo
 	swX := uint(0)
 	swY := uint(0)
 
-	if (cellX > xPerm) {
+	if cellX > xPerm {
 		swX = cellX - xPerm
 	}
 
-	if (cellY > yPerm) {
+	if cellY > yPerm {
 		swY = cellY - yPerm
 	}
 

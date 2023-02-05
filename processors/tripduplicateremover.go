@@ -536,7 +536,7 @@ func (m *TripDuplicateRemover) getTripChunks(feed *gtfsparser.Feed) [][][]*gtfs.
 		chunks[curchunk] = append(chunks[curchunk], make([]*gtfs.Trip, 0))
 
 		for _, t := range trips[hash] {
-			chunks[curchunk][len(chunks[curchunk]) - 1] = append(chunks[curchunk][len(chunks[curchunk]) - 1], t)
+			chunks[curchunk][len(chunks[curchunk])-1] = append(chunks[curchunk][len(chunks[curchunk])-1], t)
 		}
 
 		if len(chunks[curchunk]) == chunksize {
@@ -662,258 +662,258 @@ func (m *TripDuplicateRemover) writeServiceList(s *gtfs.Service) {
 }
 
 func (m *TripDuplicateRemover) combineAllContainedTrips(feed *gtfsparser.Feed) bool {
-		nchunks := m.getTripChunks(feed)
+	nchunks := m.getTripChunks(feed)
 
-		rets := make([][][]*gtfs.Trip, len(nchunks))
-		sem := make(chan empty, len(nchunks))
+	rets := make([][][]*gtfs.Trip, len(nchunks))
+	sem := make(chan empty, len(nchunks))
 
-		for i, c := range nchunks {
-			go func(j int, chunk [][]*gtfs.Trip) {
-				processed := make(map[*gtfs.Trip]bool)
-				for _, trips := range chunk {
-					for _, ta := range trips {
-						// skip already merged trips
-						if _, ok := processed[ta]; ok {
+	for i, c := range nchunks {
+		go func(j int, chunk [][]*gtfs.Trip) {
+			processed := make(map[*gtfs.Trip]bool)
+			for _, trips := range chunk {
+				for _, ta := range trips {
+					// skip already merged trips
+					if _, ok := processed[ta]; ok {
+						continue
+					}
+					written := false
+					for _, tb := range trips {
+						// skip equivalent trips
+						if ta == tb {
 							continue
 						}
-						written := false
-						for _, tb := range trips {
-							// skip equivalent trips
-							if ta == tb {
-								continue
-							}
 
-							// skip already merged trips
-							if _, ok := processed[tb]; ok {
-								continue
-							}
+						// skip already merged trips
+						if _, ok := processed[tb]; ok {
+							continue
+						}
 
-							if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
-								if m.tripCalContained(tb, ta) {
-									if !written {
-										rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
-										rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], ta)
-										processed[ta] = true
-										written = true
-									}
-									rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], tb)
-									processed[tb] = true
+						if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
+							if m.tripCalContained(tb, ta) {
+								if !written {
+									rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
+									rets[j][len(rets[j])-1] = append(rets[j][len(rets[j])-1], ta)
+									processed[ta] = true
+									written = true
 								}
+								rets[j][len(rets[j])-1] = append(rets[j][len(rets[j])-1], tb)
+								processed[tb] = true
 							}
 						}
 					}
 				}
-				sem <- empty{}
-			}(i, c)
-		}
-
-		// wait for goroutines to finish
-		for i := 0; i < len(nchunks); i++ {
-			<-sem
-		}
-
-		merged := false
-
-		// combine all results
-		for _, r := range rets {
-			for _, trips := range r {
-				m.combineContTrips(feed, trips[0], trips[1:])
-				merged = true
 			}
-		}
+			sem <- empty{}
+		}(i, c)
+	}
 
-		return merged
+	// wait for goroutines to finish
+	for i := 0; i < len(nchunks); i++ {
+		<-sem
+	}
+
+	merged := false
+
+	// combine all results
+	for _, r := range rets {
+		for _, trips := range r {
+			m.combineContTrips(feed, trips[0], trips[1:])
+			merged = true
+		}
+	}
+
+	return merged
 }
 
 func (m *TripDuplicateRemover) combineAllEqTrips(feed *gtfsparser.Feed) bool {
-		nchunks := m.getTripChunks(feed)
+	nchunks := m.getTripChunks(feed)
 
-		rets := make([][][]*gtfs.Trip, len(nchunks))
-		sem := make(chan empty, len(nchunks))
+	rets := make([][][]*gtfs.Trip, len(nchunks))
+	sem := make(chan empty, len(nchunks))
 
-		for i, c := range nchunks {
-			go func(j int, chunk [][]*gtfs.Trip) {
-				processed := make(map[*gtfs.Trip]bool)
-				for _, trips := range chunk {
-					for _, ta := range trips {
-						// skip already merged trips
-						if _, ok := processed[ta]; ok {
+	for i, c := range nchunks {
+		go func(j int, chunk [][]*gtfs.Trip) {
+			processed := make(map[*gtfs.Trip]bool)
+			for _, trips := range chunk {
+				for _, ta := range trips {
+					// skip already merged trips
+					if _, ok := processed[ta]; ok {
+						continue
+					}
+					written := false
+					for _, tb := range trips {
+						// skip equivalent trips
+						if ta == tb {
 							continue
 						}
-						written := false
-						for _, tb := range trips {
-							// skip equivalent trips
-							if ta == tb {
-								continue
-							}
 
-							// skip already merged trips
-							if _, ok := processed[tb]; ok {
-								continue
-							}
+						// skip already merged trips
+						if _, ok := processed[tb]; ok {
+							continue
+						}
 
-							if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
-								if m.tripCalEq(ta, tb) {
-									if !written {
-										rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
-										rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], ta)
-										processed[ta] = true
-										written = true
-									}
-									rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], tb)
-									processed[tb] = true
+						if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
+							if m.tripCalEq(ta, tb) {
+								if !written {
+									rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
+									rets[j][len(rets[j])-1] = append(rets[j][len(rets[j])-1], ta)
+									processed[ta] = true
+									written = true
 								}
+								rets[j][len(rets[j])-1] = append(rets[j][len(rets[j])-1], tb)
+								processed[tb] = true
 							}
 						}
 					}
 				}
-				sem <- empty{}
-			}(i, c)
-		}
-
-		// wait for goroutines to finish
-		for i := 0; i < len(nchunks); i++ {
-			<-sem
-		}
-
-		merged := false
-
-		// combine all results
-		for _, r := range rets {
-			for _, trips := range r {
-				m.combineEqTrips(feed, trips[0], trips[1:])
-				merged = true
 			}
-		}
+			sem <- empty{}
+		}(i, c)
+	}
 
-		return merged
+	// wait for goroutines to finish
+	for i := 0; i < len(nchunks); i++ {
+		<-sem
+	}
+
+	merged := false
+
+	// combine all results
+	for _, r := range rets {
+		for _, trips := range r {
+			m.combineEqTrips(feed, trips[0], trips[1:])
+			merged = true
+		}
+	}
+
+	return merged
 }
 
 func (m *TripDuplicateRemover) combineAllOverlapTrips(feed *gtfsparser.Feed) bool {
-		nchunks := m.getTripChunks(feed)
+	nchunks := m.getTripChunks(feed)
 
-		rets := make([][][]Overlap, len(nchunks))
-		sem := make(chan empty, len(nchunks))
+	rets := make([][][]Overlap, len(nchunks))
+	sem := make(chan empty, len(nchunks))
 
-		for i, c := range nchunks {
-			go func(j int, chunk [][]*gtfs.Trip) {
-				processed := make(map[*gtfs.Trip]bool)
-				for _, trips := range chunk {
-					for _, ta := range trips {
-						// skip already merged trips
-						if _, ok := processed[ta]; ok {
+	for i, c := range nchunks {
+		go func(j int, chunk [][]*gtfs.Trip) {
+			processed := make(map[*gtfs.Trip]bool)
+			for _, trips := range chunk {
+				for _, ta := range trips {
+					// skip already merged trips
+					if _, ok := processed[ta]; ok {
+						continue
+					}
+					written := false
+					for _, tb := range trips {
+						// skip equivalent trips
+						if ta == tb {
 							continue
 						}
-						written := false
-						for _, tb := range trips {
-							// skip equivalent trips
-							if ta == tb {
-								continue
-							}
 
-							// skip already merged trips
-							if _, ok := processed[tb]; ok {
-								continue
-							}
+						// skip already merged trips
+						if _, ok := processed[tb]; ok {
+							continue
+						}
 
-							if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
-								overlaps := m.tripCalOverlap(tb, ta)
-								if len(overlaps) > 0 {
-									if !written {
-										rets[j] = append(rets[j], make([]Overlap, 0))
-										rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], Overlap{ta, overlaps})
-										processed[ta] = true
-										written = true
-									}
-									rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], Overlap{tb, overlaps})
-									processed[tb] = true
+						if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
+							overlaps := m.tripCalOverlap(tb, ta)
+							if len(overlaps) > 0 {
+								if !written {
+									rets[j] = append(rets[j], make([]Overlap, 0))
+									rets[j][len(rets[j])-1] = append(rets[j][len(rets[j])-1], Overlap{ta, overlaps})
+									processed[ta] = true
+									written = true
 								}
+								rets[j][len(rets[j])-1] = append(rets[j][len(rets[j])-1], Overlap{tb, overlaps})
+								processed[tb] = true
 							}
 						}
 					}
 				}
-				sem <- empty{}
-			}(i, c)
-		}
-
-		// wait for goroutines to finish
-		for i := 0; i < len(nchunks); i++ {
-			<-sem
-		}
-
-		merged := false
-
-		// combine all results
-		for _, r := range rets {
-			for _, trips := range r {
-				m.excludeTrips(feed, trips[0].Trip, trips[1:])
-				merged = true
 			}
-		}
+			sem <- empty{}
+		}(i, c)
+	}
 
-		return merged
+	// wait for goroutines to finish
+	for i := 0; i < len(nchunks); i++ {
+		<-sem
+	}
+
+	merged := false
+
+	// combine all results
+	for _, r := range rets {
+		for _, trips := range r {
+			m.excludeTrips(feed, trips[0].Trip, trips[1:])
+			merged = true
+		}
+	}
+
+	return merged
 }
 
 func (m *TripDuplicateRemover) combineAllAdjTrips(feed *gtfsparser.Feed, maxDist uint64) bool {
-		nchunks := m.getTripChunks(feed)
+	nchunks := m.getTripChunks(feed)
 
-		rets := make([][][]*gtfs.Trip, len(nchunks))
-		sem := make(chan empty, len(nchunks))
+	rets := make([][][]*gtfs.Trip, len(nchunks))
+	sem := make(chan empty, len(nchunks))
 
-		for i, c := range nchunks {
-			go func(j int, chunk [][]*gtfs.Trip) {
-				processed := make(map[*gtfs.Trip]bool)
-				for _, trips := range chunk {
-					for _, ta := range trips {
-						// skip already merged trips
-						if _, ok := processed[ta]; ok {
+	for i, c := range nchunks {
+		go func(j int, chunk [][]*gtfs.Trip) {
+			processed := make(map[*gtfs.Trip]bool)
+			for _, trips := range chunk {
+				for _, ta := range trips {
+					// skip already merged trips
+					if _, ok := processed[ta]; ok {
+						continue
+					}
+					written := false
+					for _, tb := range trips {
+						// skip equivalent trips
+						if ta == tb {
 							continue
 						}
-						written := false
-						for _, tb := range trips {
-							// skip equivalent trips
-							if ta == tb {
-								continue
-							}
 
-							// skip already merged trips
-							if _, ok := processed[tb]; ok {
-								continue
-							}
+						// skip already merged trips
+						if _, ok := processed[tb]; ok {
+							continue
+						}
 
-							if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
-								if m.tripCalAdj(tb, ta, maxDist) {
-									if !written {
-										rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
-										rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], ta)
-										processed[ta] = true
-										written = true
-									}
-									rets[j][len(rets[j]) - 1] = append(rets[j][len(rets[j]) - 1], tb)
-									processed[tb] = true
+						if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
+							if m.tripCalAdj(tb, ta, maxDist) {
+								if !written {
+									rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
+									rets[j][len(rets[j])-1] = append(rets[j][len(rets[j])-1], ta)
+									processed[ta] = true
+									written = true
 								}
+								rets[j][len(rets[j])-1] = append(rets[j][len(rets[j])-1], tb)
+								processed[tb] = true
 							}
 						}
 					}
 				}
-				sem <- empty{}
-			}(i, c)
-		}
-
-		// wait for goroutines to finish
-		for i := 0; i < len(nchunks); i++ {
-			<-sem
-		}
-
-		merged := false
-
-		// combine all results
-		for _, r := range rets {
-			for _, trips := range r {
-				m.combineAdjTrips(feed, trips[0], trips[1:])
-				merged = true
 			}
-		}
+			sem <- empty{}
+		}(i, c)
+	}
 
-		return merged
+	// wait for goroutines to finish
+	for i := 0; i < len(nchunks); i++ {
+		<-sem
+	}
+
+	merged := false
+
+	// combine all results
+	for _, r := range rets {
+		for _, trips := range r {
+			m.combineAdjTrips(feed, trips[0], trips[1:])
+			merged = true
+		}
+	}
+
+	return merged
 }

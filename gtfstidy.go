@@ -142,6 +142,7 @@ func main() {
 	zipCompressionLevel := flag.IntP("zip-compression-level", "", 9, "output ZIP file compression level, between 0 and 9")
 	dontSortZipFiles := flag.BoolP("unsorted-files", "", false, "don't sort the output ZIP files (might increase final ZIP size)")
 	useStandardRouteTypes := flag.BoolP("standard-route-types", "", false, "Always use standard route types")
+	motFilterStr := flag.StringP("keep-mots", "M", "", "comma-separated list of MOTs to filter, empty filter (default) keeps all")
 	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
@@ -163,6 +164,24 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Error:", r)
 		}
 	}()
+
+	motFilter := make(map[int16]bool, 0)
+
+	if motFilterStr != nil {
+		for _, s := range strings.Split(*motFilterStr, ",") {
+			s = strings.TrimSpace(s)
+			if len(s) == 0 {
+				continue
+			}
+			i, err := strconv.Atoi(s)
+
+			if err != nil {
+				panic(fmt.Errorf("%s is not a valid GTFS MOT", s))
+			}
+
+			motFilter[int16(i)] = true
+		}
+	}
 
 	startDate := gtfs.Date{Day: 0, Month: 0, Year: 0}
 	endDate := gtfs.Date{Day: 0, Month: 0, Year: 0}
@@ -299,7 +318,7 @@ func main() {
 	}
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, PolygonFilter: polys, UseStandardRouteTypes: *useStandardRouteTypes}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, PolygonFilter: polys, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
@@ -502,7 +521,7 @@ func main() {
 							feed.Stops[oldId].Id = oldId
 
 							// update additional fields
-							for k, _ := range feed.StopsAddFlds {
+							for k := range feed.StopsAddFlds {
 								feed.StopsAddFlds[k][oldId] = feed.StopsAddFlds[k][id]
 								delete(feed.StopsAddFlds[k], id)
 							}
@@ -556,7 +575,7 @@ func main() {
 							feed.Agencies[oldId].Id = oldId
 
 							// update additional fields
-							for k, _ := range feed.AgenciesAddFlds {
+							for k := range feed.AgenciesAddFlds {
 								feed.AgenciesAddFlds[k][oldId] = feed.AgenciesAddFlds[k][id]
 								delete(feed.AgenciesAddFlds[k], id)
 							}
@@ -580,12 +599,12 @@ func main() {
 							feed.FareAttributes[oldId].Id = oldId
 
 							// update additional fields
-							for k, _ := range feed.FareAttributesAddFlds {
+							for k := range feed.FareAttributesAddFlds {
 								feed.FareAttributesAddFlds[k][oldId] = feed.FareAttributesAddFlds[k][id]
 								delete(feed.FareAttributesAddFlds[k], id)
 							}
 
-							for k, _ := range feed.FareRulesAddFlds {
+							for k := range feed.FareRulesAddFlds {
 								feed.FareRulesAddFlds[k][oldId] = feed.FareRulesAddFlds[k][id]
 								delete(feed.FareRulesAddFlds[k], id)
 							}
@@ -627,7 +646,7 @@ func main() {
 							feed.Routes[oldId].Id = oldId
 
 							// update additional fields
-							for k, _ := range feed.RoutesAddFlds {
+							for k := range feed.RoutesAddFlds {
 								feed.RoutesAddFlds[k][oldId] = feed.RoutesAddFlds[k][id]
 								delete(feed.RoutesAddFlds[k], id)
 							}
@@ -651,7 +670,7 @@ func main() {
 							feed.Shapes[oldId].Id = oldId
 
 							// update additional fields
-							for k, _ := range feed.ShapesAddFlds {
+							for k := range feed.ShapesAddFlds {
 								feed.ShapesAddFlds[k][oldId] = feed.ShapesAddFlds[k][id]
 								delete(feed.ShapesAddFlds[k], id)
 							}
@@ -675,17 +694,17 @@ func main() {
 							feed.Trips[oldId].Id = oldId
 
 							// update additional fields
-							for k, _ := range feed.TripsAddFlds {
+							for k := range feed.TripsAddFlds {
 								feed.TripsAddFlds[k][oldId] = feed.TripsAddFlds[k][id]
 								delete(feed.TripsAddFlds[k], id)
 							}
 
-							for k, _ := range feed.StopTimesAddFlds {
+							for k := range feed.StopTimesAddFlds {
 								feed.StopTimesAddFlds[k][oldId] = feed.StopTimesAddFlds[k][id]
 								delete(feed.StopTimesAddFlds[k], id)
 							}
 
-							for k, _ := range feed.FrequenciesAddFlds {
+							for k := range feed.FrequenciesAddFlds {
 								feed.FrequenciesAddFlds[k][oldId] = feed.FrequenciesAddFlds[k][id]
 								delete(feed.FrequenciesAddFlds[k], id)
 							}
@@ -709,7 +728,7 @@ func main() {
 							feed.Levels[oldId].Id = oldId
 
 							// update additional fields
-							for k, _ := range feed.LevelsAddFlds {
+							for k := range feed.LevelsAddFlds {
 								feed.LevelsAddFlds[k][oldId] = feed.LevelsAddFlds[k][id]
 								delete(feed.LevelsAddFlds[k], id)
 							}
@@ -733,7 +752,7 @@ func main() {
 							feed.Pathways[oldId].Id = oldId
 
 							// update additional fields
-							for k, _ := range feed.PathwaysAddFlds {
+							for k := range feed.PathwaysAddFlds {
 								feed.PathwaysAddFlds[k][oldId] = feed.PathwaysAddFlds[k][id]
 								delete(feed.PathwaysAddFlds[k], id)
 							}
