@@ -187,27 +187,21 @@ func (rdr RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*
 
 		// delete every fare rule that contains this route
 		for _, fa := range feed.FareAttributes {
-			emptyBef := true
-			toDel := make([]int, 0)
-			for j, fr := range fa.Rules {
-				emptyBef = false
-				if fr.Route == r {
-					toDel = append(toDel, j)
+			new := make([]*gtfs.FareAttributeRule, 0)
+			for _, fr := range fa.Rules {
+				if fr.Route != r {
+					new = append(new, fr)
 				}
 			}
 
-			for _, j := range toDel {
-				fa.Rules[j] = fa.Rules[len(fa.Rules)-1]
-				fa.Rules[len(fa.Rules)-1] = nil
-				fa.Rules = fa.Rules[:len(fa.Rules)-1]
-			}
-
 			/**
-			 * if the fare attributes rule are empty now, and haven't been empty before,
+			 * if the fare attribute rules would be empty now, and haven't been empty before,
 			 * delete the attribute
 			 */
-			if len(fa.Rules) == 0 && !emptyBef {
+			if len(new) == 0 && len(fa.Rules) != 0 {
 				feed.DeleteFareAttribute(fa.Id)
+			} else {
+				fa.Rules = new
 			}
 		}
 
