@@ -18,119 +18,112 @@ func TestServiceMinimizer(t *testing.T) {
 
 	proc := ServiceMinimizer{}
 
-	testa := gtfs.Service{
-		Id:         "a",
-		Daymap:     [7]bool{true, true, true, true, true, true, true},
-		Start_date: gtfs.Date{Day: 1, Month: 1, Year: 2017},
-		End_date:   gtfs.Date{Day: 1, Month: 2, Year: 2027},
-	}
+	testa := gtfs.EmptyService()
+	testa.SetId("a")
+	testa.SetRawDaymap(255)
+	testa.SetStart_date(gtfs.NewDate(1, 1, 2017))
+	testa.SetEnd_date(gtfs.NewDate(1, 2, 2017))
 
-	proc.perfectMinimize(&testa)
+	proc.perfectMinimize(testa)
 
-	if len(testa.Exceptions) != 0 {
-		t.Error(testa.Exceptions)
-	}
-
-	/**
-	 *
-	 */
-
-	testa = gtfs.Service{
-		Id:         "a",
-		Daymap:     [7]bool{true, true, true, true, true, true, true},
-		Start_date: gtfs.Date{Day: 1, Month: 1, Year: 2017},
-		End_date:   gtfs.Date{Day: 1, Month: 2, Year: 2027},
-		Exceptions: make(map[gtfs.Date]bool, 0),
-	}
-
-	testa.Exceptions[gtfs.Date{Day: 1, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 2, Month: 1, Year: 2017}] = true
-
-	proc.perfectMinimize(&testa)
-
-	if len(testa.Exceptions) != 0 {
-		t.Error(testa.Exceptions)
+	if len(testa.Exceptions()) != 0 {
+		t.Error(testa.Exceptions())
 	}
 
 	/**
 	 *
 	 */
 
-	testa = gtfs.Service{
-		Id:         "a",
-		Daymap:     [7]bool{false, false, false, false, false, false, false},
-		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2013},
-		End_date:   gtfs.Date{Day: 8, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]bool, 0),
-	}
+	testa = gtfs.EmptyService()
+	testa.SetId("a")
+	testa.SetRawDaymap(255)
+	testa.SetStart_date(gtfs.NewDate(1, 1, 2017))
+	testa.SetEnd_date(gtfs.NewDate(1, 2, 2017))
 
-	testa.Exceptions[gtfs.Date{Day: 2, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 3, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 4, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 5, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 6, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 7, Month: 1, Year: 2017}] = true
+	testa.Exceptions()[gtfs.NewDate(1, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(2, 1, 2017)] = true
 
-	proc.perfectMinimize(&testa)
+	proc.perfectMinimize(testa)
 
-	if len(testa.Exceptions) != 0 {
-		t.Error(testa.Exceptions)
-	}
-
-	if testa.Start_date.Day != 2 || testa.Start_date.Month != 1 || testa.Start_date.Year != 2017 {
-		t.Error(testa.Start_date)
-	}
-
-	if testa.End_date.Day != 7 || testa.End_date.Month != 1 || testa.End_date.Year != 2017 {
-		t.Error(testa.End_date)
+	if len(testa.Exceptions()) != 0 {
+		t.Error(testa.Exceptions())
 	}
 
 	/**
 	 *
 	 */
 
-	testa = gtfs.Service{
-		Id:         "a",
-		Daymap:     [7]bool{false, false, false, false, false, false, false},
-		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2013},
-		End_date:   gtfs.Date{Day: 8, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]bool, 0),
+	testa = gtfs.EmptyService()
+	testa.SetId("a")
+	testa.SetRawDaymap(0)
+	testa.SetStart_date(gtfs.NewDate(2, 1, 2013))
+	testa.SetEnd_date(gtfs.NewDate(8, 1, 2017))
+
+	testa.Exceptions()[gtfs.NewDate(2, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(3, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(4, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(5, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(6, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(7, 1, 2017)] = true
+
+	proc.perfectMinimize(testa)
+
+	if len(testa.Exceptions()) != 0 {
+		t.Error(testa.Exceptions())
 	}
 
-	testa.Exceptions[gtfs.Date{Day: 3, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 4, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 5, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 6, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 7, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 8, Month: 1, Year: 2017}] = true
-
-	proc.perfectMinimize(&testa)
-
-	if len(testa.Exceptions) != 0 {
-		t.Error(testa.Exceptions)
+	if testa.Start_date().Day() != 2 || testa.Start_date().Month() != 1 || testa.Start_date().Year() != 2017 {
+		t.Error(testa.Start_date())
 	}
 
-	if testa.Start_date.Day != 3 || testa.Start_date.Month != 1 || testa.Start_date.Year != 2017 {
-		t.Error(testa.Start_date)
+	if testa.End_date().Day() != 7 || testa.End_date().Month() != 1 || testa.End_date().Year() != 2017 {
+		t.Error(testa.End_date())
 	}
 
-	if testa.End_date.Day != 8 || testa.End_date.Month != 1 || testa.End_date.Year != 2017 {
-		t.Error(testa.End_date)
+	/**
+	 *
+	 */
+
+	testa = gtfs.EmptyService()
+	testa.SetId("a")
+	testa.SetRawDaymap(0)
+	testa.SetStart_date(gtfs.NewDate(2, 1, 2013))
+	testa.SetEnd_date(gtfs.NewDate(8, 1, 2017))
+
+	testa.Exceptions()[gtfs.NewDate(3, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(4, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(5, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(6, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(7, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(8, 1, 2017)] = true
+
+	proc.perfectMinimize(testa)
+
+	if len(testa.Exceptions()) != 0 {
+		t.Error(testa.Exceptions())
+	}
+
+	if testa.Start_date().Day() != 3 || testa.Start_date().Month() != 1 || testa.Start_date().Year() != 2017 {
+		t.Error(testa.Start_date())
+	}
+
+	if testa.End_date().Day() != 8 || testa.End_date().Month() != 1 || testa.End_date().Year() != 2017 {
+		t.Error(testa.End_date())
 	}
 
 	for i := 3; i < 9; i++ {
-		d := gtfs.Date{Day: int8(i), Month: 1, Year: 2017}
+		d := gtfs.NewDate(uint8(i), 1, 2017)
 		if !testa.IsActiveOn(d) {
 			t.Error(testa)
 		}
 	}
 
-	d := gtfs.Date{Day: 2, Month: 1, Year: 2017}
+	d := gtfs.NewDate(2, 1, 2017)
 	if testa.IsActiveOn(d) {
 		t.Error(testa)
 	}
 
-	d = gtfs.Date{Day: 9, Month: 1, Year: 2017}
+	d = gtfs.NewDate(9, 1, 2017)
 	if testa.IsActiveOn(d) {
 		t.Error(testa)
 	}
@@ -139,93 +132,91 @@ func TestServiceMinimizer(t *testing.T) {
 	 *
 	 */
 
-	testa = gtfs.Service{
-		Id:         "a",
-		Daymap:     [7]bool{false, true, true, false, true, false, false},
-		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2017},
-		End_date:   gtfs.Date{Day: 29, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]bool, 0),
+	testa = gtfs.EmptyService()
+	testa.SetId("a")
+	testa.SetDaymap(1, true)
+	testa.SetDaymap(2, true)
+	testa.SetDaymap(4, true)
+	testa.SetStart_date(gtfs.NewDate(2, 1, 2017))
+	testa.SetEnd_date(gtfs.NewDate(29, 1, 2017))
+
+	testa.Exceptions()[gtfs.NewDate(30, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(31, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(7, 2, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(14, 2, 2017)] = true
+
+	proc.perfectMinimize(testa)
+
+	if testa.Start_date().Day() != 2 || testa.Start_date().Month() != 1 || testa.Start_date().Year() != 2017 {
+		t.Error(testa.Start_date())
 	}
 
-	testa.Exceptions[gtfs.Date{Day: 30, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 31, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 7, Month: 2, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 14, Month: 2, Year: 2017}] = true
-
-	proc.perfectMinimize(&testa)
-
-	if testa.Start_date.Day != 2 || testa.Start_date.Month != 1 || testa.Start_date.Year != 2017 {
-		t.Error(testa.Start_date)
+	if testa.End_date().Day() != 31 || testa.End_date().Month() != 1 || testa.End_date().Year() != 2017 {
+		t.Error(testa.End_date())
 	}
 
-	if testa.End_date.Day != 31 || testa.End_date.Month != 1 || testa.End_date.Year != 2017 {
-		t.Error(testa.End_date)
-	}
-
-	if len(testa.Exceptions) != 2 {
-		t.Error(testa.Exceptions)
-	}
-
-	/**
-	 *
-	 */
-
-	testa = gtfs.Service{
-		Id:         "a",
-		Daymap:     [7]bool{false, true, true, false, true, false, false},
-		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2017},
-		End_date:   gtfs.Date{Day: 29, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]bool, 0),
-	}
-
-	testa.Exceptions[gtfs.Date{Day: 30, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 31, Month: 1, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 7, Month: 2, Year: 2017}] = true
-	testa.Exceptions[gtfs.Date{Day: 14, Month: 2, Year: 2017}] = true
-
-	proc.perfectMinimize(&testa)
-
-	if testa.Start_date.Day != 2 || testa.Start_date.Month != 1 || testa.Start_date.Year != 2017 {
-		t.Error(testa.Start_date)
-	}
-
-	if testa.End_date.Day != 31 || testa.End_date.Month != 1 || testa.End_date.Year != 2017 {
-		t.Error(testa.End_date)
-	}
-
-	if len(testa.Exceptions) != 2 {
-		t.Error(testa.Exceptions)
+	if len(testa.Exceptions()) != 2 {
+		t.Error(testa.Exceptions())
 	}
 
 	/**
 	 *
 	 */
 
-	testa = gtfs.Service{
-		Id:         "a",
-		Daymap:     [7]bool{true, true, true, true, true, true, true},
-		Start_date: gtfs.Date{Day: 2, Month: 1, Year: 2017},
-		End_date:   gtfs.Date{Day: 8, Month: 1, Year: 2017},
-		Exceptions: make(map[gtfs.Date]bool, 0),
+	testa = gtfs.EmptyService()
+	testa.SetId("a")
+	testa.SetDaymap(1, true)
+	testa.SetDaymap(2, true)
+	testa.SetDaymap(4, true)
+	testa.SetStart_date(gtfs.NewDate(2, 1, 2017))
+	testa.SetEnd_date(gtfs.NewDate(29, 1, 2017))
+
+	testa.Exceptions()[gtfs.NewDate(30, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(31, 1, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(7, 2, 2017)] = true
+	testa.Exceptions()[gtfs.NewDate(14, 2, 2017)] = true
+
+	proc.perfectMinimize(testa)
+
+	if testa.Start_date().Day() != 2 || testa.Start_date().Month() != 1 || testa.Start_date().Year() != 2017 {
+		t.Error(testa.Start_date())
 	}
 
-	testa.Exceptions[gtfs.Date{Day: 3, Month: 1, Year: 2017}] = false
-
-	proc.perfectMinimize(&testa)
-
-	if testa.Start_date.Day != 2 || testa.Start_date.Month != 1 || testa.Start_date.Year != 2017 {
-		t.Error(testa.Start_date)
+	if testa.End_date().Day() != 31 || testa.End_date().Month() != 1 || testa.End_date().Year() != 2017 {
+		t.Error(testa.End_date())
 	}
 
-	if testa.End_date.Day != 8 || testa.End_date.Month != 1 || testa.End_date.Year != 2017 {
-		t.Error(testa.End_date)
+	if len(testa.Exceptions()) != 2 {
+		t.Error(testa.Exceptions())
 	}
 
-	if len(testa.Exceptions) != 0 {
-		t.Error(testa.Exceptions)
+	/**
+	 *
+	 */
+
+	testa = gtfs.EmptyService()
+	testa.SetId("a")
+	testa.SetRawDaymap(255)
+	testa.SetStart_date(gtfs.NewDate(2, 1, 2017))
+	testa.SetEnd_date(gtfs.NewDate(8, 1, 2017))
+
+	testa.Exceptions()[gtfs.NewDate(3, 1, 2017)] = false
+
+	proc.perfectMinimize(testa)
+
+	if testa.Start_date().Day() != 2 || testa.Start_date().Month() != 1 || testa.Start_date().Year() != 2017 {
+		t.Error(testa.Start_date())
 	}
 
-	if testa.Daymap[2] {
-		t.Error(testa.Daymap)
+	if testa.End_date().Day() != 8 || testa.End_date().Month() != 1 || testa.End_date().Year() != 2017 {
+		t.Error(testa.End_date())
+	}
+
+	if len(testa.Exceptions()) != 0 {
+		t.Error(testa.Exceptions())
+	}
+
+	if testa.Daymap(2) {
+		t.Error(testa.Daymap(2))
 	}
 }

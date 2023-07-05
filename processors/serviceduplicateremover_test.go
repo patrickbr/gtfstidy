@@ -28,8 +28,8 @@ func TestServiceDuplicateRemoval(t *testing.T) {
 	dRange := GetDateRange(feed.Services["SINGLE_WE_WITH_CALENDAR"])
 	actDays := GetActDays(feed.Services["SINGLE_WE_WITH_CALENDAR"])
 
-	a := gtfs.Date{Day: 04, Month: 11, Year: 2017}
-	b := gtfs.Date{Day: 05, Month: 11, Year: 2017}
+	a := gtfs.NewDate(04, 11, 2017)
+	b := gtfs.NewDate(05, 11, 2017)
 
 	if dRange.Start != a {
 		t.Error(dRange)
@@ -98,11 +98,11 @@ func TestServiceDuplicateRemoval(t *testing.T) {
 		t.Error("Service should have been deleted!")
 	}
 
-	if feed.Trips["BFC2"].Service.Id != "SINGLE_WE_WITH_CALENDAR" {
-		t.Error(feed.Trips["BFC2"].Service.Id)
+	if feed.Trips["BFC2"].Service.Id() != "SINGLE_WE_WITH_CALENDAR" {
+		t.Error(feed.Trips["BFC2"].Service.Id())
 	}
 
-	if feed.Trips["AAMV4"].Service.Id != "SINGLE_WE_WITH_CALENDAR" {
-		t.Error(feed.Trips["AAMV4"].Service.Id)
+	if feed.Trips["AAMV4"].Service.Id() != "SINGLE_WE_WITH_CALENDAR" {
+		t.Error(feed.Trips["AAMV4"].Service.Id())
 	}
 }

@@ -136,6 +136,7 @@ func main() {
 	useFrequencyMinimizer := flag.BoolP("minimize-stoptimes", "T", false, "search for frequency patterns in explicit trips and combine them, using a CAP approach")
 	useCalDatesRemover := flag.BoolP("remove-cal-dates", "", false, "don't use calendar_dates.txt")
 	explicitCals := flag.BoolP("explicit-calendar", "", false, "add calendar.txt entry for every service, even irregular ones")
+	ensureParents := flag.BoolP("ensure-stop-parents", "", false, "ensure that every stop (location_type=0) has a parent station")
 	keepColOrder := flag.BoolP("keep-col-order", "", false, "keep the original column ordering of the input feed")
 	keepFields := flag.BoolP("keep-additional-fields", "F", false, "keep all non-GTFS fields from the input")
 	useRedStopMinimizer := flag.BoolP("remove-red-stops", "P", false, "remove stop and level duplicates")
@@ -509,6 +510,10 @@ func main() {
 
 		if *useCalDatesRemover {
 			minzers = append(minzers, processors.ServiceCalDatesRem{})
+		}
+
+		if *ensureParents {
+			minzers = append(minzers, processors.StopParentEnforcer{})
 		}
 
 		if *useIDMinimizerNum {
