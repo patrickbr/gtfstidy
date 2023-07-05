@@ -134,20 +134,18 @@ func (m *TripDuplicateRemover) getParent(stop *gtfs.Stop) *gtfs.Stop {
 func (m *TripDuplicateRemover) combineAdjTrips(feed *gtfsparser.Feed, ref *gtfs.Trip, trips []*gtfs.Trip) {
 	if m.serviceRefs[ref.Service] != 1 {
 		newService := new(gtfs.Service)
-		newService.Exceptions = make(map[gtfs.Date]bool, 0)
-		newService.Start_date = ref.Service.Start_date
-		newService.End_date = ref.Service.End_date
+		newService.SetExceptions(make(map[gtfs.Date]bool, 0))
+		newService.SetStart_date(ref.Service.Start_date())
+		newService.SetEnd_date(ref.Service.End_date())
 
-		for k, v := range ref.Service.Exceptions {
-			newService.Exceptions[k] = v
+		for k, v := range ref.Service.Exceptions() {
+			newService.Exceptions()[k] = v
 		}
-		for k, v := range ref.Service.Daymap {
-			newService.Daymap[k] = v
-		}
+		newService.SetRawDaymap(ref.Service.RawDaymap())
 
 		for ; ; m.serviceIdC++ {
-			newService.Id = "merged" + strconv.Itoa(m.serviceIdC)
-			if _, ok := feed.Services[newService.Id]; !ok {
+			newService.SetId("merged" + strconv.Itoa(m.serviceIdC))
+			if _, ok := feed.Services[newService.Id()]; !ok {
 				break
 			}
 		}
@@ -156,7 +154,7 @@ func (m *TripDuplicateRemover) combineAdjTrips(feed *gtfsparser.Feed, ref *gtfs.
 		ref.Service = newService
 		m.serviceRefs[ref.Service] = 1
 		m.writeServiceList(ref.Service)
-		feed.Services[ref.Service.Id] = ref.Service
+		feed.Services[ref.Service.Id()] = ref.Service
 	}
 
 	combServices := make([]*gtfs.Service, 0)
@@ -177,7 +175,7 @@ func (m *TripDuplicateRemover) combineAdjTrips(feed *gtfsparser.Feed, ref *gtfs.
 
 			// also update measurements
 			for i := 0; i < len(ref.StopTimes); i++ {
-				ref.StopTimes[i].Shape_dist_traveled = t.StopTimes[i].Shape_dist_traveled
+				ref.StopTimes[i].SetShape_dist_traveled(t.StopTimes[i].Shape_dist_traveled())
 			}
 		}
 
@@ -202,7 +200,7 @@ func (m *TripDuplicateRemover) combineContTrips(feed *gtfsparser.Feed, ref *gtfs
 
 			// also update measurements
 			for i := 0; i < len(ref.StopTimes); i++ {
-				ref.StopTimes[i].Shape_dist_traveled = t.StopTimes[i].Shape_dist_traveled
+				ref.StopTimes[i].SetShape_dist_traveled(t.StopTimes[i].Shape_dist_traveled())
 			}
 		}
 
@@ -247,7 +245,7 @@ func (m *TripDuplicateRemover) combineEqTrips(feed *gtfsparser.Feed, ref *gtfs.T
 
 			// also update measurements
 			for i := 0; i < len(ref.StopTimes); i++ {
-				ref.StopTimes[i].Shape_dist_traveled = t.StopTimes[i].Shape_dist_traveled
+				ref.StopTimes[i].SetShape_dist_traveled(t.StopTimes[i].Shape_dist_traveled())
 			}
 		}
 
@@ -272,7 +270,7 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 
 			// also update measurements
 			for i := 0; i < len(ref.StopTimes); i++ {
-				ref.StopTimes[i].Shape_dist_traveled = o.Trip.StopTimes[i].Shape_dist_traveled
+				ref.StopTimes[i].SetShape_dist_traveled(o.Trip.StopTimes[i].Shape_dist_traveled())
 			}
 		} else {
 			break
@@ -297,20 +295,18 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 		}
 	} else {
 		newService := new(gtfs.Service)
-		newService.Exceptions = make(map[gtfs.Date]bool, 0)
-		newService.Start_date = ref.Service.Start_date
-		newService.End_date = ref.Service.End_date
+		newService.SetExceptions(make(map[gtfs.Date]bool, 0))
+		newService.SetStart_date(ref.Service.Start_date())
+		newService.SetEnd_date(ref.Service.End_date())
 
-		for k, v := range ref.Service.Exceptions {
-			newService.Exceptions[k] = v
+		for k, v := range ref.Service.Exceptions() {
+			newService.Exceptions()[k] = v
 		}
-		for k, v := range ref.Service.Daymap {
-			newService.Daymap[k] = v
-		}
+		newService.SetRawDaymap(ref.Service.RawDaymap())
 
 		for ; ; m.serviceIdC++ {
-			newService.Id = "merged" + strconv.Itoa(m.serviceIdC)
-			if _, ok := feed.Services[newService.Id]; !ok {
+			newService.SetId("merged" + strconv.Itoa(m.serviceIdC))
+			if _, ok := feed.Services[newService.Id()]; !ok {
 				break
 			}
 		}
@@ -334,7 +330,7 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 		// otherwise, use the new service
 		m.serviceRefs[ref.Service]--
 		ref.Service = newService
-		feed.Services[newService.Id] = newService
+		feed.Services[newService.Id()] = newService
 		m.serviceRefs[newService] = 1
 	}
 }
@@ -355,19 +351,19 @@ func (m *TripDuplicateRemover) tripStEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 		// NOTE: we don't check for the additional stop time attributes here
 		bSt := b.StopTimes[i]
 
-		if !m.stopEq(aSt.Stop, bSt.Stop) {
+		if !m.stopEq(aSt.Stop(), bSt.Stop()) {
 			return false
 		}
 
-		if i == 0 && aSt.Departure_time.Equals(bSt.Departure_time) {
+		if i == 0 && aSt.Departure_time().Equals(bSt.Departure_time()) {
 			continue
 		}
 
-		if i == len(a.StopTimes)-1 && aSt.Arrival_time.Equals(bSt.Arrival_time) {
+		if i == len(a.StopTimes)-1 && aSt.Arrival_time().Equals(bSt.Arrival_time()) {
 			continue
 		}
 
-		if aSt.Arrival_time.Equals(bSt.Arrival_time) && aSt.Departure_time.Equals(bSt.Departure_time) {
+		if aSt.Arrival_time().Equals(bSt.Arrival_time()) && aSt.Departure_time().Equals(bSt.Departure_time()) {
 			continue
 		}
 
@@ -426,8 +422,8 @@ func (m *TripDuplicateRemover) tripCalEq(a *gtfs.Trip, b *gtfs.Trip) bool {
 	}
 
 	// shortcut
-	if a.Service.Start_date.Day > 0 && b.Service.Start_date.Day > 0 && len(a.Service.Exceptions) == 0 && len(b.Service.Exceptions) == 0 {
-		return a.Service.Start_date == b.Service.Start_date && a.Service.End_date == b.Service.End_date && a.Service.Daymap[0] == b.Service.Daymap[0] && a.Service.Daymap[1] == b.Service.Daymap[1] && a.Service.Daymap[2] == b.Service.Daymap[2] && a.Service.Daymap[3] == b.Service.Daymap[3] && a.Service.Daymap[4] == b.Service.Daymap[4] && a.Service.Daymap[5] == b.Service.Daymap[5] && a.Service.Daymap[6] == b.Service.Daymap[6]
+	if !a.Service.Start_date().IsEmpty() && !b.Service.Start_date().IsEmpty() && len(a.Service.Exceptions()) == 0 && len(b.Service.Exceptions()) == 0 {
+		return a.Service.Start_date() == b.Service.Start_date() && a.Service.End_date() == b.Service.End_date() && a.Service.RawDaymap() == b.Service.RawDaymap()
 	}
 
 	aDList := m.serviceList[a.Service]
@@ -486,7 +482,7 @@ func (m *TripDuplicateRemover) tripCalContained(child *gtfs.Trip, parent *gtfs.T
 func (m *TripDuplicateRemover) tripCalAdj(child *gtfs.Trip, parent *gtfs.Trip, maxdist uint64) bool {
 	// only merge if daymap is equal, to avoid creating complicated services
 
-	if !(child.Service.Start_date.Year > 0 && parent.Service.Start_date.Year > 0 && child.Service.Daymap[0] == parent.Service.Daymap[0] && child.Service.Daymap[1] == parent.Service.Daymap[1] && child.Service.Daymap[2] == parent.Service.Daymap[2] && child.Service.Daymap[3] == parent.Service.Daymap[3] && child.Service.Daymap[4] == parent.Service.Daymap[4] && child.Service.Daymap[5] == parent.Service.Daymap[5] && child.Service.Daymap[6] == parent.Service.Daymap[6]) {
+	if !(!child.Service.Start_date().IsEmpty() && !parent.Service.Start_date().IsEmpty() && child.Service.RawDaymap() == parent.Service.RawDaymap()) {
 		return false
 	}
 
@@ -553,8 +549,8 @@ func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint64 {
 	b := make([]byte, 8)
 
 	if len(t.StopTimes) > 0 {
-		start := m.getParent(t.StopTimes[0].Stop)
-		end := m.getParent(t.StopTimes[len(t.StopTimes)-1].Stop)
+		start := m.getParent(t.StopTimes[0].Stop())
+		end := m.getParent(t.StopTimes[len(t.StopTimes)-1].Stop())
 
 		binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(start))))
 		h.Write(b)
@@ -565,10 +561,10 @@ func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint64 {
 		binary.LittleEndian.PutUint64(b, uint64(len(t.StopTimes)))
 		h.Write(b)
 
-		binary.LittleEndian.PutUint64(b, uint64(t.StopTimes[0].Departure_time.SecondsSinceMidnight()))
+		binary.LittleEndian.PutUint64(b, uint64(t.StopTimes[0].Departure_time().SecondsSinceMidnight()))
 		h.Write(b)
 
-		binary.LittleEndian.PutUint64(b, uint64(t.StopTimes[len(t.StopTimes)-1].Arrival_time.SecondsSinceMidnight()))
+		binary.LittleEndian.PutUint64(b, uint64(t.StopTimes[len(t.StopTimes)-1].Arrival_time().SecondsSinceMidnight()))
 		h.Write(b)
 
 		binary.LittleEndian.PutUint64(b, uint64(gtfs.GetTypeFromExtended(t.Route.Type)))
@@ -602,18 +598,18 @@ func (m *TripDuplicateRemover) combineServices(services []*gtfs.Service, ref *gt
 		dlist = merge(dlist, m.serviceList[serv])
 	}
 
-	if ref.Start_date.Year > 0 {
+	if !ref.Start_date().IsEmpty() {
 		// extend range and delete wrong dates
 		for _, s := range services {
 			first := m.getDateFromRefDay(m.serviceList[s][0])
 			last := m.getDateFromRefDay(m.serviceList[s][len(m.serviceList[s])-1])
 
-			if first.GetTime().Before(ref.Start_date.GetTime()) {
-				ref.Start_date = first
+			if first.GetTime().Before(ref.Start_date().GetTime()) {
+				ref.SetStart_date(first)
 			}
 
-			if last.GetTime().After(ref.End_date.GetTime()) {
-				ref.End_date = last
+			if last.GetTime().After(ref.End_date().GetTime()) {
+				ref.SetEnd_date(last)
 			}
 		}
 

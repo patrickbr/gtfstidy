@@ -31,8 +31,7 @@ type DateRange struct {
 }
 
 func hasBit(n uint, pos uint) bool {
-	val := n & (1 << pos)
-	return (val > 0)
+	return (n & (1 << pos)) > 0
 }
 
 // Run this ServiceMinimizer on some feed
@@ -80,15 +79,39 @@ func (sm ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 		calsSign = "+"
 	}
 
-	fmt.Fprintf(os.Stdout, "done. (%s%d calendar_dates.txt entries [%s%.2f%%], %s%d calendar.txt entries [%s%.2f%%])\n",
-		datesSign,
-		datesAfter-datesBefore,
-		datesSign,
-		100.0*(float64(datesAfter-datesBefore))/(float64(datesBefore)+0.001),
-		calsSign,
-		calAfter-calBefore,
-		calsSign,
-		100.0*(float64(calAfter-calBefore))/(float64(calBefore)+0.001))
+	if calBefore > 0 && datesBefore > 0 {
+		fmt.Fprintf(os.Stdout, "done. (%s%d calendar_dates.txt entries [%s%.2f%%], %s%d calendar.txt entries [%s%.2f%%])\n",
+			datesSign,
+			datesAfter-datesBefore,
+			datesSign,
+			100.0*(float64(datesAfter-datesBefore))/(float64(datesBefore)+0.001),
+			calsSign,
+			calAfter-calBefore,
+			calsSign,
+			100.0*(float64(calAfter-calBefore))/(float64(calBefore)+0.001))
+	} else if calBefore > 0 {
+		fmt.Fprintf(os.Stdout, "done. (%s%d calendar_dates.txt entries, %s%d calendar.txt entries [%s%.2f%%])\n",
+			datesSign,
+			datesAfter-datesBefore,
+			calsSign,
+			calAfter-calBefore,
+			calsSign,
+			100.0*(float64(calAfter-calBefore))/(float64(calBefore)+0.001))
+	} else if datesBefore > 0 {
+		fmt.Fprintf(os.Stdout, "done. (%s%d calendar_dates.txt entries [%s%.2f%%], %s%d calendar.txt entries)\n",
+			datesSign,
+			datesAfter-datesBefore,
+			datesSign,
+			100.0*(float64(datesAfter-datesBefore))/(float64(datesBefore)+0.001),
+			calsSign,
+			calAfter-calBefore)
+	} else {
+		fmt.Fprintf(os.Stdout, "done. (%s%d calendar_dates.txt entries, %s%d calendar.txt entries)\n",
+			datesSign,
+			datesAfter-datesBefore,
+			calsSign,
+			calAfter-calBefore)
+	}
 }
 
 func (sm ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
@@ -98,7 +121,7 @@ func (sm ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
 	 *  but I am not 100% sure and have no proof / reduction method atm
 	 **/
 
-	if len(service.Exceptions) == 0 {
+	if len(service.Exceptions()) == 0 {
 		// already minimal
 		return
 	}
@@ -125,18 +148,21 @@ func (sm ServiceMinimizer) perfectMinimize(service *gtfs.Service) {
 	daysNotMatched := sm.getDaysNotMatched(service)
 	l := len(activeOn)
 
+	startDiff := int(startTimeAm.Sub(startTime).Hours() / 24)
+	endDiff := int(startTimeAm.Sub(endTime).Hours() / 24)
+
 out:
 	for a := 0; a < l; a = a + 7 {
 		for b := l - 1; b > a; b = b - 7 {
+			fullWeekCoverage := ((b - a) - 7) / 7
 			for d := uint(1); d < 128; d++ {
-				fullWeekCoverage := ((b - a) - 7) / 7
-				minExc := fullWeekCoverage*daysNotMatched[d] - len(service.Exceptions)
+				minExc := fullWeekCoverage*daysNotMatched[d] - len(service.Exceptions())
 
 				if minExc > -1 && uint(minExc) > e {
 					continue
 				}
 
-				c := sm.countExceptions(service, activeOn, d, startTime, endTime, startTimeAm, a, b, e)
+				c := sm.countExceptions(service, activeOn, d, startDiff, endDiff, a, b, e)
 
 				if c < e {
 					e = c
@@ -156,22 +182,19 @@ out:
 	sm.updateService(service, bestMap, bestA, bestB, startTime, endTime, start, end)
 }
 
-func (sm ServiceMinimizer) countExceptions(s *gtfs.Service, actmap []bool, bm uint, start time.Time, end time.Time, startActMap time.Time, a int, b int, max uint) uint {
+func (sm ServiceMinimizer) countExceptions(s *gtfs.Service, actmap []bool, bm uint, startDiff int, endDiff int, a int, b int, max uint) uint {
 	ret := uint(0)
 	l := len(actmap)
 
-	for d := 0; d < l; d++ {
+	if l > -endDiff+1 {
+		l = -endDiff + 1
+	}
+
+	for d := -startDiff; d < l; d++ {
 		if ret >= max {
 			return max
 		}
 
-		checkD := startActMap.AddDate(0, 0, d)
-		if checkD.Before(start) {
-			continue
-		}
-		if checkD.After(end) {
-			break
-		}
 		if d < a || d > b {
 			// we are out of the weekmap span
 			if actmap[d] {
@@ -225,7 +248,7 @@ func GetActDays(service *gtfs.Service) int {
 }
 
 func (sm ServiceMinimizer) getGtfsDateFromTime(t time.Time) gtfs.Date {
-	return gtfs.Date{Day: int8(t.Day()), Month: int8(t.Month()), Year: int16(t.Year())}
+	return gtfs.NewDate(uint8(t.Day()), uint8(t.Month()), uint16(t.Year()))
 }
 
 func (sm ServiceMinimizer) getNextDate(d gtfs.Date) gtfs.Date {
@@ -257,8 +280,8 @@ func (sm ServiceMinimizer) countServices(feed *gtfsparser.Feed) (int, int) {
 	dates := 0
 
 	for _, s := range feed.Services {
-		dates += len(s.Exceptions)
-		if s.Daymap[0] || s.Daymap[1] || s.Daymap[2] || s.Daymap[3] || s.Daymap[4] || s.Daymap[5] || s.Daymap[6] {
+		dates += len(s.Exceptions())
+		if s.RawDaymap() > 0 {
 			cals++
 		}
 	}
@@ -269,7 +292,7 @@ func (sm ServiceMinimizer) getDaysNotMatched(service *gtfs.Service) [128]int {
 	var ret [128]int
 	for d := uint(1); d < 128; d++ {
 		for i := 0; i < 7; i++ {
-			if service.Daymap[i] && !hasBit(d, uint(i)) {
+			if service.Daymap(i) && !hasBit(d, uint(i)) {
 				ret[d]++
 			}
 		}
@@ -342,13 +365,19 @@ func (sm ServiceMinimizer) updateService(service *gtfs.Service, bestMap uint, be
 		}
 	}
 
-	service.Exceptions = make(map[gtfs.Date]bool, 0)
+	service.SetExceptions(make(map[gtfs.Date]bool, 0))
 
 	for _, e := range newExceptions {
 		service.SetExceptionTypeOn(e.Date, e.Type)
 	}
 
-	service.Start_date = sm.getGtfsDateFromTime(newBegin)
-	service.End_date = sm.getGtfsDateFromTime(newEnd)
-	service.Daymap = newMap
+	service.SetStart_date(sm.getGtfsDateFromTime(newBegin))
+	service.SetEnd_date(sm.getGtfsDateFromTime(newEnd))
+	service.SetDaymap(0, newMap[0])
+	service.SetDaymap(1, newMap[1])
+	service.SetDaymap(2, newMap[2])
+	service.SetDaymap(3, newMap[3])
+	service.SetDaymap(4, newMap[4])
+	service.SetDaymap(5, newMap[5])
+	service.SetDaymap(6, newMap[6])
 }

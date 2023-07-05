@@ -68,7 +68,7 @@ func (or OrphanRemover) removeTransferOrphans(feed *gtfsparser.Feed) {
 	referenced := make(map[*gtfs.Stop]empty, 0)
 	for _, t := range feed.Trips {
 		for _, st := range t.StopTimes {
-			referenced[st.Stop] = empty{}
+			referenced[st.Stop()] = empty{}
 		}
 	}
 
@@ -94,7 +94,7 @@ func (or OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
 	referenced := make(map[*gtfs.Stop]empty, 0)
 	for _, t := range feed.Trips {
 		for _, st := range t.StopTimes {
-			referenced[st.Stop] = empty{}
+			referenced[st.Stop()] = empty{}
 		}
 	}
 

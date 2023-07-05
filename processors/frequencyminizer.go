@@ -393,7 +393,7 @@ func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, t
 				if t.Id == trip.Id || m.isTimeIndependentEqual(t, trip, feed) {
 					if len(t.Frequencies) == 0 {
 						mutex.Lock()
-						ret.trips = append(ret.trips, tripWrapper{t, t.StopTimes[0].Arrival_time, false, nil})
+						ret.trips = append(ret.trips, tripWrapper{t, t.StopTimes[0].Arrival_time(), false, nil})
 						ret.coveredTrips[t] = empty{}
 						mutex.Unlock()
 					} else {
@@ -446,14 +446,14 @@ func (m FrequencyMinimizer) remeasureStopTimes(t *gtfs.Trip, time gtfs.Time) {
 	diff := 0
 	curArrDepDiff := 0
 	for i := 0; i < len(t.StopTimes); i++ {
-		curArrDepDiff = t.StopTimes[i].Departure_time.SecondsSinceMidnight() - t.StopTimes[i].Arrival_time.SecondsSinceMidnight()
-		oldArrT := t.StopTimes[i].Arrival_time.SecondsSinceMidnight()
+		curArrDepDiff = t.StopTimes[i].Departure_time().SecondsSinceMidnight() - t.StopTimes[i].Arrival_time().SecondsSinceMidnight()
+		oldArrT := t.StopTimes[i].Arrival_time().SecondsSinceMidnight()
 
-		t.StopTimes[i].Arrival_time = m.getGtfsTimeFromSec(time.SecondsSinceMidnight() + diff)
-		t.StopTimes[i].Departure_time = m.getGtfsTimeFromSec(time.SecondsSinceMidnight() + diff + curArrDepDiff)
+		t.StopTimes[i].SetArrival_time(m.getGtfsTimeFromSec(time.SecondsSinceMidnight() + diff))
+		t.StopTimes[i].SetDeparture_time(m.getGtfsTimeFromSec(time.SecondsSinceMidnight() + diff + curArrDepDiff))
 
 		if i < len(t.StopTimes)-1 {
-			diff += t.StopTimes[i+1].Arrival_time.SecondsSinceMidnight() - oldArrT
+			diff += t.StopTimes[i+1].Arrival_time().SecondsSinceMidnight() - oldArrT
 		}
 	}
 }
@@ -477,23 +477,23 @@ func (m FrequencyMinimizer) hasSameRelStopTimes(a *gtfs.Trip, b *gtfs.Trip, feed
 		addFldsEq := true
 
 		for _, v := range feed.StopTimesAddFlds {
-			if v[a.Id][a.StopTimes[i].Sequence] != v[b.Id][a.StopTimes[i].Sequence] {
+			if v[a.Id][a.StopTimes[i].Sequence()] != v[b.Id][a.StopTimes[i].Sequence()] {
 				addFldsEq = false
 				break
 			}
 		}
 
-		if !(addFldsEq && a.StopTimes[i].Stop == b.StopTimes[i].Stop &&
-			a.StopTimes[i].Headsign == b.StopTimes[i].Headsign &&
-			a.StopTimes[i].Pickup_type == b.StopTimes[i].Pickup_type && a.StopTimes[i].Drop_off_type == b.StopTimes[i].Drop_off_type && a.StopTimes[i].Continuous_drop_off == b.StopTimes[i].Continuous_drop_off && a.StopTimes[i].Continuous_pickup == b.StopTimes[i].Continuous_pickup &&
-			((math.IsNaN(float64(a.StopTimes[i].Shape_dist_traveled)) && math.IsNaN(float64(b.StopTimes[i].Shape_dist_traveled))) || FloatEquals(a.StopTimes[i].Shape_dist_traveled, b.StopTimes[i].Shape_dist_traveled, 0.01)) && a.StopTimes[i].Timepoint == b.StopTimes[i].Timepoint) {
+		if !(addFldsEq && a.StopTimes[i].Stop() == b.StopTimes[i].Stop() &&
+			a.StopTimes[i].Headsign() == b.StopTimes[i].Headsign() &&
+			a.StopTimes[i].Pickup_type() == b.StopTimes[i].Pickup_type() && a.StopTimes[i].Drop_off_type() == b.StopTimes[i].Drop_off_type() && a.StopTimes[i].Continuous_drop_off() == b.StopTimes[i].Continuous_drop_off() && a.StopTimes[i].Continuous_pickup() == b.StopTimes[i].Continuous_pickup() &&
+			((math.IsNaN(float64(a.StopTimes[i].Shape_dist_traveled())) && math.IsNaN(float64(b.StopTimes[i].Shape_dist_traveled()))) || FloatEquals(a.StopTimes[i].Shape_dist_traveled(), b.StopTimes[i].Shape_dist_traveled(), 0.01)) && a.StopTimes[i].Timepoint() == b.StopTimes[i].Timepoint()) {
 			return false
 		}
 		if i != 0 {
-			if a.StopTimes[i].Arrival_time.SecondsSinceMidnight()-aPrev.Arrival_time.SecondsSinceMidnight() != b.StopTimes[i].Arrival_time.SecondsSinceMidnight()-bPrev.Arrival_time.SecondsSinceMidnight() {
+			if a.StopTimes[i].Arrival_time().SecondsSinceMidnight()-aPrev.Arrival_time().SecondsSinceMidnight() != b.StopTimes[i].Arrival_time().SecondsSinceMidnight()-bPrev.Arrival_time().SecondsSinceMidnight() {
 				return false
 			}
-			if a.StopTimes[i].Departure_time.SecondsSinceMidnight()-aPrev.Departure_time.SecondsSinceMidnight() != b.StopTimes[i].Departure_time.SecondsSinceMidnight()-bPrev.Departure_time.SecondsSinceMidnight() {
+			if a.StopTimes[i].Departure_time().SecondsSinceMidnight()-aPrev.Departure_time().SecondsSinceMidnight() != b.StopTimes[i].Departure_time().SecondsSinceMidnight()-bPrev.Departure_time().SecondsSinceMidnight() {
 				return false
 			}
 		}

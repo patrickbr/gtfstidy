@@ -186,17 +186,17 @@ func (m ServiceDuplicateRemover) serviceHash(active []bool, first gtfs.Date, las
 
 	b := make([]byte, 8)
 
-	binary.LittleEndian.PutUint64(b, uint64(first.Day))
+	binary.LittleEndian.PutUint64(b, uint64(first.Day()))
 	h.Write(b)
-	binary.LittleEndian.PutUint64(b, uint64(first.Month))
+	binary.LittleEndian.PutUint64(b, uint64(first.Month()))
 	h.Write(b)
-	binary.LittleEndian.PutUint64(b, uint64(first.Year))
+	binary.LittleEndian.PutUint64(b, uint64(first.Year()))
 	h.Write(b)
-	binary.LittleEndian.PutUint64(b, uint64(last.Day))
+	binary.LittleEndian.PutUint64(b, uint64(last.Day()))
 	h.Write(b)
-	binary.LittleEndian.PutUint64(b, uint64(last.Month))
+	binary.LittleEndian.PutUint64(b, uint64(last.Month()))
 	h.Write(b)
-	binary.LittleEndian.PutUint64(b, uint64(last.Year))
+	binary.LittleEndian.PutUint64(b, uint64(last.Year()))
 	h.Write(b)
 
 	return h.Sum32()
@@ -225,7 +225,7 @@ func (sdr ServiceDuplicateRemover) combineServices(feed *gtfsparser.Feed, servic
 	ref := services[0]
 
 	for _, s := range services {
-		if len(s.Exceptions) < len(ref.Exceptions) {
+		if len(s.Exceptions()) < len(ref.Exceptions()) {
 			ref = s
 		}
 	}
@@ -242,6 +242,6 @@ func (sdr ServiceDuplicateRemover) combineServices(feed *gtfsparser.Feed, servic
 			}
 		}
 
-		delete(feed.Services, s.Id)
+		delete(feed.Services, s.Id())
 	}
 }

@@ -37,11 +37,23 @@ func parseDate(str string) gtfs.Date {
 		year, e = strconv.Atoi(str[0:4])
 	}
 
+	if e == nil && day < 1 || day > 31 {
+		e = fmt.Errorf("day must be in the range [1, 31]")
+	}
+
+	if e == nil && month < 1 || month > 12 {
+		e = fmt.Errorf("month must be in the range [1, 12]")
+	}
+
+	if e == nil && year < 1900 || year > (1900+255) {
+		e = fmt.Errorf("date must be in the range [19000101, 21551231]")
+	}
+
 	if e != nil {
 		panic(fmt.Errorf("Expected YYYYMMDD date, found '%s' (%s)", str, e.Error()))
 	}
 
-	return gtfs.Date{Day: int8(day), Month: int8(month), Year: int16(year)}
+	return gtfs.NewDate(uint8(day), uint8(month), uint16(year))
 }
 
 func parseCoords(s string) ([][2]float64, error) {
@@ -72,7 +84,7 @@ func parseCoords(s string) ([][2]float64, error) {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "gtfstidy - (C) 2016-2021 by P. Brosi <info@patrickbrosi.de>\n\nUsage:\n\n  %s [<options>] [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "gtfstidy - (C) 2016-2023 by Patrick Brosi <info@patrickbrosi.de>\n\nUsage:\n\n  %s [<options>] [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
@@ -183,8 +195,8 @@ func main() {
 		}
 	}
 
-	startDate := gtfs.Date{Day: 0, Month: 0, Year: 0}
-	endDate := gtfs.Date{Day: 0, Month: 0, Year: 0}
+	startDate := gtfs.Date{}
+	endDate := gtfs.Date{}
 
 	if len(*startDateFilter) > 0 {
 		startDate = parseDate(*startDateFilter)
@@ -625,7 +637,7 @@ func main() {
 						oldId := strings.TrimPrefix(id, prefix)
 						if _, ok := feed.Services[oldId]; !ok {
 							feed.Services[oldId] = s
-							feed.Services[oldId].Id = oldId
+							feed.Services[oldId].SetId(oldId)
 
 							feed.DeleteService(id)
 						}

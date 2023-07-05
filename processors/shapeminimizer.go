@@ -43,7 +43,7 @@ func (sm ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 				chunknum[a] += len(s.Points)
 				s.Points = sm.minimizeShape(s.Points, sm.Epsilon)
 				for i := 0; i < len(s.Points); i++ {
-					s.Points[i].Sequence = i
+					s.Points[i].Sequence = uint32(i)
 				}
 				chunkgain[a] += bef - len(s.Points)
 			}

@@ -70,7 +70,7 @@ func (sdr StopDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		// collect stop times that use stops
 		for _, t := range feed.Trips {
 			for i, st := range t.StopTimes {
-				stoptimes[st.Stop] = append(stoptimes[st.Stop], &t.StopTimes[i])
+				stoptimes[st.Stop()] = append(stoptimes[st.Stop()], &t.StopTimes[i])
 			}
 		}
 
@@ -164,13 +164,14 @@ func (sdr StopDuplicateRemover) combineStops(feed *gtfsparser.Feed, stops []*gtf
 	// heuristic: use the stop with the most colons as the reference stop, to prefer
 	// stops with global ID of the form de:54564:345:3 over something like 5542, and to
 	// also prefer more specific global IDs. If the number of colons is equivalent,
-	// user the shorter id
+	// user the shorter id. If the IDs also have the same length, order alphabetically and take
+	// the first one
 	ref := stops[0]
 
 	for _, s := range stops {
 		numColsS := sdr.numColons(s.Id)
 		numColsRef := sdr.numColons(ref.Id)
-		if numColsS > numColsRef || (numColsS == numColsRef && len(ref.Id) > len(s.Id)) {
+		if numColsS > numColsRef || (numColsS == numColsRef && len(ref.Id) > len(s.Id)) || (numColsS == numColsRef && len(ref.Id) == len(s.Id) && s.Id < ref.Id) {
 			ref = s
 		}
 	}
@@ -181,8 +182,8 @@ func (sdr StopDuplicateRemover) combineStops(feed *gtfsparser.Feed, stops []*gtf
 		}
 
 		for i, st := range stoptimes[s] {
-			if st.Stop == s {
-				stoptimes[s][i].Stop = ref
+			if st.Stop() == s {
+				stoptimes[s][i].SetStop(ref)
 				stoptimes[ref] = append(stoptimes[ref], stoptimes[s][i])
 			}
 		}

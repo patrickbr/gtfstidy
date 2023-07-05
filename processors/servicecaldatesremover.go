@@ -34,10 +34,10 @@ func (sm ServiceCalDatesRem) Run(feed *gtfsparser.Feed) {
 
 		if len(blocks) == 1 {
 			// change inplace
-			s.Start_date = blocks[0].Start_date
-			s.End_date = blocks[0].End_date
-			s.Daymap = blocks[0].Daymap
-			s.Exceptions = make(map[gtfs.Date]bool, 0)
+			s.SetStart_date(blocks[0].Start_date())
+			s.SetEnd_date(blocks[0].End_date())
+			s.SetRawDaymap(blocks[0].RawDaymap())
+			s.SetExceptions(make(map[gtfs.Date]bool, 0))
 		} else {
 			newServices[s] = blocks
 		}
@@ -45,9 +45,9 @@ func (sm ServiceCalDatesRem) Run(feed *gtfsparser.Feed) {
 
 	for old, news := range newServices {
 		for _, new := range news {
-			feed.Services[new.Id] = new
+			feed.Services[new.Id()] = new
 		}
-		delete(feed.Services, old.Id)
+		delete(feed.Services, old.Id())
 	}
 
 	newTrips := make([]*gtfs.Trip, 0)
@@ -108,22 +108,22 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 	curBlockStart := first
 
 	for first.GetTime().Before(last.GetTime()) || first.GetTime() == last.GetTime() {
-		if s.IsActiveOn(first) && !s.Daymap[first.GetTime().Weekday()] {
+		if s.IsActiveOn(first) && !s.Daymap(int(first.GetTime().Weekday())) {
 			// if day is valid according to exception, but not according to map
 
 			// add a single day span
 			service_ex := new(gtfs.Service)
-			service_ex.Id = sm.freeServiceId(feed, s.Id)
-			service_ex.Exceptions = make(map[gtfs.Date]bool, 0)
-			service_ex.Daymap = [7]bool{false, false, false, false, false, false, false}
+			service_ex.SetId(sm.freeServiceId(feed, s.Id()))
+			service_ex.SetExceptions(make(map[gtfs.Date]bool, 0))
+			service_ex.SetRawDaymap(0)
 
-			service_ex.Daymap[first.GetTime().Weekday()] = true
+			service_ex.SetDaymap(int(first.GetTime().Weekday()), true)
 
-			service_ex.Start_date = first
-			service_ex.End_date = first
+			service_ex.SetStart_date(first)
+			service_ex.SetEnd_date(first)
 
 			ret = append(ret, service_ex)
-		} else if !s.IsActiveOn(first) && s.Daymap[first.GetTime().Weekday()] {
+		} else if !s.IsActiveOn(first) && s.Daymap(int(first.GetTime().Weekday())) {
 			// if day is valid according to map, but not according to exception
 
 			// if the current block start is the same as the currently checked date,
@@ -131,14 +131,14 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 			if first.GetTime() != curBlockStart.GetTime() {
 				service := new(gtfs.Service)
 
-				service.Id = sm.freeServiceId(feed, s.Id)
-				service.Exceptions = make(map[gtfs.Date]bool, 0)
+				service.SetId(sm.freeServiceId(feed, s.Id()))
+				service.SetExceptions(make(map[gtfs.Date]bool, 0))
 
-				service.Daymap = s.Daymap
-				service.Start_date = curBlockStart
+				service.SetRawDaymap(s.RawDaymap())
+				service.SetStart_date(curBlockStart)
 
 				// end date is the date before the current date
-				service.End_date = first.GetOffsettedDate(-1)
+				service.SetEnd_date(first.GetOffsettedDate(-1))
 
 				ret = append(ret, service)
 			}
@@ -152,16 +152,16 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 	}
 
 	// add last block, if open
-	if (s.Daymap[0] || s.Daymap[1] || s.Daymap[2] || s.Daymap[3] || s.Daymap[4] || s.Daymap[5] || s.Daymap[6]) && (curBlockStart.GetTime().Before(last.GetTime()) || curBlockStart.GetTime() == last.GetTime()) {
+	if (s.RawDaymap() > 0) && (curBlockStart.GetTime().Before(last.GetTime()) || curBlockStart.GetTime() == last.GetTime()) {
 		service := new(gtfs.Service)
-		service.Id = sm.freeServiceId(feed, s.Id)
-		service.Exceptions = make(map[gtfs.Date]bool, 0)
+		service.SetId(sm.freeServiceId(feed, s.Id()))
+		service.SetExceptions(make(map[gtfs.Date]bool, 0))
 
-		service.Daymap = s.Daymap
-		service.Start_date = curBlockStart
+		service.SetRawDaymap(s.RawDaymap())
+		service.SetStart_date(curBlockStart)
 
 		// end date is the date before the current date
-		service.End_date = first.GetOffsettedDate(-1)
+		service.SetEnd_date(first.GetOffsettedDate(-1))
 
 		ret = append(ret, service)
 	}
@@ -170,17 +170,23 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 	ret2 := make([]*gtfs.Service, 0)
 	for _, s := range ret {
 		newmap := [7]bool{false, false, false, false, false, false, false}
-		start := s.Start_date
-		end := s.End_date
+		start := s.Start_date()
+		end := s.End_date()
 
 		for start.GetTime().Before(end.GetTime()) || start.GetTime() == end.GetTime() {
-			if s.Daymap[start.GetTime().Weekday()] {
+			if s.Daymap(int(start.GetTime().Weekday())) {
 				newmap[start.GetTime().Weekday()] = true
 			}
 			start = start.GetOffsettedDate(1)
 		}
 
-		s.Daymap = newmap
+		s.SetDaymap(0, newmap[0])
+		s.SetDaymap(1, newmap[1])
+		s.SetDaymap(2, newmap[2])
+		s.SetDaymap(3, newmap[3])
+		s.SetDaymap(4, newmap[4])
+		s.SetDaymap(5, newmap[5])
+		s.SetDaymap(6, newmap[6])
 
 		if newmap[0] || newmap[1] || newmap[2] || newmap[3] || newmap[4] || newmap[5] || newmap[6] {
 			ret2 = append(ret2, s)
@@ -191,12 +197,12 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 		// special case: service was empty, re-add empty
 
 		service := new(gtfs.Service)
-		service.Id = sm.freeServiceId(feed, s.Id)
-		service.Exceptions = make(map[gtfs.Date]bool, 0)
+		service.SetId(sm.freeServiceId(feed, s.Id()))
+		service.SetExceptions(make(map[gtfs.Date]bool, 0))
 
-		service.Daymap = [7]bool{false, false, false, false, false, false, false}
-		service.Start_date = s.GetFirstDefinedDate()
-		service.End_date = s.GetLastDefinedDate()
+		service.SetRawDaymap(0)
+		service.SetStart_date(s.GetFirstDefinedDate())
+		service.SetEnd_date(s.GetLastDefinedDate())
 
 		ret2 = append(ret, service)
 	}

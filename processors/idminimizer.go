@@ -201,9 +201,9 @@ func (minimizer IDMinimizer) minimizeServiceIds(feed *gtfsparser.Feed) {
 
 	newMap := make(map[string]*gtfs.Service)
 	for _, s := range feed.Services {
-		s.Id = strconv.FormatInt(idCount, minimizer.Base)
+		s.SetId(strconv.FormatInt(idCount, minimizer.Base))
 		idCount = idCount + 1
-		newMap[s.Id] = s
+		newMap[s.Id()] = s
 	}
 
 	feed.Services = newMap
