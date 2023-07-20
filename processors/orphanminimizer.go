@@ -72,21 +72,17 @@ func (or OrphanRemover) removeTransferOrphans(feed *gtfsparser.Feed) {
 		}
 	}
 
-	i := 0
-	for _, t := range feed.Transfers {
-		_, inFrom := referenced[t.From_stop]
-		_, inTo := referenced[t.To_stop]
+	transfers_new := make(map[gtfs.TransferKey]gtfs.TransferVal, 0)
+	for tk, tv := range feed.Transfers {
+		_, inFrom := referenced[tk.From_stop]
+		_, inTo := referenced[tk.To_stop]
 
 		if inFrom && inTo {
-			feed.Transfers[i] = t
-			i++
+			transfers_new[tk] = tv
 		}
 	}
 
-	for j := i; j < len(feed.Transfers); j++ {
-		feed.Transfers[j] = nil
-	}
-	feed.Transfers = feed.Transfers[:i]
+	feed.Transfers = transfers_new
 }
 
 // Remove stop orphans
@@ -98,9 +94,9 @@ func (or OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
 		}
 	}
 
-	for _, t := range feed.Transfers {
-		referenced[t.From_stop] = empty{}
-		referenced[t.To_stop] = empty{}
+	for tk, _ := range feed.Transfers {
+		referenced[tk.From_stop] = empty{}
+		referenced[tk.To_stop] = empty{}
 	}
 
 	for _, s := range feed.Stops {

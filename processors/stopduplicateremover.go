@@ -61,7 +61,7 @@ func (sdr StopDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	for i := 0; i < 3; i++ {
 		stoptimes := make(map[*gtfs.Stop][]*gtfs.StopTime, len(feed.Stops))
 		stops := make(map[*gtfs.Stop][]*gtfs.Stop, len(feed.Stops))
-		transfers := make(map[*gtfs.Stop][]*gtfs.Transfer, len(feed.Stops))
+		transfers := make(map[*gtfs.Stop][]gtfs.TransferKey, len(feed.Stops))
 		pathways := make(map[*gtfs.Stop][]*gtfs.Pathway, len(feed.Stops))
 		proced := make(map[*gtfs.Stop]bool, len(feed.Stops))
 
@@ -82,10 +82,10 @@ func (sdr StopDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		}
 
 		// collect transfers that use stop
-		for _, t := range feed.Transfers {
-			transfers[t.From_stop] = append(transfers[t.From_stop], t)
-			if t.From_stop != t.To_stop {
-				transfers[t.To_stop] = append(transfers[t.To_stop], t)
+		for tk, _ := range feed.Transfers {
+			transfers[tk.From_stop] = append(transfers[tk.From_stop], tk)
+			if tk.From_stop != tk.To_stop {
+				transfers[tk.To_stop] = append(transfers[tk.To_stop], tk)
 			}
 		}
 
@@ -159,7 +159,7 @@ func (sdr StopDuplicateRemover) getEquivalentStops(stop *gtfs.Stop, feed *gtfspa
 
 // Combine a slice of equal stops into a single stop
 func (sdr StopDuplicateRemover) combineStops(feed *gtfsparser.Feed, stops []*gtfs.Stop, stoptimes map[*gtfs.Stop][]*gtfs.StopTime, pstops map[*gtfs.Stop][]*gtfs.Stop,
-	transfers map[*gtfs.Stop][]*gtfs.Transfer,
+	transfers map[*gtfs.Stop][]gtfs.TransferKey,
 	pathways map[*gtfs.Stop][]*gtfs.Pathway) {
 	// heuristic: use the stop with the most colons as the reference stop, to prefer
 	// stops with global ID of the form de:54564:345:3 over something like 5542, and to
@@ -195,18 +195,25 @@ func (sdr StopDuplicateRemover) combineStops(feed *gtfsparser.Feed, stops []*gtf
 			}
 		}
 
-		for i, t := range transfers[s] {
-			up := false
-			if t.From_stop == s {
-				transfers[s][i].From_stop = ref
-				up = true
+		for _, tk := range transfers[s] {
+			// update the  key
+			tk_new := tk
+
+			// at least one of the following two will be true
+			if tk.From_stop == s {
+				tk_new.From_stop = ref
 			}
-			if t.To_stop == s {
-				transfers[s][i].To_stop = ref
-				up = true
+
+			if tk.To_stop == s {
+				tk_new.To_stop = ref
 			}
-			if up {
-				transfers[ref] = append(transfers[ref], transfers[s][i])
+
+			if _, ok := feed.Transfers[tk_new]; !ok {
+				feed.Transfers[tk_new] = feed.Transfers[tk]
+				delete(feed.Transfers, tk)
+
+				// add new transfer to transfer refs
+				transfers[ref] = append(transfers[ref], tk_new)
 			}
 		}
 

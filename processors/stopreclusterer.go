@@ -253,12 +253,18 @@ func (m *StopReclusterer) writeCluster(cl *StopCluster, feed *gtfsparser.Feed) {
 			continue
 		}
 
-		for _, tr := range feed.Transfers {
-			if tr.From_stop == st {
-				tr.From_stop = parent
+		for tk, tv := range feed.Transfers {
+			tk_new := tk
+			if tk.From_stop == st {
+				tk_new.From_stop = parent
 			}
-			if tr.To_stop == st {
-				tr.To_stop = parent
+			if tk.To_stop == st {
+				tk_new.To_stop = parent
+			}
+
+			if _, ok := feed.Transfers[tk_new]; !ok {
+				feed.Transfers[tk_new] = tv
+				delete(feed.Transfers, tk)
 			}
 		}
 
