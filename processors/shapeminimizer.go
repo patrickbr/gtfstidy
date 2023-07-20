@@ -36,9 +36,9 @@ func (sm ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 	}
 
 	sem := make(chan empty, numchunks)
-	for i, c := range chunks {
+	for i, c := range chunks[:] {
 		go func(chunk []*gtfs.Shape, a int) {
-			for _, s := range chunk {
+			for _, s := range chunk[:] {
 				bef := len(s.Points)
 				chunknum[a] += len(s.Points)
 				s.Points = sm.minimizeShape(s.Points, sm.Epsilon)
@@ -58,10 +58,10 @@ func (sm ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 
 	n := 0
 	orign := 0
-	for _, g := range chunkgain {
+	for _, g := range chunkgain[:] {
 		n = n + g
 	}
-	for _, g := range chunknum {
+	for _, g := range chunknum[:] {
 		orign = orign + g
 	}
 	fmt.Fprintf(os.Stdout, "done. (-%d shape points [-%.2f%%])\n",

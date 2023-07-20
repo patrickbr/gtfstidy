@@ -32,8 +32,8 @@ func NewShapeIdx(shapes []*gtfs.Shape, mercs map[*gtfs.Shape][][]float64, cellWi
 
 	// retrieving shape bounding box
 
-	for _, s := range shapes {
-		for _, p := range mercs[s] {
+	for _, s := range shapes[:] {
+		for _, p := range mercs[s][:] {
 			x, y := p[0], p[1]
 			if x < idx.llx {
 				idx.llx = x
@@ -71,7 +71,7 @@ func NewShapeIdx(shapes []*gtfs.Shape, mercs map[*gtfs.Shape][][]float64, cellWi
 		idx.grid[i] = make([]map[*gtfs.Shape]bool, idx.yHeight)
 	}
 
-	for _, s := range shapes {
+	for _, s := range shapes[:] {
 		idx.Add(s, mercs[s])
 	}
 

@@ -47,7 +47,7 @@ func (rdr RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		if len(eqRoutes) > 0 {
 			rdr.combineRoutes(feed, append(eqRoutes, r), trips)
 
-			for _, r := range eqRoutes {
+			for _, r := range eqRoutes[:] {
 				proced[r] = true
 			}
 
@@ -65,9 +65,9 @@ func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gt
 	rets := make([][]*gtfs.Route, len(chunks))
 	sem := make(chan empty, len(chunks))
 
-	for i, c := range chunks {
+	for i, c := range chunks[:] {
 		go func(j int, chunk []*gtfs.Route) {
-			for _, r := range chunk {
+			for _, r := range chunk[:] {
 				if r != route && rdr.routeEquals(r, route, feed) && rdr.checkFareEquality(feed, route, r) {
 					rets[j] = append(rets[j], r)
 				}
@@ -84,7 +84,7 @@ func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gt
 	// combine results
 	ret := make([]*gtfs.Route, 0)
 
-	for _, r := range rets {
+	for _, r := range rets[:] {
 		ret = append(ret, r...)
 	}
 
@@ -95,7 +95,7 @@ func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gt
 func (rdr RouteDuplicateRemover) checkFareEquality(feed *gtfsparser.Feed, a *gtfs.Route, b *gtfs.Route) bool {
 	for _, fa := range feed.FareAttributes {
 		// check if this rule contains route a
-		for _, fr := range fa.Rules {
+		for _, fr := range fa.Rules[:] {
 			if fr.Route == a || fr.Route == b {
 				// if so,
 				if !rdr.fareRulesEqual(fa, a, b) {
@@ -115,7 +115,7 @@ func (rdr RouteDuplicateRemover) fareRulesEqual(attr *gtfs.FareAttribute, a *gtf
 	rulesA := make([]*gtfs.FareAttributeRule, 0)
 	rulesB := make([]*gtfs.FareAttributeRule, 0)
 
-	for _, r := range attr.Rules {
+	for _, r := range attr.Rules[:] {
 		if r.Route == a {
 			// check if rule is already contained in rulesB
 			found := false
@@ -164,18 +164,18 @@ func (rdr RouteDuplicateRemover) combineRoutes(feed *gtfsparser.Feed, routes []*
 	// heuristic: use the route with the shortest ID as 'reference'
 	ref := routes[0]
 
-	for _, r := range routes {
+	for _, r := range routes[:] {
 		if len(r.Id) < len(ref.Id) {
 			ref = r
 		}
 	}
 
-	for _, r := range routes {
+	for _, r := range routes[:] {
 		if r == ref {
 			continue
 		}
 
-		for _, t := range trips[r] {
+		for _, t := range trips[r][:] {
 			if t.Route == r {
 				t.Route = ref
 			}

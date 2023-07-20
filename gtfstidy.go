@@ -146,6 +146,7 @@ func main() {
 	useRedAgencyMinimizer := flag.BoolP("remove-red-agencies", "A", false, "remove agency duplicates")
 	useStopReclusterer := flag.BoolP("recluster-stops", "E", false, "recluster stops")
 	dropShapes := flag.BoolP("drop-shapes", "", false, "drop shapes")
+	polygonFilterCompleteTrips := flag.BoolP("complete-filtered-trips", "", false, "always include complete data for trips filtered e.g. using a geo filter")
 	flag.StringArrayVar(&bboxStrings, "bounding-box", []string{}, "bounding box filter, as comma separated latitude,longitude pairs (multiple boxes allowed by defining --bounding-box multiple times)")
 	flag.StringArrayVar(&polygonStrings, "polygon", []string{}, "polygon filter, as comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon multiple times)")
 	flag.StringArrayVar(&polygonFiles, "polygon-file", []string{}, "polygon filter, as a file containing comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon-file multiple times)")
@@ -331,7 +332,7 @@ func main() {
 	}
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, PolygonFilter: polys, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
@@ -342,6 +343,12 @@ func main() {
 	opts.KeepAddFlds = *keepFields
 	opts.DateFilterStart = startDate
 	opts.DateFilterEnd = endDate
+
+	if !*polygonFilterCompleteTrips {
+		// only use built-in polygon filter if trips should not be completed
+		opts.PolygonFilter = polys
+	}
+
 	feed.SetParseOpts(opts)
 
 	var e error
@@ -435,6 +442,10 @@ func main() {
 		os.Exit(1)
 	} else {
 		minzers := make([]processors.Processor, 0)
+
+		if *polygonFilterCompleteTrips {
+			minzers = append(minzers, processors.CompleteTripsGeoFilter{Polygons: polys})
+		}
 
 		if *useOrphanDeleter {
 			minzers = append(minzers, processors.OrphanRemover{})

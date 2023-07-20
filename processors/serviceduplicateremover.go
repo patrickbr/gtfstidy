@@ -52,7 +52,7 @@ func (sdr ServiceDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		if len(eqServices) > 0 {
 			sdr.combineServices(feed, append(eqServices, s), trips)
 
-			for _, s := range eqServices {
+			for _, s := range eqServices[:] {
 				proced[s] = true
 			}
 			proced[s] = true
@@ -69,9 +69,9 @@ func (m ServiceDuplicateRemover) getEquivalentServices(serv *gtfs.Service, amaps
 	rets := make([][]*gtfs.Service, len(chunks))
 	sem := make(chan empty, len(chunks))
 
-	for i, c := range chunks {
+	for i, c := range chunks[:] {
 		go func(j int, chunk []*gtfs.Service) {
-			for _, s := range chunk {
+			for _, s := range chunk[:] {
 				if s != serv && m.servEqual(amaps[s], amaps[serv]) {
 					rets[j] = append(rets[j], s)
 				}
@@ -88,7 +88,7 @@ func (m ServiceDuplicateRemover) getEquivalentServices(serv *gtfs.Service, amaps
 	// combine results
 	ret := make([]*gtfs.Service, 0)
 
-	for _, r := range rets {
+	for _, r := range rets[:] {
 		ret = append(ret, r...)
 	}
 
@@ -115,10 +115,10 @@ func (m ServiceDuplicateRemover) getActiveMaps(feed *gtfsparser.Feed) map[*gtfs.
 
 	sm := ServiceMinimizer{}
 
-	for i, c := range chunks {
+	for i, c := range chunks[:] {
 		rets[i] = make(map[*gtfs.Service]ServiceCompressed)
 		go func(j int, chunk []*gtfs.Service) {
-			for _, s := range chunk {
+			for _, s := range chunk[:] {
 				first := s.GetFirstActiveDate()
 				last := s.GetLastActiveDate()
 
@@ -141,7 +141,7 @@ func (m ServiceDuplicateRemover) getActiveMaps(feed *gtfsparser.Feed) map[*gtfs.
 	}
 
 	// combine results
-	for _, r := range rets {
+	for _, r := range rets[:] {
 		for k, v := range r {
 			ret[k] = v
 		}
@@ -166,7 +166,7 @@ func (m ServiceDuplicateRemover) getServiceChunks(feed *gtfsparser.Feed, amaps m
 		chunks[hash] = make([][]*gtfs.Service, numchunks)
 		curchunk := 0
 
-		for _, t := range services[hash] {
+		for _, t := range services[hash][:] {
 			chunks[hash][curchunk] = append(chunks[hash][curchunk], t)
 			if len(chunks[hash][curchunk]) == chunksize {
 				curchunk++
@@ -224,19 +224,19 @@ func (sdr ServiceDuplicateRemover) combineServices(feed *gtfsparser.Feed, servic
 	// heuristic: use the service with the least number of exceptions as 'reference'
 	ref := services[0]
 
-	for _, s := range services {
+	for _, s := range services[:] {
 		if len(s.Exceptions()) < len(ref.Exceptions()) {
 			ref = s
 		}
 	}
 
 	// replace deleted services with new ref service in all trips referencing
-	for _, s := range services {
+	for _, s := range services[:] {
 		if s == ref {
 			continue
 		}
 
-		for _, t := range trips[s] {
+		for _, t := range trips[s][:] {
 			if t.Service == s {
 				t.Service = ref
 			}
