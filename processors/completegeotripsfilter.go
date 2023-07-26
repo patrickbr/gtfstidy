@@ -23,7 +23,7 @@ func (f CompleteTripsGeoFilter) Run(feed *gtfsparser.Feed) {
 	usedstops := make(map[*gtfs.Stop]bool, 0)
 
 	for _, s := range feed.Stops {
-		for _, poly := range f.Polygons[:] {
+		for _, poly := range f.Polygons {
 			if poly.PolyContains(float64(s.Lon), float64(s.Lat)) {
 				filterstops[s] = true
 				usedstops[s] = true
@@ -99,7 +99,7 @@ func (f CompleteTripsGeoFilter) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
-	for _, s := range toDel[:] {
+	for _, s := range toDel {
 		for _, p := range pathways[s] {
 			feed.DeletePathway(p.Id)
 		}

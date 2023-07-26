@@ -82,7 +82,7 @@ func (sdr StopDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		}
 
 		// collect transfers that use stop
-		for tk, _ := range feed.Transfers {
+		for tk := range feed.Transfers {
 			transfers[tk.From_stop] = append(transfers[tk.From_stop], tk)
 			if tk.From_stop != tk.To_stop {
 				transfers[tk.To_stop] = append(transfers[tk.To_stop], tk)

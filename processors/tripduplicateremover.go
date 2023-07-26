@@ -159,13 +159,13 @@ func (m *TripDuplicateRemover) combineAdjTrips(feed *gtfsparser.Feed, ref *gtfs.
 
 	combServices := make([]*gtfs.Service, 0)
 
-	for _, t := range trips[:] {
+	for _, t := range trips {
 		combServices = append(combServices, t.Service)
 	}
 
 	m.combineServices(combServices, ref.Service)
 
-	for _, t := range trips[:] {
+	for _, t := range trips {
 		if t == ref {
 			continue
 		}
@@ -179,8 +179,14 @@ func (m *TripDuplicateRemover) combineAdjTrips(feed *gtfsparser.Feed, ref *gtfs.
 			}
 		}
 
-		for _, attr := range t.Attributions {
-			ref.Attributions = append(ref.Attributions, attr)
+		if t.Attributions != nil {
+			if ref.Attributions == nil {
+				sl := make([]*gtfs.Attribution, 0)
+				ref.Attributions = &sl
+			}
+			for _, attr := range *t.Attributions {
+				*ref.Attributions = append(*ref.Attributions, attr)
+			}
 		}
 
 		feed.DeleteTrip(t.Id)
@@ -190,7 +196,7 @@ func (m *TripDuplicateRemover) combineAdjTrips(feed *gtfsparser.Feed, ref *gtfs.
 
 // Combine a slice of contained trips into a single trip
 func (m *TripDuplicateRemover) combineContTrips(feed *gtfsparser.Feed, ref *gtfs.Trip, trips []*gtfs.Trip) {
-	for _, t := range trips[:] {
+	for _, t := range trips {
 		if t == ref {
 			continue
 		}
@@ -204,8 +210,14 @@ func (m *TripDuplicateRemover) combineContTrips(feed *gtfsparser.Feed, ref *gtfs
 			}
 		}
 
-		for _, attr := range t.Attributions {
-			ref.Attributions = append(ref.Attributions, attr)
+		if t.Attributions != nil {
+			if ref.Attributions == nil {
+				sl := make([]*gtfs.Attribution, 0)
+				ref.Attributions = &sl
+			}
+			for _, attr := range *t.Attributions {
+				*ref.Attributions = append(*ref.Attributions, attr)
+			}
 		}
 
 		feed.DeleteTrip(t.Id)
@@ -215,13 +227,19 @@ func (m *TripDuplicateRemover) combineContTrips(feed *gtfsparser.Feed, ref *gtfs
 
 // Combine a slice of equal trips into a single trip
 func (m *TripDuplicateRemover) combineEqTrips(feed *gtfsparser.Feed, ref *gtfs.Trip, trips []*gtfs.Trip) {
-	for _, t := range trips[:] {
+	for _, t := range trips {
 		if t == ref {
 			continue
 		}
 
-		for _, attr := range t.Attributions {
-			ref.Attributions = append(ref.Attributions, attr)
+		if t.Attributions != nil {
+			if ref.Attributions == nil {
+				sl := make([]*gtfs.Attribution, 0)
+				ref.Attributions = &sl
+			}
+			for _, attr := range *t.Attributions {
+				*ref.Attributions = append(*ref.Attributions, attr)
+			}
 		}
 
 		if ref.Bikes_allowed == 0 && t.Bikes_allowed > 0 {
@@ -253,7 +271,7 @@ func (m *TripDuplicateRemover) combineEqTrips(feed *gtfsparser.Feed, ref *gtfs.T
 			ref.Headsign = t.Headsign
 		}
 
-		if len(ref.Short_name) == 0 {
+		if ref.Short_name == nil || len(*ref.Short_name) == 0 {
 			ref.Short_name = t.Short_name
 		}
 
@@ -264,7 +282,7 @@ func (m *TripDuplicateRemover) combineEqTrips(feed *gtfsparser.Feed, ref *gtfs.T
 
 // Exclude a list of overlaps from a trip
 func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Trip, overlaps []Overlap) {
-	for _, o := range overlaps[:] {
+	for _, o := range overlaps {
 		if ref.Shape == nil && o.Trip.Shape != nil {
 			ref.Shape = o.Trip.Shape
 
@@ -279,7 +297,7 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 
 	if m.serviceRefs[ref.Service] == 1 {
 		// change inplace
-		for _, o := range overlaps[:] {
+		for _, o := range overlaps {
 			for _, d := range o.Dates {
 				date := m.getDateFromRefDay(d)
 				ref.Service.SetExceptionTypeOn(date, 2)
@@ -311,7 +329,7 @@ func (m *TripDuplicateRemover) excludeTrips(feed *gtfsparser.Feed, ref *gtfs.Tri
 			}
 		}
 
-		for _, o := range overlaps[:] {
+		for _, o := range overlaps {
 			for _, d := range o.Dates {
 				date := m.getDateFromRefDay(d)
 				newService.SetExceptionTypeOn(date, 2)
@@ -383,7 +401,7 @@ func (m *TripDuplicateRemover) tripAttrEq(a *gtfs.Trip, b *gtfs.Trip, feed *gtfs
 		return false
 	}
 
-	if len(a.Frequencies) != 0 || len(b.Frequencies) != 0 {
+	if (a.Frequencies != nil && len(*a.Frequencies) != 0) || (b.Frequencies != nil && len(*b.Frequencies) != 0) {
 		// TODO: at the moment, don't combine trips with frequencies,
 		// this is not yet implemented
 		return false
@@ -574,7 +592,11 @@ func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint64 {
 		binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(t.Route))))
 		h.Write(b)
 
-		h.Write([]byte(t.Short_name))
+		if t.Short_name != nil {
+			h.Write([]byte(*t.Short_name))
+		} else {
+			h.Write([]byte(""))
+		}
 		h.Write([]byte(*t.Headsign))
 	}
 
@@ -589,7 +611,7 @@ func (m *TripDuplicateRemover) combineServices(services []*gtfs.Service, ref *gt
 	dlist := m.serviceList[ref]
 
 	// first collect all active dates of the services
-	for _, serv := range services[:] {
+	for _, serv := range services {
 		if serv == ref {
 			continue
 		}
@@ -599,7 +621,7 @@ func (m *TripDuplicateRemover) combineServices(services []*gtfs.Service, ref *gt
 
 	if !ref.Start_date().IsEmpty() {
 		// extend range and delete wrong dates
-		for _, s := range services[:] {
+		for _, s := range services {
 			first := m.getDateFromRefDay(m.serviceList[s][0])
 			last := m.getDateFromRefDay(m.serviceList[s][len(m.serviceList[s])-1])
 
@@ -613,7 +635,7 @@ func (m *TripDuplicateRemover) combineServices(services []*gtfs.Service, ref *gt
 		}
 
 		// add all missing service dates
-		for _, d := range dlist[:] {
+		for _, d := range dlist {
 			date := m.getDateFromRefDay(d)
 			if !ref.IsActiveOn(date) {
 				ref.SetExceptionTypeOn(date, 1)
@@ -630,7 +652,7 @@ func (m *TripDuplicateRemover) combineServices(services []*gtfs.Service, ref *gt
 		}
 	} else {
 		// add all missing service dates
-		for _, d := range dlist[:] {
+		for _, d := range dlist {
 			date := m.getDateFromRefDay(d)
 			if !ref.IsActiveOn(date) {
 				ref.SetExceptionTypeOn(date, 1)
@@ -662,17 +684,17 @@ func (m *TripDuplicateRemover) combineAllContainedTrips(feed *gtfsparser.Feed) b
 	rets := make([][][]*gtfs.Trip, len(nchunks))
 	sem := make(chan empty, len(nchunks))
 
-	for i, c := range nchunks[:] {
+	for i, c := range nchunks {
 		go func(j int, chunk [][]*gtfs.Trip) {
 			processed := make(map[*gtfs.Trip]bool)
-			for _, trips := range chunk[:] {
-				for _, ta := range trips[:] {
+			for _, trips := range chunk {
+				for _, ta := range trips {
 					// skip already merged trips
 					if _, ok := processed[ta]; ok {
 						continue
 					}
 					written := false
-					for _, tb := range trips[:] {
+					for _, tb := range trips {
 						// skip equivalent trips
 						if ta == tb {
 							continue
@@ -710,8 +732,8 @@ func (m *TripDuplicateRemover) combineAllContainedTrips(feed *gtfsparser.Feed) b
 	merged := false
 
 	// combine all results
-	for _, r := range rets[:] {
-		for _, trips := range r[:] {
+	for _, r := range rets {
+		for _, trips := range r {
 			m.combineContTrips(feed, trips[0], trips[1:])
 			merged = true
 		}
@@ -726,17 +748,17 @@ func (m *TripDuplicateRemover) combineAllEqTrips(feed *gtfsparser.Feed) bool {
 	rets := make([][][]*gtfs.Trip, len(nchunks))
 	sem := make(chan empty, len(nchunks))
 
-	for i, c := range nchunks[:] {
+	for i, c := range nchunks {
 		go func(j int, chunk [][]*gtfs.Trip) {
 			processed := make(map[*gtfs.Trip]bool)
-			for _, trips := range chunk[:] {
-				for _, ta := range trips[:] {
+			for _, trips := range chunk {
+				for _, ta := range trips {
 					// skip already merged trips
 					if _, ok := processed[ta]; ok {
 						continue
 					}
 					written := false
-					for _, tb := range trips[:] {
+					for _, tb := range trips {
 						// skip equivalent trips
 						if ta == tb {
 							continue
@@ -774,8 +796,8 @@ func (m *TripDuplicateRemover) combineAllEqTrips(feed *gtfsparser.Feed) bool {
 	merged := false
 
 	// combine all results
-	for _, r := range rets[:] {
-		for _, trips := range r[:] {
+	for _, r := range rets {
+		for _, trips := range r {
 			m.combineEqTrips(feed, trips[0], trips[1:])
 			merged = true
 		}
@@ -790,17 +812,17 @@ func (m *TripDuplicateRemover) combineAllOverlapTrips(feed *gtfsparser.Feed) boo
 	rets := make([][][]Overlap, len(nchunks))
 	sem := make(chan empty, len(nchunks))
 
-	for i, c := range nchunks[:] {
+	for i, c := range nchunks {
 		go func(j int, chunk [][]*gtfs.Trip) {
 			processed := make(map[*gtfs.Trip]bool)
-			for _, trips := range chunk[:] {
-				for _, ta := range trips[:] {
+			for _, trips := range chunk {
+				for _, ta := range trips {
 					// skip already merged trips
 					if _, ok := processed[ta]; ok {
 						continue
 					}
 					written := false
-					for _, tb := range trips[:] {
+					for _, tb := range trips {
 						// skip equivalent trips
 						if ta == tb {
 							continue
@@ -839,8 +861,8 @@ func (m *TripDuplicateRemover) combineAllOverlapTrips(feed *gtfsparser.Feed) boo
 	merged := false
 
 	// combine all results
-	for _, r := range rets[:] {
-		for _, trips := range r[:] {
+	for _, r := range rets {
+		for _, trips := range r {
 			m.excludeTrips(feed, trips[0].Trip, trips[1:])
 			merged = true
 		}
@@ -855,11 +877,11 @@ func (m *TripDuplicateRemover) combineAllAdjTrips(feed *gtfsparser.Feed, maxDist
 	rets := make([][][]*gtfs.Trip, len(nchunks))
 	sem := make(chan empty, len(nchunks))
 
-	for i, c := range nchunks[:] {
+	for i, c := range nchunks {
 		go func(j int, chunk [][]*gtfs.Trip) {
 			processed := make(map[*gtfs.Trip]bool)
-			for _, trips := range chunk[:] {
-				for _, ta := range trips[:] {
+			for _, trips := range chunk {
+				for _, ta := range trips {
 					// skip already merged trips
 					if _, ok := processed[ta]; ok {
 						continue
@@ -903,8 +925,8 @@ func (m *TripDuplicateRemover) combineAllAdjTrips(feed *gtfsparser.Feed, maxDist
 	merged := false
 
 	// combine all results
-	for _, r := range rets[:] {
-		for _, trips := range r[:] {
+	for _, r := range rets {
+		for _, trips := range r {
 			m.combineAdjTrips(feed, trips[0], trips[1:])
 			merged = true
 		}

@@ -57,7 +57,9 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 	processed := make(map[*gtfs.Trip]empty, 0)
 	freqBef := 0
 	for _, t := range feed.Trips {
-		freqBef += len(t.Frequencies)
+		if t.Frequencies != nil {
+			freqBef += len(*t.Frequencies)
+		}
 	}
 	tripsBef := len(feed.Trips)
 
@@ -156,7 +158,9 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 			} else {
 				curTrip = t
 			}
-			curTrip.Frequencies = make([]*gtfs.Frequency, 0)
+
+			freqs := make([]*gtfs.Frequency, 0)
+			curTrip.Frequencies = &freqs
 
 			suffixC++
 
@@ -166,8 +170,8 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 			for _, p := range indProgr.progressions {
 				if len(p.matches) == 1 {
 					/**
-					 * we can assume that progressions with 1 match are only
-					 * contained in single-progression-packs
+					* we can assume that progressions with 1 match are only
+					* contained in single-progression-packs
 					 */
 					continue
 				}
@@ -184,7 +188,7 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 				a.Start_time = eqs.trips[p.matches[0]].t
 				a.End_time = m.getGtfsTimeFromSec(eqs.trips[p.matches[len(p.matches)-1]].t.SecondsSinceMidnight() + p.headways)
 				a.Headway_secs = p.headways
-				curTrip.Frequencies = append(curTrip.Frequencies, a)
+				*curTrip.Frequencies = append(*curTrip.Frequencies, a)
 			}
 			m.remeasureStopTimes(curTrip, smallestStartTime)
 		}
@@ -203,7 +207,9 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 
 	freqAfter := 0
 	for _, t := range feed.Trips {
-		freqAfter += len(t.Frequencies)
+		if t.Frequencies != nil {
+			freqAfter += len(*t.Frequencies)
+		}
 	}
 
 	if freqAfter >= freqBef {
@@ -391,14 +397,14 @@ func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, t
 				t := trips[i]
 
 				if t.Id == trip.Id || m.isTimeIndependentEqual(t, trip, feed) {
-					if len(t.Frequencies) == 0 {
+					if t.Frequencies == nil || len(*t.Frequencies) == 0 {
 						mutex.Lock()
 						ret.trips = append(ret.trips, tripWrapper{t, t.StopTimes[0].Arrival_time(), false, nil})
 						ret.coveredTrips[t] = empty{}
 						mutex.Unlock()
 					} else {
 						// expand frequencies
-						for _, f := range t.Frequencies {
+						for _, f := range *t.Frequencies {
 							for s := f.Start_time.SecondsSinceMidnight(); s < f.End_time.SecondsSinceMidnight(); s = s + f.Headway_secs {
 								mutex.Lock()
 								ret.trips = append(ret.trips, tripWrapper{t, m.getGtfsTimeFromSec(s), false, f})

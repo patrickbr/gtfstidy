@@ -568,23 +568,23 @@ func main() {
 			existingBlockIds := make(map[string]bool)
 			oldToNewBlockIds := make(map[string]string)
 			for _, t := range feed.Trips {
-				if t.Block_id != "" {
-					existingBlockIds[t.Block_id] = true
+				if t.Block_id != nil && *t.Block_id != "" {
+					existingBlockIds[*t.Block_id] = true
 				}
 			}
 
 			for _, s := range feed.Trips {
 				for prefix := range prefixes {
-					if strings.HasPrefix(s.Block_id, prefix) {
-						oldId := strings.TrimPrefix(s.Block_id, prefix)
+					if s.Block_id != nil && strings.HasPrefix(*s.Block_id, prefix) {
+						oldId := strings.TrimPrefix(*s.Block_id, prefix)
 						if _, ok := existingBlockIds[oldId]; !ok {
-							oldToNewBlockIds[s.Block_id] = oldId
-							s.Block_id = oldId
+							oldToNewBlockIds[*s.Block_id] = oldId
+							*s.Block_id = oldId
 
-							existingBlockIds[s.Block_id] = true
+							existingBlockIds[*s.Block_id] = true
 
-						} else if newId, ok := oldToNewBlockIds[s.Block_id]; ok && newId == oldId {
-							s.Block_id = oldId
+						} else if newId, ok := oldToNewBlockIds[*s.Block_id]; ok && newId == oldId {
+							*s.Block_id = oldId
 						}
 						break
 					}

@@ -94,7 +94,7 @@ func (or OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
 		}
 	}
 
-	for tk, _ := range feed.Transfers {
+	for tk := range feed.Transfers {
 		referenced[tk.From_stop] = empty{}
 		referenced[tk.To_stop] = empty{}
 	}
@@ -157,7 +157,7 @@ func (or OrphanRemover) removeServiceOrphans(feed *gtfsparser.Feed) {
 // Remove trip orphans
 func (or OrphanRemover) removeTripOrphans(feed *gtfsparser.Feed) {
 	for id, s := range feed.Trips {
-		if len(s.StopTimes) == 0 && len(s.Frequencies) == 0 {
+		if len(s.StopTimes) == 0 && (s.Frequencies == nil || len(*s.Frequencies) == 0) {
 			feed.DeleteTrip(id)
 		}
 	}

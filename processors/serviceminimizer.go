@@ -52,9 +52,9 @@ func (sm ServiceMinimizer) Run(feed *gtfsparser.Feed) {
 	}
 
 	sem := make(chan empty, len(chunks))
-	for _, c := range chunks[:] {
+	for _, c := range chunks {
 		go func(chunk []*gtfs.Service) {
-			for _, s := range chunk[:] {
+			for _, s := range chunk {
 				sm.perfectMinimize(s)
 			}
 			sem <- empty{}
@@ -367,7 +367,7 @@ func (sm ServiceMinimizer) updateService(service *gtfs.Service, bestMap uint, be
 
 	service.SetExceptions(make(map[gtfs.Date]bool, 0))
 
-	for _, e := range newExceptions[:] {
+	for _, e := range newExceptions {
 		service.SetExceptionTypeOn(e.Date, e.Type)
 	}
 
