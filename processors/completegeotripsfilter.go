@@ -66,31 +66,6 @@ func (f CompleteTripsGeoFilter) Run(feed *gtfsparser.Feed) {
 
 	pathways := make(map[*gtfs.Stop][]*gtfs.Pathway, len(feed.Stops))
 
-	transfers_new := make(map[gtfs.TransferKey]gtfs.TransferVal, 0)
-
-	// delete transfers that use a stop
-	for tk, tv := range feed.Transfers {
-		if _, ok := usedstops[tk.From_stop]; !ok {
-			// delete additional fields from CSV
-			for k := range feed.TransfersAddFlds {
-				delete(feed.TransfersAddFlds[k], tk)
-			}
-			continue
-		}
-
-		if _, ok := usedstops[tk.To_stop]; !ok {
-			// delete additional fields from CSV
-			for k := range feed.TransfersAddFlds {
-				delete(feed.TransfersAddFlds[k], tk)
-			}
-			continue
-		}
-
-		transfers_new[tk] = tv
-	}
-
-	feed.Transfers = transfers_new
-
 	// collect pathways that use a stop
 	for _, p := range feed.Pathways {
 		pathways[p.From_stop] = append(pathways[p.From_stop], p)
@@ -106,4 +81,7 @@ func (f CompleteTripsGeoFilter) Run(feed *gtfsparser.Feed) {
 
 		feed.DeleteStop(s.Id)
 	}
+
+	// delete transfers
+	feed.CleanTransfers()
 }

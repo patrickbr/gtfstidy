@@ -202,6 +202,9 @@ func (m FrequencyMinimizer) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
+	// delete transfers
+	feed.CleanTransfers()
+
 	freqsSign := ""
 	tripsSign := ""
 

@@ -68,7 +68,7 @@ type StopReclusterer struct {
 	// TF-IDF stuff
 	wordscores []float32
 	wordmap    map[string]int
-	vecs       map[*gtfs.Stop][]float64
+	vecs       map[*gtfs.Stop]map[int]float64
 	tokens     map[*gtfs.Stop]map[string]int
 
 	idx *StopClusterIdx
@@ -457,11 +457,17 @@ func (m *StopReclusterer) stopSimi(a *gtfs.Stop, b *gtfs.Stop) float32 {
 	geosimi := 0.5 - 0.5*math.Tanh((distSApprox(a, b)-m.DistThreshold)/(m.DistThreshold*0.25))
 
 	vecA, nTokA := m.getTokenVec(a)
-	vecB, nTokB := m.getTokenVec(b)
 
-	if nTokA == 0 || nTokB == 0 {
+	if nTokA == 0 {
 		return float32(geosimi)
 	}
+
+	vecB, nTokB := m.getTokenVec(b)
+
+	if nTokB == 0 {
+		return float32(geosimi)
+	}
+
 	namesimi := cosSimi(vecA, vecB)
 
 	if namesimi > m.NameSimiThreshold { // this is the threshold value
@@ -475,7 +481,7 @@ func (m *StopReclusterer) stopSimi(a *gtfs.Stop, b *gtfs.Stop) float32 {
 
 func (m *StopReclusterer) buildTfIdfScores(stops map[string]*gtfs.Stop) {
 	m.wordmap = make(map[string]int)
-	m.vecs = make(map[*gtfs.Stop][]float64)
+	m.vecs = make(map[*gtfs.Stop]map[int]float64)
 	m.tokens = make(map[*gtfs.Stop]map[string]int)
 
 	for _, st := range stops {
@@ -498,13 +504,13 @@ func (m *StopReclusterer) buildTfIdfScores(stops map[string]*gtfs.Stop) {
 	}
 }
 
-func (m *StopReclusterer) getTokenVec(stop *gtfs.Stop) ([]float64, int) {
+func (m *StopReclusterer) getTokenVec(stop *gtfs.Stop) (map[int]float64, int) {
 	if vec, ok := m.vecs[stop]; ok {
 		return vec, len(m.tokens[stop])
 	}
 
 	tokens := m.tokenize(stop.Name)
-	ret := make([]float64, len(m.wordscores))
+	ret := make(map[int]float64, 0)
 
 	for token, count := range tokens {
 		id := m.wordmap[token]
@@ -518,11 +524,11 @@ func (m *StopReclusterer) getTokenVec(stop *gtfs.Stop) ([]float64, int) {
 }
 
 func (m *StopReclusterer) tokenize(s string) map[string]int {
+	ret := make(map[string]int)
 	s = strings.ToUpper(s)
 	tokens := m.splitregex.Split(s, -1)
-	ret := make(map[string]int)
 	for _, tok := range tokens {
-		if len(tok) == 0 {
+		if tok == "" {
 			continue
 		}
 		if _, ok := ret[tok]; ok {

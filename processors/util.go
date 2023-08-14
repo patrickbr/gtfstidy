@@ -109,33 +109,23 @@ func webMercToLatLng(x float64, y float64) (float32, float32) {
 	return float32(latitude), float32(longitude)
 }
 
-func cosSimi(a []float64, b []float64) float64 {
-	count := 0
-	lenA := len(a)
-	lenB := len(b)
-
-	if len(a) > lenA {
-		count = lenA
-	} else {
-		count = lenB
-	}
-
+func cosSimi(a map[int]float64, b map[int]float64) float64 {
 	sumA := 0.0
 	s1 := 0.0
 	s2 := 0.0
 
-	for k := 0; k < count; k++ {
-		if k >= lenA {
-			s2 += b[k] * b[k]
-			continue
+	for i, va := range a {
+		if vb, ok := b[i]; ok {
+			sumA += va * vb
+			s2 += vb * vb
 		}
-		if k >= lenB {
-			s1 += a[k] * a[k]
-			continue
+		s1 += va * va
+	}
+
+	for i, vb := range b {
+		if _, ok := a[i]; !ok {
+			s2 += vb * vb
 		}
-		sumA += a[k] * b[k]
-		s1 += a[k] * a[k]
-		s2 += b[k] * b[k]
 	}
 
 	return sumA / (math.Sqrt(s1) * math.Sqrt(s2))

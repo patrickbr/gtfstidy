@@ -55,6 +55,9 @@ func (rdr RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
+	// delete transfers
+	feed.CleanTransfers()
+
 	fmt.Fprintf(os.Stdout, "done. (-%d routes [-%.2f%%])\n",
 		(bef - len(feed.Routes)),
 		100.0*float64(bef-len(feed.Routes))/(float64(bef)+0.001))

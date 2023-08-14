@@ -105,6 +105,9 @@ func (m TripDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
+	// delete transfers
+	feed.CleanTransfers()
+
 	fmt.Fprintf(os.Stdout, "done. (-%d trips [-%.2f%%])\n",
 		(bef - len(feed.Trips)),
 		100.0*float64(bef-len(feed.Trips))/(float64(bef)+0.001))

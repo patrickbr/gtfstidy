@@ -46,6 +46,9 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 
 	or.removeAgencyOrphans(feed)
 
+	// delete transfers
+	feed.CleanTransfers()
+
 	fmt.Fprintf(os.Stdout, "done. (-%d trips [-%.2f%%], -%d stops [-%.2f%%], -%d shapes [-%.2f%%], -%d services [-%.2f%%], -%d routes [-%.2f%%], -%d agencies [-%.2f%%], -%d transfers [-%.2f%%])\n",
 		(tripsB - len(feed.Trips)),
 		100.0*float64(tripsB-len(feed.Trips))/(float64(tripsB)+0.001),
@@ -66,23 +69,49 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 // Remove transfer orphans
 func (or OrphanRemover) removeTransferOrphans(feed *gtfsparser.Feed) {
 	referenced := make(map[*gtfs.Stop]empty, 0)
+	referenced_routes := make(map[*gtfs.Route]empty, 0)
 	for _, t := range feed.Trips {
+		referenced_routes[t.Route] = empty{}
 		for _, st := range t.StopTimes {
 			referenced[st.Stop()] = empty{}
 		}
 	}
 
-	transfers_new := make(map[gtfs.TransferKey]gtfs.TransferVal, 0)
-	for tk, tv := range feed.Transfers {
-		_, inFrom := referenced[tk.From_stop]
-		_, inTo := referenced[tk.To_stop]
+	referenced_trans := make(map[gtfs.TransferKey]empty, 0)
+	for tk := range feed.Transfers {
+		inFrom := true
+		inTo := true
 
-		if inFrom && inTo {
-			transfers_new[tk] = tv
+		inFromRoute := true
+		inToRoute := true
+
+		if tk.From_stop != nil {
+			_, inFrom = referenced[tk.From_stop]
+		}
+
+		if tk.To_stop != nil {
+			_, inTo = referenced[tk.To_stop]
+		}
+
+		if tk.From_route != nil {
+			_, inFromRoute = referenced_routes[tk.From_route]
+		}
+
+		if tk.To_route != nil {
+			_, inFromRoute = referenced_routes[tk.To_route]
+		}
+
+		if inFrom && inTo && inFromRoute && inToRoute {
+			referenced_trans[tk] = empty{}
 		}
 	}
 
-	feed.Transfers = transfers_new
+	// delete unreferenced
+	for tk := range feed.Transfers {
+		if _, in := referenced_trans[tk]; !in {
+			feed.DeleteTransfer(tk)
+		}
+	}
 }
 
 // Remove stop orphans
@@ -95,8 +124,13 @@ func (or OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
 	}
 
 	for tk := range feed.Transfers {
-		referenced[tk.From_stop] = empty{}
-		referenced[tk.To_stop] = empty{}
+		if tk.From_stop != nil {
+			referenced[tk.From_stop] = empty{}
+		}
+
+		if tk.To_stop != nil {
+			referenced[tk.To_stop] = empty{}
+		}
 	}
 
 	for _, s := range feed.Stops {
@@ -159,6 +193,7 @@ func (or OrphanRemover) removeTripOrphans(feed *gtfsparser.Feed) {
 	for id, s := range feed.Trips {
 		if len(s.StopTimes) == 0 && (s.Frequencies == nil || len(*s.Frequencies) == 0) {
 			feed.DeleteTrip(id)
+
 		}
 	}
 }
