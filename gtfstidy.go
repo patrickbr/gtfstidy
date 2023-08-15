@@ -139,6 +139,7 @@ func main() {
 	ensureParents := flag.BoolP("ensure-stop-parents", "", false, "ensure that every stop (location_type=0) has a parent station")
 	keepColOrder := flag.BoolP("keep-col-order", "", false, "keep the original column ordering of the input feed")
 	keepFields := flag.BoolP("keep-additional-fields", "F", false, "keep all non-GTFS fields from the input")
+	dropTooFast := flag.BoolP("drop-too-fast-trips", "", false, "drop trips that are too fast to realistically occur")
 	useRedStopMinimizer := flag.BoolP("remove-red-stops", "P", false, "remove stop and level duplicates")
 	useRedTripMinimizer := flag.BoolP("remove-red-trips", "I", false, "remove trip duplicates")
 	useRedTripMinimizerFuzzyRoute := flag.BoolP("red-trips-fuzzy", "", false, "only check MOT of routes for trip duplicate removal")
@@ -442,6 +443,10 @@ func main() {
 		os.Exit(1)
 	} else {
 		minzers := make([]processors.Processor, 0)
+
+		if *dropTooFast {
+			minzers = append(minzers, processors.TooFastTripRemover{})
+		}
 
 		if *polygonFilterCompleteTrips {
 			minzers = append(minzers, processors.CompleteTripsGeoFilter{Polygons: polys})
