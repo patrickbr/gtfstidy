@@ -127,6 +127,7 @@ func main() {
 	useOrphanDeleter := flag.BoolP("delete-orphans", "O", false, "remove entities that are not referenced anywhere")
 	useShapeMinimizer := flag.BoolP("min-shapes", "s", false, "minimize shapes (using Douglas-Peucker)")
 	useShapeRemeasurer := flag.BoolP("remeasure-shapes", "m", false, "remeasure shapes (filling measurement-holes)")
+	useShapeSnapper := flag.BoolP("snap-stops", "", false, "snap stop points to shape if dist > 100 m")
 	useRedShapeRemover := flag.BoolP("remove-red-shapes", "S", false, "remove shape duplicates")
 	useRedRouteMinimizer := flag.BoolP("remove-red-routes", "R", false, "remove route duplicates")
 	useRedServiceMinimizer := flag.BoolP("remove-red-services", "C", false, "remove duplicate services in calendar.txt and calendar_dates.txt")
@@ -482,6 +483,22 @@ func main() {
 
 		if *useShapeMinimizer {
 			minzers = append(minzers, processors.ShapeMinimizer{Epsilon: 1.0})
+		}
+
+		if *useShapeSnapper {
+			minzers = append(minzers, processors.ShapeSnapper{MaxDist: 100.0})
+			if *useRedStopMinimizer {
+				minzers = append(minzers, processors.StopDuplicateRemover{
+					DistThresholdStop:    5.0,
+					DistThresholdStation: 50,
+					Fuzzy:                *useRedStopsMinimizerFuzzy,
+				})
+			}
+
+			// may have created route and stop orphans
+			if *useOrphanDeleter {
+				minzers = append(minzers, processors.OrphanRemover{})
+			}
 		}
 
 		if *useRedShapeRemover {

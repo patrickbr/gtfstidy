@@ -7,9 +7,9 @@
 package processors
 
 import (
+	"fmt"
 	"github.com/patrickbr/gtfsparser"
 	gtfs "github.com/patrickbr/gtfsparser/gtfs"
-	"fmt"
 	"os"
 )
 
@@ -19,7 +19,8 @@ type TooFastTripRemover struct {
 
 // Run this StopDuplicateRemover on some feed
 func (f TooFastTripRemover) Run(feed *gtfsparser.Feed) {
-	fmt.Println("Removing trips travelling too fast...")
+	fmt.Fprintf(os.Stdout, "Removing trips travelling too fast...")
+
 	bef := len(feed.Trips)
 
 	for id, t := range feed.Trips {
@@ -42,7 +43,6 @@ func (f TooFastTripRemover) Run(feed *gtfsparser.Feed) {
 			} else {
 				speed = (float64(dist) / 1000.0) / (float64(inter) / 3600.0)
 			}
-
 
 			if dist >= 10000 {
 				if gtfs.GetTypeFromExtended(t.Route.Type) == 0 && speed > 100 {

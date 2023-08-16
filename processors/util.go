@@ -41,6 +41,23 @@ func perpendicularDist(px, py, lax, lay, lbx, lby float64) float64 {
 	return dist(px, py, lax+t*(lbx-lax), lay+t*(lby-lay))
 }
 
+// Snape the point p to line segment [a, b]
+func snapTo(px, py, lax, lay, lbx, lby float64) (float64, float64) {
+	d := dist(lax, lay, lbx, lby) * dist(lax, lay, lbx, lby)
+
+	if d == 0 {
+		return lax, lay
+	}
+	t := float64((px-lax)*(lbx-lax)+(py-lay)*(lby-lay)) / d
+	if t < 0 {
+		return lax, lay
+	} else if t > 1 {
+		return lbx, lby
+	}
+
+	return lax + t*(lbx-lax), lay + t*(lby-lay)
+}
+
 // Calculate the distance between two points (x1, y1) and (x2, y2)
 func dist(x1 float64, y1 float64, x2 float64, y2 float64) float64 {
 	return math.Sqrt(float64((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)))
@@ -103,7 +120,7 @@ func haversineApprox(latA float64, lonA float64, latB float64, lonB float64) flo
 func webMercToLatLng(x float64, y float64) (float32, float32) {
 	a := 6378137.0
 
-	latitude := (1.5707963267948966 - (2.0 * math.Atan(math.Exp((-1.0*y)/a)))) * DEG_TO_RAD
+	latitude := (1.5707963267948966 - (2.0 * math.Atan(math.Exp((-1.0*y)/a)))) / DEG_TO_RAD
 	longitude := ((x / a) * 57.295779513082323) - ((math.Floor((((x / a) * 57.295779513082323) + 180.0) / 360.0)) * 360.0)
 
 	return float32(latitude), float32(longitude)
