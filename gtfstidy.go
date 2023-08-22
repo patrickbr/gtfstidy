@@ -122,6 +122,7 @@ func main() {
 	keepTripIds := flag.BoolP("keep-trip-ids", "", false, "preserve trip IDs")
 	keepLevelIds := flag.BoolP("keep-level-ids", "", false, "preserve level IDs")
 	keepPathwayIds := flag.BoolP("keep-pathway-ids", "", false, "preserve pathway IDs")
+	keepAttributionIds := flag.BoolP("keep-attribution-ids", "", false, "preserve attribution IDs")
 	keepServiceIds := flag.BoolP("keep-service-ids", "", false, "preserve service IDs in calendar.txt and calendar_dates.txt")
 	keepAgencyIds := flag.BoolP("keep-agency-ids", "", false, "preserve agency IDs")
 	useOrphanDeleter := flag.BoolP("delete-orphans", "O", false, "remove entities that are not referenced anywhere")
@@ -405,9 +406,11 @@ func main() {
 			} else {
 				fmt.Fprintf(os.Stdout, " done.")
 			}
-			fmt.Fprintf(os.Stdout, " (%d trips [%.2f%%], %d stops [%.2f%%], %d shapes [%.2f%%], %d services [%.2f%%], %d routes [%.2f%%], %d agencies [%.2f%%], %d transfers [%.2f%%], %d pathways [%.2f%%], %d levels [%.2f%%], %d fare attributes [%.2f%%], %d translations [%.2f%%] dropped due to errors.",
+			fmt.Fprintf(os.Stdout, " (%d trips [%.2f%%], %d stop times [%.2f%%], %d stops [%.2f%%], %d shapes [%.2f%%], %d services [%.2f%%], %d routes [%.2f%%], %d agencies [%.2f%%], %d transfers [%.2f%%], %d pathways [%.2f%%], %d levels [%.2f%%], %d fare attributes [%.2f%%], %d translations [%.2f%%] dropped due to errors.",
 				s.DroppedTrips,
 				100.0*float64(s.DroppedTrips)/(float64(s.DroppedTrips+len(feed.Trips))+0.001),
+				s.DroppedStopTimes,
+				100.0*float64(s.DroppedStopTimes)/(float64(s.DroppedStopTimes+feed.NumStopTimes)+0.001),
 				s.DroppedStops,
 				100.0*float64(s.DroppedStops)/(float64(s.DroppedStops+len(feed.Stops))+0.001),
 				s.DroppedShapes,
@@ -550,9 +553,9 @@ func main() {
 		}
 
 		if *useIDMinimizerNum {
-			minzers = append(minzers, processors.IDMinimizer{Base: 10, KeepStations: *keepStationIds, KeepBlocks: *keepBlockIds, KeepFares: *keepFareIds, KeepShapes: *keepShapeIds, KeepRoutes: *keepRouteIds, KeepTrips: *keepTripIds, KeepLevels: *keepLevelIds, KeepServices: *keepServiceIds, KeepAgencies: *keepAgencyIds, KeepPathways: *keepPathwayIds})
+			minzers = append(minzers, processors.IDMinimizer{Base: 10, KeepStations: *keepStationIds, KeepBlocks: *keepBlockIds, KeepFares: *keepFareIds, KeepShapes: *keepShapeIds, KeepRoutes: *keepRouteIds, KeepTrips: *keepTripIds, KeepLevels: *keepLevelIds, KeepServices: *keepServiceIds, KeepAgencies: *keepAgencyIds, KeepPathways: *keepPathwayIds, KeepAttributions: *keepAttributionIds})
 		} else if *useIDMinimizerChar {
-			minzers = append(minzers, processors.IDMinimizer{Base: 36, KeepStations: *keepStationIds, KeepBlocks: *keepBlockIds, KeepFares: *keepFareIds, KeepShapes: *keepShapeIds, KeepRoutes: *keepRouteIds, KeepTrips: *keepTripIds, KeepLevels: *keepLevelIds, KeepServices: *keepServiceIds, KeepAgencies: *keepAgencyIds, KeepPathways: *keepPathwayIds})
+			minzers = append(minzers, processors.IDMinimizer{Base: 36, KeepStations: *keepStationIds, KeepBlocks: *keepBlockIds, KeepFares: *keepFareIds, KeepShapes: *keepShapeIds, KeepRoutes: *keepRouteIds, KeepTrips: *keepTripIds, KeepLevels: *keepLevelIds, KeepServices: *keepServiceIds, KeepAgencies: *keepAgencyIds, KeepPathways: *keepPathwayIds, KeepAttributions: *keepAttributionIds})
 		}
 
 		// do processing

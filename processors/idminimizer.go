@@ -16,17 +16,18 @@ import (
 
 // IDMinimizer minimizes IDs by replacing them be continuous integer
 type IDMinimizer struct {
-	Base         int
-	KeepStations bool
-	KeepBlocks   bool
-	KeepTrips    bool
-	KeepRoutes   bool
-	KeepFares    bool
-	KeepShapes   bool
-	KeepLevels   bool
-	KeepServices bool
-	KeepAgencies bool
-	KeepPathways bool
+	Base             int
+	KeepStations     bool
+	KeepBlocks       bool
+	KeepTrips        bool
+	KeepRoutes       bool
+	KeepFares        bool
+	KeepShapes       bool
+	KeepLevels       bool
+	KeepServices     bool
+	KeepAgencies     bool
+	KeepPathways     bool
+	KeepAttributions bool
 }
 
 // Run this IDMinimizer on a feed
@@ -57,6 +58,9 @@ func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
 		j = j - 1
 	}
 	if minimizer.KeepPathways {
+		j = j - 1
+	}
+	if minimizer.KeepAttributions {
 		j = j - 1
 	}
 	fmt.Fprintf(os.Stdout, "Minimizing ids... ")
@@ -113,6 +117,12 @@ func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
 	if !minimizer.KeepLevels {
 		go func() {
 			minimizer.minimizeLevelIds(feed)
+			sem <- empty{}
+		}()
+	}
+	if !minimizer.KeepAttributions {
+		go func() {
+			minimizer.minimizeAttributionIds(feed)
 			sem <- empty{}
 		}()
 	}
@@ -229,6 +239,44 @@ func (minimizer IDMinimizer) minimizeStopIds(feed *gtfsparser.Feed) {
 	}
 
 	feed.Stops = newMap
+}
+
+// Minimize attribution IDs
+func (minimizer IDMinimizer) minimizeAttributionIds(feed *gtfsparser.Feed) {
+	var idCount int64 = 1
+
+	for i, _ := range feed.Attributions {
+		newId := strconv.FormatInt(idCount, minimizer.Base)
+		feed.Attributions[i].Id = newId
+		idCount = idCount + 1
+	}
+
+	for _, ag := range feed.Agencies {
+		for i, _ := range ag.Attributions {
+			newId := strconv.FormatInt(idCount, minimizer.Base)
+			ag.Attributions[i].Id = newId
+			idCount = idCount + 1
+		}
+	}
+
+	for _, r := range feed.Routes {
+		for i, _ := range r.Attributions {
+			newId := strconv.FormatInt(idCount, minimizer.Base)
+			r.Attributions[i].Id = newId
+			idCount = idCount + 1
+		}
+	}
+
+	for _, t := range feed.Trips {
+		if t.Attributions == nil {
+			continue
+		}
+		for i, _ := range *t.Attributions {
+			newId := strconv.FormatInt(idCount, minimizer.Base)
+			(*t.Attributions)[i].Id = newId
+			idCount = idCount + 1
+		}
+	}
 }
 
 // Minimize agency IDs
