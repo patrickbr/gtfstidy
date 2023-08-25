@@ -107,6 +107,7 @@ func main() {
 	mergeShortHand := flag.BoolP("merge", "", false, "shorthand for -ARPICO")
 	fuzzyMergeShortHand := flag.BoolP("Merge", "", false, "shorthand for -EARPICO --red-trips-fuzzy --red-stops-fuzzy")
 
+	assumeCleanCsv := flag.BoolP("assume-clean-csv", "", false, "assume clean csv (no leading spaces, clean line breaks)")
 	useDefaultValuesOnError := flag.BoolP("default-on-errs", "e", false, "if non-required fields have errors, fall back to the default values")
 	fixZip := flag.BoolP("fix-zip", "z", false, "try to fix some errors in the ZIP file directory hierarchy")
 	emptyStrRepl := flag.StringP("empty-str-repl", "p", "", "string to use if a non-critical required string field is empty (like stop_name, agency_name, ...)")
@@ -335,7 +336,7 @@ func main() {
 	}
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter, AssumeCleanCsv: *assumeCleanCsv}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
