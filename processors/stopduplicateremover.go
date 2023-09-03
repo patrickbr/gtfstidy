@@ -287,7 +287,10 @@ func (sdr StopDuplicateRemover) stopHash(s *gtfs.Stop) uint32 {
 		h.Write([]byte(s.Code))
 	}
 
-	h.Write([]byte(s.Name))
+	if !sdr.Fuzzy {
+		h.Write([]byte(s.Name))
+	}
+
 	h.Write([]byte(s.Desc))
 	h.Write([]byte(s.Zone_id))
 	h.Write([]byte(s.Timezone.GetTzString()))
@@ -377,9 +380,11 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtf
 		}
 	}
 
+	parentsEqual := a.Parent_station != nil && a.Parent_station == b.Parent_station
+
 	if sdr.Fuzzy {
-		return (a.Code == b.Code || len(a.Code) == 0 || len(b.Code) == 0) &&
-			a.Name == b.Name &&
+		return ((distSApprox(a, b) <= sdr.DistThresholdStop / 2 && parentsEqual) || a.Code == b.Code || len(a.Code) == 0 || len(b.Code) == 0) &&
+			((distSApprox(a, b) <= sdr.DistThresholdStop / 2 && parentsEqual) || a.Name == b.Name) &&
 			a.Desc == b.Desc &&
 			a.Zone_id == b.Zone_id &&
 			(a.Url == b.Url || a.Url == nil || b.Url == nil) &&
@@ -388,7 +393,7 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtf
 			a.Timezone == b.Timezone &&
 			a.Wheelchair_boarding == b.Wheelchair_boarding &&
 			(a.Level == b.Level || a.Level == nil || b.Level == nil) &&
-			(a.Platform_code == b.Platform_code || len(a.Platform_code) == 0 || len(b.Platform_code) == 0) &&
+			((distSApprox(a, b) <= sdr.DistThresholdStop / 2 && parentsEqual) || a.Platform_code == b.Platform_code || len(a.Platform_code) == 0 || len(b.Platform_code) == 0) &&
 			(distSApprox(a, b) <= sdr.DistThresholdStop || (a.Location_type == 1 && distSApprox(a, b) <= sdr.DistThresholdStation))
 	}
 
