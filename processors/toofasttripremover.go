@@ -94,6 +94,72 @@ func (f TooFastTripRemover) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
+	for id, t := range feed.Trips {
+		if len(t.StopTimes) == 0 {
+			continue
+		}
+
+		for j := 1; j < len(t.StopTimes); j++ {
+			dist := 0.0
+			for i := j + 1; i < len(t.StopTimes); i++ {
+				dist += distSApprox(t.StopTimes[i-1].Stop(), t.StopTimes[i].Stop())
+
+				inter := t.StopTimes[i].Arrival_time().SecondsSinceMidnight() - t.StopTimes[j].Departure_time().SecondsSinceMidnight()
+
+				speed := 0.0
+
+				if inter == 0 {
+					speed = (float64(dist) / 1000.0) / (float64(60) / 3600.0)
+				} else {
+					speed = (float64(dist) / 1000.0) / (float64(inter) / 3600.0)
+				}
+
+				if dist >= 10000 {
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 0 && speed > 100 {
+						feed.DeleteTrip(id)
+						break
+					}
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 1 && speed > 150 {
+						feed.DeleteTrip(id)
+						break
+					}
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 2 && speed > 500 {
+						feed.DeleteTrip(id)
+						break
+					}
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 3 && speed > 150 {
+						feed.DeleteTrip(id)
+						break
+					}
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 4 && speed > 80 {
+						feed.DeleteTrip(id)
+						break
+					}
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 5 && speed > 30 {
+						feed.DeleteTrip(id)
+						break
+					}
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 6 && speed > 50 {
+						feed.DeleteTrip(id)
+						break
+					}
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 7 && speed > 50 {
+						feed.DeleteTrip(id)
+						break
+					}
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 11 && speed > 50 {
+						feed.DeleteTrip(id)
+						break
+					}
+					if gtfs.GetTypeFromExtended(t.Route.Type) == 12 && speed > 150 {
+						feed.DeleteTrip(id)
+						break
+					}
+				}
+			}
+		}
+	}
+
 	// delete transfers
 	feed.CleanTransfers()
 
