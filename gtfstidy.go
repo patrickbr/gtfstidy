@@ -114,6 +114,8 @@ func main() {
 	dropErroneousEntities := flag.BoolP("drop-errs", "D", false, "drop erroneous entries from feed")
 	checkNullCoords := flag.BoolP("check-null-coords", "n", false, "check for (0, 0) coordinates")
 
+	dropPlatformCodesForParentless := flag.BoolP("drop-platform-for-parentless", "", false, "drop platform codes for parentless stops")
+
 	keepIds := flag.BoolP("keep-ids", "", false, "preserve station, fare, shape, route, trip, level, agency, pathway, and service IDs")
 	keepStationIds := flag.BoolP("keep-station-ids", "", false, "preserve station IDs")
 	keepBlockIds := flag.BoolP("keep-block-ids", "", false, "preserve block IDs")
@@ -478,6 +480,17 @@ func main() {
 				DistThreshold:     75,
 				NameSimiThreshold: 0.55,
 				GridCellSize:      10000,
+			})
+		}
+
+		if *dropPlatformCodesForParentless {
+			minzers = append(minzers, processors.PlatformCodeDropper{})
+
+			// remove redundant stops again
+			minzers = append(minzers, processors.StopDuplicateRemover{
+				DistThresholdStop:    5.0,
+				DistThresholdStation: 50,
+				Fuzzy:                *useRedStopsMinimizerFuzzy,
 			})
 		}
 
