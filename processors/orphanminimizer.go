@@ -208,7 +208,6 @@ func (or OrphanRemover) removeTripOrphans(feed *gtfsparser.Feed) {
 			}
 		}
 		if !hasPickUp || !hasDropOff {
-			fmt.Println(id)
 			feed.DeleteTrip(id)
 		}
 	}
