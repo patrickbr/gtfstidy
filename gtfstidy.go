@@ -302,7 +302,7 @@ func main() {
 			poly = append(poly, [2]float64{poly[0][0], poly[0][1]})
 		}
 
-		polys = append(polys, gtfsparser.NewPolygon(poly))
+		polys = append(polys, gtfsparser.NewPolygon(poly, make([][][2]float64, 0)))
 	}
 
 	for _, bboxString := range bboxStrings {
@@ -333,7 +333,7 @@ func main() {
 				poly = append(poly, [2]float64{poly[0][0], poly[0][1]})
 			}
 
-			polys = append(polys, gtfsparser.NewPolygon(poly))
+			polys = append(polys, gtfsparser.NewPolygon(poly, make([][][2]float64, 0)))
 		}
 	}
 

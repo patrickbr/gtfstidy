@@ -316,10 +316,12 @@ func (sdr StopDuplicateRemover) getEquivalentLevels(lvl *gtfs.Level, feed *gtfsp
 
 		addFldsEq := true
 
-		for _, v := range feed.LevelsAddFlds {
-			if v[l.Id] != v[lvl.Id] {
-				addFldsEq = false
-				break
+		if !sdr.Fuzzy {
+			for _, v := range feed.LevelsAddFlds {
+				if v[l.Id] != v[lvl.Id] {
+					addFldsEq = false
+					break
+				}
 			}
 		}
 
@@ -373,18 +375,20 @@ func (sdr StopDuplicateRemover) numColons(str string) int {
 func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtfsparser.Feed) bool {
 	addFldsEq := true
 
-	for _, v := range feed.StopsAddFlds {
-		if v[a.Id] != v[b.Id] {
-			addFldsEq = false
-			break
+	if !sdr.Fuzzy {
+		for _, v := range feed.StopsAddFlds {
+			if v[a.Id] != v[b.Id] {
+				addFldsEq = false
+				break
+			}
 		}
 	}
 
 	parentsEqual := a.Parent_station != nil && a.Parent_station == b.Parent_station
 
 	if sdr.Fuzzy {
-		return ((distSApprox(a, b) <= sdr.DistThresholdStop / 2 && parentsEqual) || a.Code == b.Code || len(a.Code) == 0 || len(b.Code) == 0) &&
-			((distSApprox(a, b) <= sdr.DistThresholdStop / 2 && parentsEqual) || a.Name == b.Name) &&
+		return ((distSApprox(a, b) <= sdr.DistThresholdStop/2 && parentsEqual) || a.Code == b.Code || len(a.Code) == 0 || len(b.Code) == 0) &&
+			((distSApprox(a, b) <= sdr.DistThresholdStop/2 && parentsEqual) || a.Name == b.Name) &&
 			a.Desc == b.Desc &&
 			a.Zone_id == b.Zone_id &&
 			(a.Url == b.Url || a.Url == nil || b.Url == nil) &&
@@ -393,7 +397,7 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtf
 			a.Timezone == b.Timezone &&
 			a.Wheelchair_boarding == b.Wheelchair_boarding &&
 			(a.Level == b.Level || a.Level == nil || b.Level == nil) &&
-			((distSApprox(a, b) <= sdr.DistThresholdStop / 2 && parentsEqual) || a.Platform_code == b.Platform_code || len(a.Platform_code) == 0 || len(b.Platform_code) == 0) &&
+			((distSApprox(a, b) <= sdr.DistThresholdStop/2 && parentsEqual) || a.Platform_code == b.Platform_code || len(a.Platform_code) == 0 || len(b.Platform_code) == 0) &&
 			(distSApprox(a, b) <= sdr.DistThresholdStop || (a.Location_type == 1 && distSApprox(a, b) <= sdr.DistThresholdStation))
 	}
 

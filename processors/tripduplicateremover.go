@@ -192,6 +192,14 @@ func (m *TripDuplicateRemover) combineAdjTrips(feed *gtfsparser.Feed, ref *gtfs.
 			}
 		}
 
+		for fld, v := range feed.TripsAddFlds {
+			valT, okT := v[t.Id]
+			_, okRef := v[ref.Id]
+			if !okRef && okT {
+				feed.TripsAddFlds[fld][ref.Id] = valT
+			}
+		}
+
 		feed.DeleteTrip(t.Id)
 		m.serviceRefs[t.Service]--
 	}
@@ -416,10 +424,12 @@ func (m *TripDuplicateRemover) tripAttrEq(a *gtfs.Trip, b *gtfs.Trip, feed *gtfs
 
 	addFldsEq := true
 
-	for _, v := range feed.TripsAddFlds {
-		if v[a.Id] != v[b.Id] {
-			addFldsEq = false
-			break
+	if !m.Fuzzy {
+		for _, v := range feed.TripsAddFlds {
+			if v[a.Id] != v[b.Id] {
+				addFldsEq = false
+				break
+			}
 		}
 	}
 
