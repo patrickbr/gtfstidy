@@ -71,6 +71,9 @@ func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gt
 	for i, c := range chunks {
 		go func(j int, chunk []*gtfs.Route) {
 			for _, r := range chunk {
+				if _, ok := feed.Routes[r.Id]; !ok {
+					continue
+				}
 				if r != route && rdr.routeEquals(r, route, feed) && rdr.checkFareEquality(feed, route, r) {
 					rets[j] = append(rets[j], r)
 				}

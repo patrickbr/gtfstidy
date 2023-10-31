@@ -60,7 +60,7 @@ func (adr AgencyDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		100.0*float64(bef-len(feed.Agencies))/float64(bef))
 }
 
-// Returns the feed's routes that are equivalent to route
+// Returns the feed's agencies that are equivalent to agency
 func (adr *AgencyDuplicateRemover) getEquivalentAgencies(agency *gtfs.Agency, feed *gtfsparser.Feed, chunks [][]*gtfs.Agency) []*gtfs.Agency {
 	rets := make([][]*gtfs.Agency, len(chunks))
 	sem := make(chan empty, len(chunks))
@@ -68,6 +68,9 @@ func (adr *AgencyDuplicateRemover) getEquivalentAgencies(agency *gtfs.Agency, fe
 	for i, c := range chunks {
 		go func(j int, chunk []*gtfs.Agency) {
 			for _, a := range chunk {
+				if _, ok := feed.Agencies[a.Id]; !ok {
+					continue
+				}
 				if a != agency && adr.agencyEquals(a, agency, feed) {
 					rets[j] = append(rets[j], a)
 				}
