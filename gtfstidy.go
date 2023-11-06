@@ -162,7 +162,8 @@ func main() {
 	zipCompressionLevel := flag.IntP("zip-compression-level", "", 9, "output ZIP file compression level, between 0 and 9")
 	dontSortZipFiles := flag.BoolP("unsorted-files", "", false, "don't sort the output ZIP files (might increase final ZIP size)")
 	useStandardRouteTypes := flag.BoolP("standard-route-types", "", false, "Always use standard route types")
-	motFilterStr := flag.StringP("keep-mots", "M", "", "comma-separated list of MOTs to filter, empty filter (default) keeps all")
+	motFilterStr := flag.StringP("keep-mots", "M", "", "comma-separated list of MOTs to keep, empty filter (default) keeps all")
+	motFilterNegStr := flag.StringP("drop-mots", "N", "", "comma-separated list of MOTs to drop")
 	help := flag.BoolP("help", "?", false, "this message")
 
 	flag.Parse()
@@ -186,6 +187,7 @@ func main() {
 	}()
 
 	motFilter := make(map[int16]bool, 0)
+	motFilterNeg := make(map[int16]bool, 0)
 
 	if motFilterStr != nil {
 		for _, s := range strings.Split(*motFilterStr, ",") {
@@ -200,6 +202,22 @@ func main() {
 			}
 
 			motFilter[int16(i)] = true
+		}
+	}
+
+	if motFilterNegStr != nil {
+		for _, s := range strings.Split(*motFilterNegStr, ",") {
+			s = strings.TrimSpace(s)
+			if len(s) == 0 {
+				continue
+			}
+			i, err := strconv.Atoi(s)
+
+			if err != nil {
+				panic(fmt.Errorf("%s is not a valid GTFS MOT", s))
+			}
+
+			motFilterNeg[int16(i)] = true
 		}
 	}
 
@@ -338,7 +356,7 @@ func main() {
 	}
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter, AssumeCleanCsv: *assumeCleanCsv}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter, MOTFilterNeg: motFilterNeg, AssumeCleanCsv: *assumeCleanCsv}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
