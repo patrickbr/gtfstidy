@@ -97,10 +97,15 @@ func (sdr StopDuplicateRemover) Run(feed *gtfsparser.Feed) {
 			}
 		}
 
+		i := 0
+
 		for _, s := range feed.Stops {
+			i += 1
 			if _, ok := proced[s]; ok {
 				continue
 			}
+
+			fmt.Println(i, len(feed.Stops))
 
 			hash := sdr.stopHash(s)
 			eqStops := sdr.getEquivalentStops(s, feed, chunks[hash])

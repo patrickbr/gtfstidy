@@ -13,6 +13,7 @@ import (
 	"github.com/patrickbr/gtfsparser/gtfs"
 	"github.com/patrickbr/gtfstidy/processors"
 	"github.com/patrickbr/gtfswriter"
+	"github.com/paulmach/go.geojson"
 	flag "github.com/spf13/pflag"
 	"io/ioutil"
 	"os"
@@ -20,6 +21,22 @@ import (
 	"strconv"
 	"strings"
 )
+
+func getGtfsPoly(poly [][][]float64) gtfsparser.Polygon {
+	outer := make([][2]float64, len(poly[0]))
+	inners := make([][][2]float64, 0)
+	for i, c := range poly[0] {
+		outer[i] = [2]float64{c[0], c[1]}
+	}
+	for i := 1; i < len(poly); i++ {
+		inners = append(inners, make([][2]float64, len(poly[i])))
+		for j, c := range poly[i] {
+			inners[i-1][j] = [2]float64{c[0], c[1]}
+		}
+	}
+
+	return gtfsparser.NewPolygon(outer, inners)
+}
 
 func parseDate(str string) gtfs.Date {
 	var day, month, year int
@@ -155,7 +172,7 @@ func main() {
 	polygonFilterCompleteTrips := flag.BoolP("complete-filtered-trips", "", false, "always include complete data for trips filtered e.g. using a geo filter")
 	flag.StringArrayVar(&bboxStrings, "bounding-box", []string{}, "bounding box filter, as comma separated latitude,longitude pairs (multiple boxes allowed by defining --bounding-box multiple times)")
 	flag.StringArrayVar(&polygonStrings, "polygon", []string{}, "polygon filter, as comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon multiple times)")
-	flag.StringArrayVar(&polygonFiles, "polygon-file", []string{}, "polygon filter, as a file containing comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon-file multiple times)")
+	flag.StringArrayVar(&polygonFiles, "polygon-file", []string{}, "polygon filter, as a file containing comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon-file multiple times), or a GeoJSON file ending with .geojson or .json")
 	showWarnings := flag.BoolP("show-warnings", "W", false, "show warnings")
 	minHeadway := flag.IntP("min-headway", "", 1, "min allowed headway (in seconds) for frequency found with -T")
 	maxHeadway := flag.IntP("max-headway", "", 3600*24, "min allowed headway (in seconds) for frequency found with -T")
@@ -291,14 +308,41 @@ func main() {
 	}
 
 	for _, polyFile := range polygonFiles {
-		bytes, err := ioutil.ReadFile(polyFile)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "\nCould not parse polygon filter file: ")
-			fmt.Fprintf(os.Stderr, err.Error()+".\n")
-			os.Exit(1)
-		}
+		if strings.HasSuffix(polyFile, ".json") || strings.HasSuffix(polyFile, ".geojson") {
+			json, err := ioutil.ReadFile(polyFile)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "\nCould not parse polygon filter file: ")
+				fmt.Fprintf(os.Stderr, err.Error()+".\n")
+				os.Exit(1)
+			}
+			fc1, err := geojson.UnmarshalFeatureCollection(json)
 
-		polygonStrings = append(polygonStrings, string(bytes))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "\nCould not parse polygon filter file: ")
+				fmt.Fprintf(os.Stderr, err.Error()+".\n")
+				os.Exit(1)
+			}
+
+			for _, feature := range fc1.Features {
+				if feature.Geometry.IsMultiPolygon() {
+					for _, poly := range feature.Geometry.MultiPolygon {
+						polys = append(polys, getGtfsPoly(poly))
+					}
+				}
+				if feature.Geometry.IsPolygon() {
+					polys = append(polys, getGtfsPoly(feature.Geometry.Polygon))
+				}
+			}
+		} else {
+			bytes, err := ioutil.ReadFile(polyFile)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "\nCould not parse polygon filter file: ")
+				fmt.Fprintf(os.Stderr, err.Error()+".\n")
+				os.Exit(1)
+			}
+
+			polygonStrings = append(polygonStrings, string(bytes))
+		}
 	}
 
 	for _, polyString := range polygonStrings {
