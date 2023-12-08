@@ -65,10 +65,7 @@ func dist(x1 float64, y1 float64, x2 float64, y2 float64) float64 {
 
 // Calculate the distance between two ShapePoints
 func distP(a *gtfs.ShapePoint, b *gtfs.ShapePoint) float64 {
-	ax, ay := latLngToWebMerc(a.Lat, a.Lon)
-	bx, by := latLngToWebMerc(b.Lat, b.Lon)
-
-	return dist(ax, ay, bx, by)
+	return haversine(float64(a.Lat), float64(a.Lon), float64(b.Lat), float64(b.Lon))
 }
 
 // Distance between two stops

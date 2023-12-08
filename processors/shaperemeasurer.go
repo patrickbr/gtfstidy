@@ -47,6 +47,16 @@ func (s ShapeRemeasurer) Run(feed *gtfsparser.Feed) {
 	for i := 0; i < len(chunks); i++ {
 		<-sem
 	}
+
+	// fix small inconsistencies
+	for _, t := range feed.Trips {
+		for i, st := range t.StopTimes {
+			if st.HasDistanceTraveled() && t.Shape != nil && st.Shape_dist_traveled() > t.Shape.Points[len(t.Shape.Points)-1].Dist_traveled {
+				t.StopTimes[i].SetShape_dist_traveled(t.Shape.Points[len(t.Shape.Points)-1].Dist_traveled)
+			}
+		}
+	}
+
 	fmt.Fprintf(os.Stdout, "done. (%d shapes remeasured)\n", len(feed.Shapes))
 }
 
