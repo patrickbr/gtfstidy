@@ -51,7 +51,7 @@ func (s ShapeRemeasurer) Run(feed *gtfsparser.Feed) {
 	// fix small inconsistencies
 	for _, t := range feed.Trips {
 		for i, st := range t.StopTimes {
-			if st.HasDistanceTraveled() && t.Shape != nil && st.Shape_dist_traveled() > t.Shape.Points[len(t.Shape.Points)-1].Dist_traveled {
+			if st.HasDistanceTraveled() && t.Shape != nil && t.Shape.Points[len(t.Shape.Points)-1].HasDistanceTraveled() && st.Shape_dist_traveled() > t.Shape.Points[len(t.Shape.Points)-1].Dist_traveled {
 				t.StopTimes[i].SetShape_dist_traveled(t.Shape.Points[len(t.Shape.Points)-1].Dist_traveled)
 			}
 		}

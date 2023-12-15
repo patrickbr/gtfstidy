@@ -197,6 +197,14 @@ func (sdr *ShapeDuplicateRemover) interpolate(d, ax, ay, bx, by, dist float64, a
 func (sdr *ShapeDuplicateRemover) combineShapes(feed *gtfsparser.Feed, shps []*gtfs.Shape, tidx map[*gtfs.Shape][]*gtfs.Trip) {
 	ref := shps[0]
 
+	// important: take the *longest* (by shape_dist_traveled) shape as a reference!
+
+	for _, shp := range shps {
+		if shp.Points[len(shp.Points)-1].HasDistanceTraveled() && (!ref.Points[len(ref.Points)-1].HasDistanceTraveled() || (shp.Points[len(shp.Points)-1].Dist_traveled > ref.Points[len(ref.Points)-1].Dist_traveled)) {
+			ref = shp
+		}
+	}
+
 	for _, s := range shps {
 		if s == ref {
 			continue

@@ -581,7 +581,7 @@ func main() {
 		}
 
 		if *useRedShapeRemover {
-			minzers = append(minzers, processors.ShapeDuplicateRemover{MaxEqDist: 10.0})
+			minzers = append(minzers, processors.ShapeDuplicateRemover{MaxEqDist: 1.0})
 		}
 
 		if *useRedRouteMinimizer {
