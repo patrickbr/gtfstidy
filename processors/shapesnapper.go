@@ -50,7 +50,7 @@ func (sm ShapeSnapper) Run(feed *gtfsparser.Feed) {
 		}
 
 		for i, st := range t.StopTimes {
-			snaplat, snaplon := webMercToLatLng(sm.snapTo(st.Stop(), t.Shape))
+			snaplat, snaplon := webMercToLatLng(sm.snapTo(st.Stop(), st.Shape_dist_traveled(), t.Shape))
 			d := haversineApprox(float64(snaplat), float64(snaplon), float64(st.Stop().Lat), float64(st.Stop().Lon))
 
 			if d > sm.MaxDist {
@@ -85,14 +85,31 @@ func (sm ShapeSnapper) Run(feed *gtfsparser.Feed) {
 		100.0*float64(len(feed.Stops)-orign)/(float64(orign)+0.001))
 }
 
-func (sm *ShapeSnapper) snapTo(stop *gtfs.Stop, shape *gtfs.Shape) (float64, float64) {
+func (sm *ShapeSnapper) snapTo(stop *gtfs.Stop, distT float32, shape *gtfs.Shape) (float64, float64) {
+	shp := sm.mercs[shape]
+
+	if float64(distT) != math.NaN() {
+		for i := 1; i < len(shape.Points); i++ {
+			if shape.Points[i].Dist_traveled <= distT && i < len(shape.Points) - 1 && shape.Points[i+1].Dist_traveled >= distT {
+				d := (distT - shape.Points[i].Dist_traveled) / (shape.Points[i + 1].Dist_traveled - shape.Points[i].Dist_traveled)
+
+				dx := shp[i+1][0] - shp[i][0]
+				dy := shp[i+1][1] - shp[i][1]
+
+				x := shp[i][0] + dx*float64(d)
+				y := shp[i][1] + dy*float64(d)
+
+				return x, y
+			}
+		}
+	}
+
 	minDist := math.Inf(1)
 	minsx := 0.0
 	minsy := 0.0
 
 	px := sm.stopMercs[stop][0]
 	py := sm.stopMercs[stop][1]
-	shp := sm.mercs[shape]
 
 	for i := 1; i < len(shp); i++ {
 		sx, sy := snapTo(px, py, shp[i-1][0], shp[i-1][1], shp[i][0], shp[i][1])
