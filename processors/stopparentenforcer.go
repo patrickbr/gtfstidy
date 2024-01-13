@@ -13,11 +13,11 @@ import (
 	"strconv"
 )
 
-// StopDuplicateRemover merges semantically equivalent stops
+// StopParentEnforcer makes sure that all stops have parents
 type StopParentEnforcer struct {
 }
 
-// Run this StopDuplicateRemover on some feed
+// Run this StopParentEnforcer on some feed
 func (sdr StopParentEnforcer) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Adding parent stations to all stops... ")
 
