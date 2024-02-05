@@ -6,8 +6,7 @@ permissions:
     packages: write
 
 jobs:
-  release-linux-amd64:
-    name: release linux/amd64
+  container-image:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -15,5 +14,19 @@ jobs:
         go mod init gtfstidy
         go mod tidy
         go build .
+        ls -lah
     - run: |
-        docker build .
+        echo "VERSION=$(date +%Y-%m-%dT%H-%M)" >> $GITHUB_ENV
+        
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: lehrenfried/gtfstidy:latest,lehrenfried/gtfstidy:${{ env.VERSION }}
