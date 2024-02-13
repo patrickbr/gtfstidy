@@ -6,7 +6,7 @@ Tidy (and validate) [GTFS](https://developers.google.com/transit/gtfs/) feeds.
 
 Fixes small inconsistencies, minimizes the overall feed size, prepares the feed for secure, standard-compliant further use.
 
-Output feeds are **semantically equivalent** to the input feed. In this context, semantical equivalency means that the output feed provides exactly the same trips with exactly the same attributes (routes, stop-times, shapes, agency, fares etc.). In other words, the output feed is equivalent the to input feed from a passenger's perspective.
+Output feeds are **semantically equivalent** to the input feed. In this context, semantical equivalency means that the output feed provides exactly the same trips with exactly the same attributes (routes, stop-times, shapes, agency, fares etc.). In other words, the output feed is equivalent to the input feed from a passenger's perspective.
 
 ## 0. Features
 
