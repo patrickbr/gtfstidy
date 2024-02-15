@@ -1,13 +1,16 @@
-FROM debian:stable-slim
+FROM docker.io/golang:bookworm AS builder
 
-LABEL org.opencontainers.image.title="gtfstidy"
-LABEL org.opencontainers.image.description="A tool for checking, sanitizing and minimizing GTFS feeds."
-LABEL org.opencontainers.image.authors="Patrick Brosi <info@patrickbrosi.de>"
-LABEL org.opencontainers.image.documentation="https://github.com/patrickbr/gtfstidy"
-LABEL org.opencontainers.image.source="https://github.com/patrickbr/gtfstidy"
-LABEL org.opencontainers.image.revision="v0.2"
-LABEL org.opencontainers.image.licenses="GPL-2.0"
+WORKDIR src
 
-COPY gtfstidy /usr/local/bin/gtfstidy
+COPY *.go ./
+COPY processors/ ./processors/
+
+RUN go mod init gtfstidy
+RUN go mod tidy
+RUN go build .
+
+FROM docker.io/debian:stable-slim
+
+COPY --from=builder /go/src/gtfstidy /usr/local/bin/gtfstidy
 
 ENTRYPOINT ["/usr/local/bin/gtfstidy"]
