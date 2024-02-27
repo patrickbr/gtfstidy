@@ -14,6 +14,7 @@ import (
 	"hash/fnv"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 	"unsafe"
 )
@@ -21,6 +22,8 @@ import (
 // TripDuplicateRemover merges semantically equivalent routes
 type TripDuplicateRemover struct {
 	Fuzzy       bool
+	Aggressive  bool
+	MaxDayDist  int
 	serviceIdC  int
 	serviceList map[*gtfs.Service][]uint64
 	refDate     time.Time
@@ -98,10 +101,8 @@ func (m TripDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	for m.combineAllOverlapTrips(feed) {
 	}
 
-	MAX_DAY_DIST := 7
-
-	for i := 1; i <= MAX_DAY_DIST; i++ {
-		for m.combineAllAdjTrips(feed, uint64(i)) {
+	for i := 1; i <= m.MaxDayDist; i++ {
+		for m.combineAllAdjTrips(feed, uint64(i), m.Aggressive) {
 		}
 	}
 
@@ -436,7 +437,7 @@ func (m *TripDuplicateRemover) tripAttrEq(a *gtfs.Trip, b *gtfs.Trip, feed *gtfs
 	return addFldsEq && a.Wheelchair_accessible == b.Wheelchair_accessible &&
 		a.Bikes_allowed == b.Bikes_allowed &&
 		a.Short_name == b.Short_name &&
-		(a.Headsign == b.Headsign || (a.Headsign != nil && b.Headsign != nil && *a.Headsign == *b.Headsign)) &&
+		(a.Headsign == b.Headsign || (m.Fuzzy && (a.Headsign == nil || b.Headsign == nil)) || (a.Headsign != nil && b.Headsign != nil && *a.Headsign == *b.Headsign || (m.Fuzzy && (strings.Contains(*b.Headsign, *a.Headsign) || strings.Contains(*a.Headsign, *b.Headsign))))) &&
 		a.Block_id == b.Block_id
 }
 
@@ -510,7 +511,10 @@ func (m *TripDuplicateRemover) tripCalContained(child *gtfs.Trip, parent *gtfs.T
 }
 
 // Check if trip child is adjacent to trip parent calendar-wise
-func (m *TripDuplicateRemover) tripCalAdj(child *gtfs.Trip, parent *gtfs.Trip, maxdist uint64) bool {
+func (m *TripDuplicateRemover) tripCalAdj(child *gtfs.Trip, parent *gtfs.Trip, maxdist uint64, aggressive bool) bool {
+	if aggressive {
+		return true
+	}
 	// only merge if daymap is equal, to avoid creating complicated services
 	if !(!child.Service.Start_date().IsEmpty() && !parent.Service.Start_date().IsEmpty() && child.Service.RawDaymap() == parent.Service.RawDaymap()) {
 		return false
@@ -884,7 +888,7 @@ func (m *TripDuplicateRemover) combineAllOverlapTrips(feed *gtfsparser.Feed) boo
 	return merged
 }
 
-func (m *TripDuplicateRemover) combineAllAdjTrips(feed *gtfsparser.Feed, maxDist uint64) bool {
+func (m *TripDuplicateRemover) combineAllAdjTrips(feed *gtfsparser.Feed, maxDist uint64, aggressive bool) bool {
 	nchunks := m.getTripChunks(feed)
 
 	rets := make([][][]*gtfs.Trip, len(nchunks))
@@ -912,7 +916,7 @@ func (m *TripDuplicateRemover) combineAllAdjTrips(feed *gtfsparser.Feed, maxDist
 						}
 
 						if m.tripAttrEq(ta, tb, feed) && m.tripStEq(ta, tb) {
-							if m.tripCalAdj(tb, ta, maxDist) {
+							if m.tripCalAdj(tb, ta, maxDist, aggressive) {
 								if !written {
 									rets[j] = append(rets[j], make([]*gtfs.Trip, 0))
 									rets[j][len(rets[j])-1] = append(rets[j][len(rets[j])-1], ta)

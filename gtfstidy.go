@@ -133,6 +133,8 @@ func main() {
 
 	dropPlatformCodesForParentless := flag.BoolP("drop-platform-for-parentless", "", false, "drop platform codes for parentless stops")
 
+	nonOverlappingServices := flag.BoolP("non-overlapping-services", "", false, "create non-overlapping services")
+
 	keepIds := flag.BoolP("keep-ids", "", false, "preserve station, fare, shape, route, trip, level, agency, pathway, and service IDs")
 	keepStationIds := flag.BoolP("keep-station-ids", "", false, "preserve station IDs")
 	keepBlockIds := flag.BoolP("keep-block-ids", "", false, "preserve block IDs")
@@ -165,6 +167,8 @@ func main() {
 	useRedStopMinimizer := flag.BoolP("remove-red-stops", "P", false, "remove stop and level duplicates")
 	useRedTripMinimizer := flag.BoolP("remove-red-trips", "I", false, "remove trip duplicates")
 	useRedTripMinimizerFuzzyRoute := flag.BoolP("red-trips-fuzzy", "", false, "only check MOT of routes for trip duplicate removal")
+	redTripMinimizerAggressive := flag.BoolP("red-trips-aggressive", "", false, "aggressive merging of equal trips, even if this would create complicated services")
+
 	useRedStopsMinimizerFuzzy := flag.BoolP("red-stops-fuzzy", "", false, "fuzzy station match for station duplicate removal")
 	useRedAgencyMinimizer := flag.BoolP("remove-red-agencies", "A", false, "remove agency duplicates")
 	useStopReclusterer := flag.BoolP("recluster-stops", "E", false, "recluster stops")
@@ -532,7 +536,7 @@ func main() {
 
 		if *useStopAverager {
 			minzers = append(minzers, processors.StopParentAverager{
-				MaxDist:     100,
+				MaxDist: 100,
 			})
 		}
 
@@ -606,7 +610,7 @@ func main() {
 				minzers = append(minzers, processors.ServiceMinimizer{})
 			}
 
-			minzers = append(minzers, processors.TripDuplicateRemover{Fuzzy: *useRedTripMinimizerFuzzyRoute})
+			minzers = append(minzers, processors.TripDuplicateRemover{Fuzzy: *useRedTripMinimizerFuzzyRoute, Aggressive: *redTripMinimizerAggressive, MaxDayDist: 7})
 
 			// may have created route and stop orphans
 			if *useOrphanDeleter {
@@ -617,6 +621,10 @@ func main() {
 			if *useRedServiceMinimizer {
 				minzers = append(minzers, processors.ServiceDuplicateRemover{})
 			}
+		}
+
+		if *nonOverlappingServices {
+			minzers = append(minzers, processors.ServiceNonOverlapper{})
 		}
 
 		if *useServiceMinimizer {
