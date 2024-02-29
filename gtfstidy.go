@@ -624,7 +624,7 @@ func main() {
 		}
 
 		if *nonOverlappingServices {
-			minzers = append(minzers, processors.ServiceNonOverlapper{})
+			minzers = append(minzers, processors.ServiceNonOverlapper{DayNames : []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}, YearWeekName : "WW"})
 		}
 
 		if *useServiceMinimizer {

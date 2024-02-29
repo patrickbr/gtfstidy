@@ -26,6 +26,8 @@ type DayType struct {
 // on which *excactly* the same trips are served. Similary day types are than aggreated,
 // and outfitted with an ID "<Weekday> (WW<list of calendar weeks served)".
 type ServiceNonOverlapper struct {
+	DayNames []string
+	YearWeekName string
 }
 
 // Run this ServiceMinimizer on some feed
@@ -88,6 +90,9 @@ func (sm ServiceNonOverlapper) Run(feed *gtfsparser.Feed) {
 	}
 
 	feed.Services = make(map[string]*gtfs.Service, 0)
+	feed.Trips = make(map[string]*gtfs.Trip, 0)
+	feed.TripsAddFlds = make(map[string]map[string]string)
+	feed.StopTimesAddFlds = make(map[string]map[string]map[int]string)
 
 	// write services
 	for wd, _ := range days {
@@ -98,14 +103,14 @@ func (sm ServiceNonOverlapper) Run(feed *gtfsparser.Feed) {
 				weeknums = append(weeknums, weeknum)
 			}
 
-			id := t.Dates[0].GetTime().Weekday().String()
+			id := sm.DayNames[t.Dates[0].GetTime().Weekday()]
 
 			if len(day_types[wd]) > 1 {
 				id += " ("
 
 				for i, _ := range weeknums {
 					if i == 0 {
-						id += "WW" + strconv.Itoa((weeknums[i]))
+						id += sm.YearWeekName + strconv.Itoa((weeknums[i]))
 						continue
 					}
 
@@ -139,7 +144,11 @@ func (sm ServiceNonOverlapper) Run(feed *gtfsparser.Feed) {
 			feed.Services[id].SetExceptions(exceptions)
 
 			for _, trip := range t.Trips {
-				trip.Service = feed.Services[id]
+				newt := *trip
+				newt.Id = newt.Id + ":" + id
+				newt.Service = feed.Services[id]
+				newt.StopTimes = append(gtfs.StopTimes{}, trip.StopTimes...)
+				feed.Trips[newt.Id] = &newt
 			}
 		}
 	}
