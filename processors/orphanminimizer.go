@@ -150,7 +150,7 @@ func (or OrphanRemover) removeStopOrphans(feed *gtfsparser.Feed) {
 
 	// delete unreferenced
 	for id, s := range feed.Stops {
-		if _, in := referenced[s]; !in {
+		if _, in := referenced[s]; !in && s.Location_type != 2 {
 			feed.DeleteStop(id)
 		}
 	}
