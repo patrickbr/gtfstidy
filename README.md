@@ -1,4 +1,5 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/patrickbr/gtfstidy)](https://goreportcard.com/report/github.com/patrickbr/gtfstidy) [![Build Status](https://travis-ci.org/patrickbr/gtfstidy.svg?branch=master)](https://travis-ci.org/patrickbr/gtfstidy)
+[![Go Report Card](https://goreportcard.com/badge/github.com/patrickbr/gtfstidy)](https://goreportcard.com/report/github.com/patrickbr/gtfstidy) [![Build Status](https://travis-ci.org/patri
+ckbr/gtfstidy.svg?branch=master)](https://travis-ci.org/patrickbr/gtfstidy) [![Go Reference](https://pkg.go.dev/badge/github.com/patrickbr/gtfstidy.svg)](https://pkg.go.dev/github.com/patrickbr/gtfstidy)
 
 # gtfstidy
 
