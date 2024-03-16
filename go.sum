@@ -1,0 +1,14 @@
+github.com/klauspost/compress v1.17.7 h1:ehO88t2UGzQK66LMdE8tibEd1ErmzZjNEqWkjLAKQQg=
+github.com/klauspost/compress v1.17.7/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
+github.com/patrickbr/gtfsparser v0.0.0-20240120174022-f85e0e2e3ab2 h1:oXtxOlNHq2K7EyhqfzUnPs7b06u+rP/GAfN71fFg4A0=
+github.com/patrickbr/gtfsparser v0.0.0-20240120174022-f85e0e2e3ab2/go.mod h1:L88c76QEIfk3Z5pr1S715jfv1EIEVZ7BvNiefxz4o3o=
+github.com/patrickbr/gtfswriter v0.0.0-20231029093346-d2fe6aa60cc5 h1:MHREVYN/kR7MDgGwrbuxqIdciuhJEdaVluZ4OyvbRX4=
+github.com/patrickbr/gtfswriter v0.0.0-20231029093346-d2fe6aa60cc5/go.mod h1:zYAfZRXtDhc4Tq+LYrvyksefggNiViL2pKMRUrGvUbE=
+github.com/paulmach/go.geojson v1.5.0 h1:7mhpMK89SQdHFcEGomT7/LuJhwhEgfmpWYVlVmLEdQw=
+github.com/paulmach/go.geojson v1.5.0/go.mod h1:DgdUy2rRVDDVgKqrjMe2vZAHMfhDTrjVKt3LmHIXGbU=
+github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
+github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+github.com/valyala/fastjson v1.6.4 h1:uAUNq9Z6ymTgGhcm0UynUAB6tlbakBrz6CQFax3BXVQ=
+github.com/valyala/fastjson v1.6.4/go.mod h1:CLCAqky6SMuOcxStkYQvblddUtoRxhYMGLrsQns1aXY=
+golang.org/x/exp v0.0.0-20240314144324-c7f7c6466f7f h1:3CW0unweImhOzd5FmYuRsD4Y4oQFKZIjAnKbjV4WIrw=
+golang.org/x/exp v0.0.0-20240314144324-c7f7c6466f7f/go.mod h1:CxmFvTBINI24O/j8iY7H1xHzx2i4OsyguNBmN/uPtqc=
