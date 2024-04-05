@@ -16,6 +16,7 @@ import (
 
 // IDMinimizer minimizes IDs by replacing them be continuous integer
 type IDMinimizer struct {
+	Prefix           string
 	Base             int
 	KeepStations     bool
 	KeepBlocks       bool
@@ -141,7 +142,7 @@ func (minimizer IDMinimizer) minimizeTripIds(feed *gtfsparser.Feed) {
 	newMap := make(map[string]*gtfs.Trip)
 	for _, t := range feed.Trips {
 		oldId := t.Id
-		newId := strconv.FormatInt(idCount, minimizer.Base)
+		newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 		t.Id = newId
 		idCount = idCount + 1
 		newMap[t.Id] = t
@@ -168,7 +169,7 @@ func (minimizer IDMinimizer) minimizeShapeIds(feed *gtfsparser.Feed) {
 	newMap := make(map[string]*gtfs.Shape)
 	for _, s := range feed.Shapes {
 		oldId := s.Id
-		newId := strconv.FormatInt(idCount, minimizer.Base)
+		newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 		s.Id = newId
 		idCount = idCount + 1
 		newMap[s.Id] = s
@@ -190,7 +191,7 @@ func (minimizer IDMinimizer) minimizeRouteIds(feed *gtfsparser.Feed) {
 	newMap := make(map[string]*gtfs.Route)
 	for _, r := range feed.Routes {
 		oldId := r.Id
-		newId := strconv.FormatInt(idCount, minimizer.Base)
+		newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 		r.Id = newId
 		idCount = idCount + 1
 		newMap[r.Id] = r
@@ -211,7 +212,7 @@ func (minimizer IDMinimizer) minimizeServiceIds(feed *gtfsparser.Feed) {
 
 	newMap := make(map[string]*gtfs.Service)
 	for _, s := range feed.Services {
-		s.SetId(strconv.FormatInt(idCount, minimizer.Base))
+		s.SetId(minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base))
 		idCount = idCount + 1
 		newMap[s.Id()] = s
 	}
@@ -226,7 +227,7 @@ func (minimizer IDMinimizer) minimizeStopIds(feed *gtfsparser.Feed) {
 	newMap := make(map[string]*gtfs.Stop)
 	for _, s := range feed.Stops {
 		oldId := s.Id
-		newId := strconv.FormatInt(idCount, minimizer.Base)
+		newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 		s.Id = newId
 		idCount = idCount + 1
 		newMap[s.Id] = s
@@ -246,14 +247,14 @@ func (minimizer IDMinimizer) minimizeAttributionIds(feed *gtfsparser.Feed) {
 	var idCount int64 = 1
 
 	for i, _ := range feed.Attributions {
-		newId := strconv.FormatInt(idCount, minimizer.Base)
+		newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 		feed.Attributions[i].Id = newId
 		idCount = idCount + 1
 	}
 
 	for _, ag := range feed.Agencies {
 		for i, _ := range ag.Attributions {
-			newId := strconv.FormatInt(idCount, minimizer.Base)
+			newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 			ag.Attributions[i].Id = newId
 			idCount = idCount + 1
 		}
@@ -261,7 +262,7 @@ func (minimizer IDMinimizer) minimizeAttributionIds(feed *gtfsparser.Feed) {
 
 	for _, r := range feed.Routes {
 		for i, _ := range r.Attributions {
-			newId := strconv.FormatInt(idCount, minimizer.Base)
+			newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 			r.Attributions[i].Id = newId
 			idCount = idCount + 1
 		}
@@ -272,7 +273,7 @@ func (minimizer IDMinimizer) minimizeAttributionIds(feed *gtfsparser.Feed) {
 			continue
 		}
 		for i, _ := range *t.Attributions {
-			newId := strconv.FormatInt(idCount, minimizer.Base)
+			newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 			(*t.Attributions)[i].Id = newId
 			idCount = idCount + 1
 		}
@@ -286,7 +287,7 @@ func (minimizer IDMinimizer) minimizeAgencyIds(feed *gtfsparser.Feed) {
 	newMap := make(map[string]*gtfs.Agency)
 	for _, a := range feed.Agencies {
 		oldId := a.Id
-		newId := strconv.FormatInt(idCount, minimizer.Base)
+		newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 		a.Id = newId
 		idCount = idCount + 1
 		newMap[a.Id] = a
@@ -308,7 +309,7 @@ func (minimizer IDMinimizer) minimizeFareIds(feed *gtfsparser.Feed) {
 	newMap := make(map[string]*gtfs.FareAttribute)
 	for _, a := range feed.FareAttributes {
 		oldId := a.Id
-		newId := strconv.FormatInt(idCount, minimizer.Base)
+		newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 		a.Id = newId
 		idCount = idCount + 1
 		newMap[a.Id] = a
@@ -330,7 +331,7 @@ func (minimizer IDMinimizer) minimizePathwayIds(feed *gtfsparser.Feed) {
 	newMap := make(map[string]*gtfs.Pathway)
 	for _, a := range feed.Pathways {
 		oldId := a.Id
-		newId := strconv.FormatInt(idCount, minimizer.Base)
+		newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 		a.Id = newId
 		idCount = idCount + 1
 		newMap[a.Id] = a
@@ -352,7 +353,7 @@ func (minimizer IDMinimizer) minimizeLevelIds(feed *gtfsparser.Feed) {
 	newMap := make(map[string]*gtfs.Level)
 	for _, a := range feed.Levels {
 		oldId := a.Id
-		newId := strconv.FormatInt(idCount, minimizer.Base)
+		newId := minimizer.Prefix + strconv.FormatInt(idCount, minimizer.Base)
 		a.Id = newId
 		idCount = idCount + 1
 		newMap[a.Id] = a
