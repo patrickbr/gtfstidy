@@ -4,23 +4,23 @@
 
 Tidy (and validate) [GTFS](https://developers.google.com/transit/gtfs/) feeds.
 
-Fixes small inconsistencies, minimizes the overall feed size, prepares the feed for secure, standard-compliant further use.
+Fixes small inconsistencies, minimizes the overall feed size, and prepares the feed for secure, standard-compliant further use.
 
 Output feeds are **semantically equivalent** to the input feed. In this context, semantical equivalency means that the output feed provides exactly the same trips with exactly the same attributes (routes, stop-times, shapes, agency, fares etc.). In other words, the output feed is equivalent to the input feed from a passenger's perspective.
 
 ## 0. Features
 
-* **Clean CSV output.** Only quote string values where needed, use dynamic float precision, remove whitespace. Only output files that are necessary.
+* **Clean CSV output.** Only quote string values where needed, use dynamic float precision and remove whitespace. Only output files that are necessary.
 * **Default-value error handling.** If non-required fields in the input-feed have errors, fall back to the default value according to the GTFS standard
 * **Drop-entities error handling.** If non-fixable errors occur, drop the affected entity (trip, route, stop, etc.).
 * **Orphan deletion**. Delete stops, routes, stop times and shapes that aren't referenced anywhere
-* **ID minimization**. Replace IDs by dense integer or character IDs
+* **ID minimization**. Replace IDs with dense integer or character IDs
 * **Shape minimization**. Minimize shape geometries using the [Douglas-Peucker](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) algorithm
 * **Service minimization**. Minimize services in `calender.txt` and `calender_dates.txt` by searching optimal progression and/or exception covers.
 * **Trip/Stop-Time minimization**. Minimize trips and stop-times by analyzing `stop_times.txt` and `frequencies.txt` and searching for optimal frequency covers.
 * **Shape remeasurement**. If shape measures (`shape_dist_traveled`) have gaps, try to fill them by interpolating surrounding measurements
 * **Duplicate removal**. Safely remove routes, shapes and services that are semantically equivalent to others and combine them into one.
-* **Extensive feed validation**. Validation includes for example checking stop time progressions, id references, id collisions,  missing required fields, shape measurements, timezone strings, general field value range validity, URLs, mail adresses, ISO language codes, timepoint validity ...
+* **Extensive feed validation**. Validation includes for example checking stop time progressions, ID references, ID collisions,  missing required fields, shape measurements, timezone strings, general field value range validity, URLs, mail addresses, ISO language codes, timepoint validity ...
 * **Entropy-minimizing heuristics**. Sort lines prior to writing them to keep the entropy of the resulting CSV files small. This often leads to better compression results (see below).
 
 For more features, see the help page (`--help`).
@@ -217,7 +217,7 @@ FUR_CREEK_RES,Furnace Creek Resort (Demo),36.42529,-117.13316,META1
 
 ---
 
-Minimizes shape geometries using Douglas-Peucker. This processor **implicitely calls the shape remeasurer!** The shape coordinates are projected to web mercator ([EPSG:3857](http://spatialreference.org/ref/sr-org/7483/)) prior to minimization. The ε value for Douglas-Peucker is set to 1.0
+Minimizes shape geometries using Douglas-Peucker. This processor **implicitly calls the shape remeasurer!** The shape coordinates are projected to web mercator ([EPSG:3857](http://spatialreference.org/ref/sr-org/7483/)) prior to minimization. The ε value for Douglas-Peucker is set to 1.0
 
 #### Flags
 
@@ -317,7 +317,7 @@ FULLW,0,1,1,1,1,1,1,20160814,20160821
 
 ### Trip/Stop-times minimizer
 
-Minimizes stop times in `stop_times.txt` and trips in `trips.txt` by searching for progression (frequency) covers on the stop times. If multiple trips with equivalent attributes (route, shapes etc) and the same relative stop times are found, they are checked for frequency patterns. If a pattern could be found, the trips are combined into a single frequency-based trip (via `frequency.txt`). Existing frequencies in `frequencies.txt` are also optimized and/or combined with entries in `stop_times.txt`.
+Minimizes stop times in `stop_times.txt` and trips in `trips.txt` by searching for progression (frequency) covers on the stop times. If multiple trips with equivalent attributes (route, shapes etc) and the same relative stop times are found, they are checked for frequency patterns. If a pattern can be found, the trips are combined into a single frequency-based trip (via `frequency.txt`). Existing frequencies in `frequencies.txt` are also optimized and/or combined with entries in `stop_times.txt`.
 
 The algorithm is based on a CAP (Cover by Arithmetic Progression) algorithm proposed by [Hannah Bast and Sabine Storandt](http://ad-publications.informatik.uni-freiburg.de/SIGSPATIAL_frequency_BS_2014.pdf).
 
