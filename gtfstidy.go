@@ -134,6 +134,8 @@ func main() {
 	dropPlatformCodesForParentless := flag.BoolP("drop-platform-for-parentless", "", false, "drop platform codes for parentless stops")
 
 	nonOverlappingServices := flag.BoolP("non-overlapping-services", "", false, "create non-overlapping services")
+	groupAdjEquStops := flag.BoolP("group-adj-stop-times", "", false, "group adjacent stop times with eqv. stops")
+	removeFillers := flag.BoolP("remove-fillers", "", false, "remove fill values (., .., .., -, ?) from some optional fields")
 
 	idPrefix := flag.StringP("prefix", "", "", "prefix used before all ids")
 
@@ -407,7 +409,7 @@ func main() {
 	}
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter, MOTFilterNeg: motFilterNeg, AssumeCleanCsv: *assumeCleanCsv}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter, MOTFilterNeg: motFilterNeg, AssumeCleanCsv: *assumeCleanCsv, RemoveFillers: *removeFillers}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
@@ -610,6 +612,10 @@ func main() {
 
 		if *useRedServiceMinimizer {
 			minzers = append(minzers, processors.ServiceDuplicateRemover{})
+		}
+
+		if *groupAdjEquStops {
+			minzers = append(minzers, processors.AdjacentStopTimeGrouper{})
 		}
 
 		if *useRedTripMinimizer {
