@@ -154,6 +154,7 @@ func main() {
 	useOrphanDeleter := flag.BoolP("delete-orphans", "O", false, "remove entities that are not referenced anywhere")
 	useShapeMinimizer := flag.BoolP("min-shapes", "s", false, "minimize shapes (using Douglas-Peucker)")
 	useShapeRemeasurer := flag.BoolP("remeasure-shapes", "m", false, "remeasure shapes (filling measurement-holes)")
+	dropSingleStopTrips := flag.BoolP("drop-single-stop-trips", "", false, "drop trips with only 1 stop")
 	useShapeSnapper := flag.BoolP("snap-stops", "", false, "snap stop points to shape if dist > 100 m")
 	useRedShapeRemover := flag.BoolP("remove-red-shapes", "S", false, "remove shape duplicates")
 	useRedRouteMinimizer := flag.BoolP("remove-red-routes", "R", false, "remove route duplicates")
@@ -188,6 +189,7 @@ func main() {
 	zipCompressionLevel := flag.IntP("zip-compression-level", "", 9, "output ZIP file compression level, between 0 and 9")
 	dontSortZipFiles := flag.BoolP("unsorted-files", "", false, "don't sort the output ZIP files (might increase final ZIP size)")
 	useStandardRouteTypes := flag.BoolP("standard-route-types", "", false, "Always use standard route types")
+	useGoogleSupportedRouteTypes := flag.BoolP("google-supported-route-types", "", false, "Only use (extended) route types supported by Google")
 	motFilterStr := flag.StringP("keep-mots", "M", "", "comma-separated list of MOTs to keep, empty filter (default) keeps all")
 	motFilterNegStr := flag.StringP("drop-mots", "N", "", "comma-separated list of MOTs to drop")
 	help := flag.BoolP("help", "?", false, "this message")
@@ -409,7 +411,7 @@ func main() {
 	}
 
 	feed := gtfsparser.NewFeed()
-	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter, MOTFilterNeg: motFilterNeg, AssumeCleanCsv: *assumeCleanCsv, RemoveFillers: *removeFillers}
+	opts := gtfsparser.ParseOptions{UseDefValueOnError: false, DropErroneous: false, DryRun: *onlyValidate, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false, UseStandardRouteTypes: *useStandardRouteTypes, MOTFilter: motFilter, MOTFilterNeg: motFilterNeg, AssumeCleanCsv: *assumeCleanCsv, RemoveFillers: *removeFillers, UseGoogleSupportedRouteTypes: *useGoogleSupportedRouteTypes, DropSingleStopTrips: *dropSingleStopTrips}
 	opts.DropErroneous = *dropErroneousEntities && !*onlyValidate
 	opts.UseDefValueOnError = *useDefaultValuesOnError && !*onlyValidate
 	opts.CheckNullCoordinates = *checkNullCoords
