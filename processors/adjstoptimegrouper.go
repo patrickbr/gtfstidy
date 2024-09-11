@@ -23,7 +23,12 @@ func (m AdjacentStopTimeGrouper) Run(feed *gtfsparser.Feed) {
 	grouped := 0
 	total := 0
 	for _, t := range feed.Trips {
+		if len(t.StopTimes) == 0 {
+			continue
+		}
 		newSt := make(gtfs.StopTimes, 0)
+		newSt = append(newSt, t.StopTimes[0])
+
 		for i := 1; i < len(t.StopTimes);i++ {
 			total++
 			if t.StopTimes[i-1].Stop() == t.StopTimes[i].Stop() && t.StopTimes[i-1].Arrival_time().Equals(t.StopTimes[i-1].Departure_time()) && t.StopTimes[i].Arrival_time().Equals(t.StopTimes[i].Departure_time()) && ((!t.StopTimes[i-1].HasDistanceTraveled() && !t.StopTimes[i].HasDistanceTraveled()) || (t.StopTimes[i-1].HasDistanceTraveled() && t.StopTimes[i].HasDistanceTraveled() && t.StopTimes[i-1].HasDistanceTraveled() == t.StopTimes[i].HasDistanceTraveled())) && t.StopTimes[i-1].Headsign() == t.StopTimes[i].Headsign() && t.StopTimes[i-1].Continuous_pickup() == t.StopTimes[i].Continuous_pickup() {
