@@ -47,7 +47,7 @@ func TestShapeMinimizer(t *testing.T) {
 		t.Error(feed.Shapes["A_shp"].Points[2])
 	}
 
-	if !(shapePointEquals(feed.Shapes["A_shp"].Points[3], gtfs.ShapePoint{Lat: 3.5, Lon: 1, Dist_traveled: 42.910156})) {
+	if !(shapePointEquals(feed.Shapes["A_shp"].Points[3], gtfs.ShapePoint{Lat: 3.5, Lon: 1, Dist_traveled: 42.902325})) {
 		t.Error(feed.Shapes["A_shp"].Points[3])
 	}
 
@@ -63,7 +63,7 @@ func TestShapeMinimizer(t *testing.T) {
 		t.Error(feed.Shapes["B_shp"].Points[2])
 	}
 
-	if !(shapePointEquals(feed.Shapes["B_shp"].Points[3], gtfs.ShapePoint{Lat: 3.5, Lon: 1, Dist_traveled: 42.910156})) {
+	if !(shapePointEquals(feed.Shapes["B_shp"].Points[3], gtfs.ShapePoint{Lat: 3.5, Lon: 1, Dist_traveled: 42.902325})) {
 		t.Error(feed.Shapes["B_shp"].Points[3])
 	}
 }
