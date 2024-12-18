@@ -397,7 +397,7 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtf
 			(a.Url == b.Url || a.Url == nil || b.Url == nil) &&
 			a.Location_type == b.Location_type &&
 			a.Parent_station == b.Parent_station &&
-			a.Timezone == b.Timezone &&
+			a.Timezone.Equals(b.Timezone) &&
 			a.Wheelchair_boarding == b.Wheelchair_boarding &&
 			(a.Level == b.Level || a.Level == nil || b.Level == nil) &&
 			((distSApprox(a, b) <= sdr.DistThresholdStop/2 && parentsEqual && (len(a.Platform_code) == 0 || len(b.Platform_code) == 0)) || a.Platform_code == b.Platform_code) &&
@@ -411,7 +411,7 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtf
 		a.Url == b.Url &&
 		a.Location_type == b.Location_type &&
 		a.Parent_station == b.Parent_station &&
-		a.Timezone == b.Timezone &&
+		a.Timezone.Equals(b.Timezone) &&
 		a.Wheelchair_boarding == b.Wheelchair_boarding &&
 		a.Level == b.Level &&
 		a.Platform_code == b.Platform_code &&

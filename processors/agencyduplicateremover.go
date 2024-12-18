@@ -179,7 +179,7 @@ func (adr *AgencyDuplicateRemover) agencyEquals(a *gtfs.Agency, b *gtfs.Agency, 
 
 	return addFldsEq && a.Name == b.Name &&
 		(a.Url == b.Url || (a.Url != nil && b.Url != nil && *a.Url == *b.Url)) &&
-		a.Timezone == b.Timezone &&
+		a.Timezone.Equals(b.Timezone) &&
 		a.Lang == b.Lang &&
 		a.Phone == b.Phone &&
 		(a.Fare_url == b.Fare_url || (a.Fare_url != nil && b.Fare_url != nil && *a.Fare_url == *b.Fare_url)) &&
