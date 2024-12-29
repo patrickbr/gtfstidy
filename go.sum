@@ -1,7 +1,7 @@
 github.com/klauspost/compress v1.17.7 h1:ehO88t2UGzQK66LMdE8tibEd1ErmzZjNEqWkjLAKQQg=
 github.com/klauspost/compress v1.17.7/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
-github.com/patrickbr/gtfsparser v0.0.0-20241218204648-ed6b0d658515 h1:E6vJHMKJPkBElv4X4Tmnmsy/Em08NEXnWFAZgR7BJ5M=
-github.com/patrickbr/gtfsparser v0.0.0-20241218204648-ed6b0d658515/go.mod h1:WsjXLsxSQc+KfBJ7APQhk3yz+4DztzMYARQ+EfxKYSQ=
+github.com/patrickbr/gtfsparser v0.0.0-20241229200251-82ac2dbeb5c3 h1:PcEcAb2UZOOCx4pVHPx4aWNhPGUfKCUThULdeT2yAI8=
+github.com/patrickbr/gtfsparser v0.0.0-20241229200251-82ac2dbeb5c3/go.mod h1:WsjXLsxSQc+KfBJ7APQhk3yz+4DztzMYARQ+EfxKYSQ=
 github.com/patrickbr/gtfswriter v0.0.0-20240919073412-98e3602c6cd8 h1:xEQhft28izewbL3fnF10Yj8zSNu2r+lW157GQq+eaaY=
 github.com/patrickbr/gtfswriter v0.0.0-20240919073412-98e3602c6cd8/go.mod h1:zYAfZRXtDhc4Tq+LYrvyksefggNiViL2pKMRUrGvUbE=
 github.com/paulmach/go.geojson v1.5.0 h1:7mhpMK89SQdHFcEGomT7/LuJhwhEgfmpWYVlVmLEdQw=
