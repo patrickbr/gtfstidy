@@ -185,7 +185,7 @@ func main() {
 	flag.StringArrayVar(&polygonFiles, "polygon-file", []string{}, "polygon filter, as a file containing comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon-file multiple times), or a GeoJSON file ending with .geojson or .json")
 	showWarnings := flag.BoolP("show-warnings", "W", false, "show warnings")
 	minHeadway := flag.IntP("min-headway", "", 1, "min allowed headway (in seconds) for frequency found with -T")
-	maxHeadway := flag.IntP("max-headway", "", 3600*24, "min allowed headway (in seconds) for frequency found with -T")
+	maxHeadway := flag.IntP("max-headway", "", 3600*24, "max allowed headway (in seconds) for frequency found with -T")
 	zipCompressionLevel := flag.IntP("zip-compression-level", "", 9, "output ZIP file compression level, between 0 and 9")
 	dontSortZipFiles := flag.BoolP("unsorted-files", "", false, "don't sort the output ZIP files (might increase final ZIP size)")
 	useStandardRouteTypes := flag.BoolP("standard-route-types", "", false, "Always use standard route types")
