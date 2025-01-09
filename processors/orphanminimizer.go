@@ -193,14 +193,17 @@ func (or OrphanRemover) removeTripOrphans(feed *gtfsparser.Feed) {
 	for id, s := range feed.Trips {
 		if len(s.StopTimes) == 0 && (s.Frequencies == nil || len(*s.Frequencies) == 0) {
 			feed.DeleteTrip(id)
+			continue
 		}
+
+		// also delete trips without any pickup/dropoff
 		hasPickUp := false
 		hasDropOff := false
 		for _, st := range s.StopTimes {
 			if st.Drop_off_type() != 1 || st.Continuous_drop_off() != 1 || s.Route.Continuous_drop_off != 1 {
 				hasDropOff = true
 			}
-			if st.Pickup_type() != 1  || st.Continuous_pickup() != 1 || s.Route.Continuous_pickup != 1 {
+			if st.Pickup_type() != 1 || st.Continuous_pickup() != 1 || s.Route.Continuous_pickup != 1 {
 				hasPickUp = true
 			}
 			if hasDropOff && hasPickUp {
