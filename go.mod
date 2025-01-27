@@ -11,6 +11,6 @@ require (
 )
 
 require (
-	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect
 )
