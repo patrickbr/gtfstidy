@@ -154,6 +154,7 @@ func main() {
 	useOrphanDeleter := flag.BoolP("delete-orphans", "O", false, "remove entities that are not referenced anywhere")
 	useShapeMinimizer := flag.BoolP("min-shapes", "s", false, "minimize shapes (using Douglas-Peucker)")
 	useShapeRemeasurer := flag.BoolP("remeasure-shapes", "m", false, "remeasure shapes (filling measurement-holes)")
+	useStopTimeRemeasurer := flag.BoolP("remeasure-stop-times", "r", false, "remeasure stop times")
 	dropSingleStopTrips := flag.BoolP("drop-single-stop-trips", "", false, "drop trips with only 1 stop")
 	useShapeSnapper := flag.BoolP("snap-stops", "", false, "snap stop points to shape if dist > 100 m")
 	useRedShapeRemover := flag.BoolP("remove-red-shapes", "S", false, "remove shape duplicates")
@@ -580,12 +581,16 @@ func main() {
 			})
 		}
 
-		if *useShapeRemeasurer || *useShapeMinimizer || *useRedShapeRemover {
-			minzers = append(minzers, processors.ShapeRemeasurer{})
+		if *useShapeRemeasurer || *useShapeMinimizer || *useRedShapeRemover || *useStopTimeRemeasurer {
+			minzers = append(minzers, processors.ShapeRemeasurer{*useStopTimeRemeasurer})
 		}
 
 		if *useShapeMinimizer {
 			minzers = append(minzers, processors.ShapeMinimizer{Epsilon: 1.0})
+		}
+
+		if *useStopTimeRemeasurer {
+			minzers = append(minzers, processors.StopTimeRemeasurer{})
 		}
 
 		if *useShapeSnapper {

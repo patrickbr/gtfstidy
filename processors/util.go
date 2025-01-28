@@ -42,20 +42,26 @@ func perpendicularDist(px, py, lax, lay, lbx, lby float64) float64 {
 }
 
 // Snape the point p to line segment [a, b]
-func snapTo(px, py, lax, lay, lbx, lby float64) (float64, float64) {
+func snapToWithProgr(px, py, lax, lay, lbx, lby float64) (float64, float64, float64) {
 	d := dist(lax, lay, lbx, lby) * dist(lax, lay, lbx, lby)
 
 	if d == 0 {
-		return lax, lay
+		return lax, lay, 0
 	}
 	t := float64((px-lax)*(lbx-lax)+(py-lay)*(lby-lay)) / d
 	if t < 0 {
-		return lax, lay
+		return lax, lay, 0
 	} else if t > 1 {
-		return lbx, lby
+		return lbx, lby, 1
 	}
 
-	return lax + t*(lbx-lax), lay + t*(lby-lay)
+	return lax + t*(lbx-lax), lay + t*(lby-lay), t
+}
+
+// Snape the point p to line segment [a, b]
+func snapTo(px, py, lax, lay, lbx, lby float64) (float64, float64) {
+	a, b, _ := snapToWithProgr(px, py, lax, lay, lbx, lby)
+	return a, b
 }
 
 // Calculate the distance between two points (x1, y1) and (x2, y2)

@@ -16,6 +16,7 @@ import (
 
 // ShapeRemeasurer remeasure shapes
 type ShapeRemeasurer struct {
+	Force bool
 }
 
 // Run this ShapeRemeasurer on some feed
@@ -62,12 +63,19 @@ func (s ShapeRemeasurer) Run(feed *gtfsparser.Feed) {
 
 // Remeasure a single shape
 func (s ShapeRemeasurer) remeasure(shape *gtfs.Shape) {
-	avgMeasure, nulled := s.remeasureKnown(shape)
+	avgMeasure, noMeasurements := s.remeasureKnown(shape)
 
-	if !nulled {
+	if noMeasurements {
+		// use meter unit
+		s.remeasureUnknown(shape, 1)
+	} else if avgMeasure != 0 {
 		s.remeasureUnknown(shape, avgMeasure)
+	} else if avgMeasure == 0 && s.Force {
+		s.remeasureUnknown(shape, 1)
 	} else {
-		// no avg measurement found, null all values
+		// no avg measurement found, null all values, we cannot simply
+		// use meters here because stop times measurements could be in different
+		// unit
 		for i := range shape.Points {
 			shape.Points[i].Dist_traveled = float32(math.NaN())
 		}
@@ -98,6 +106,7 @@ func (s ShapeRemeasurer) remeasureUnknown(shape *gtfs.Shape, avgMeasure float64)
 // Remeasure parts of the shape we can guess by using surrounding points
 func (s ShapeRemeasurer) remeasureKnown(shape *gtfs.Shape) (float64, bool) {
 	c := 0
+	cc := 0
 	m := 0.0
 
 	lastMIndex := -1
@@ -110,6 +119,7 @@ func (s ShapeRemeasurer) remeasureKnown(shape *gtfs.Shape) (float64, bool) {
 			d = d + distP(&shape.Points[i-1], &shape.Points[i])
 		}
 		if shape.Points[i].HasDistanceTraveled() {
+			cc++
 			if hasLast && d > 0 {
 				localM := (float64(shape.Points[i].Dist_traveled) - lastM) / d
 
@@ -128,9 +138,9 @@ func (s ShapeRemeasurer) remeasureKnown(shape *gtfs.Shape) (float64, bool) {
 	}
 
 	if c == 0 {
-		return 0, true
+		return 0, cc == 0
 	}
-	return m / float64(c), false
+	return m / float64(c), cc == 0
 }
 
 // Remeasure between points i and end
