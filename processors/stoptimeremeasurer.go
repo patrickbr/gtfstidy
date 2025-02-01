@@ -37,22 +37,27 @@ func (s StopTimeRemeasurer) Run(feed *gtfsparser.Feed) {
 
 	s.buildAllSegments(feed)
 
-	shapeTrips := make([]*gtfs.Trip, 0)
+	fixTrips := make([]*gtfs.Trip, 0)
 
 	for _, t := range feed.Trips {
 		if t.Shape != nil {
-			shapeTrips = append(shapeTrips, t)
+			for _, st := range t.StopTimes {
+				if !st.HasDistanceTraveled() {
+					fixTrips = append(fixTrips, t)
+					break
+				}
+			}
 		}
 	}
 
 	numchunks := MaxParallelism()
-	chunksize := (len(shapeTrips) + numchunks - 1) / numchunks
+	chunksize := (len(fixTrips) + numchunks - 1) / numchunks
 	chunks := make([][]*gtfs.Trip, numchunks)
 	nFailed := make([]int, numchunks)
 	nSucc := make([]int, numchunks)
 
 	curchunk := 0
-	for _, s := range shapeTrips {
+	for _, s := range fixTrips {
 		chunks[curchunk] = append(chunks[curchunk], s)
 		if len(chunks[curchunk]) == chunksize {
 			curchunk++
@@ -86,7 +91,7 @@ func (s StopTimeRemeasurer) Run(feed *gtfsparser.Feed) {
 		nSuccAggr += nSucc[i]
 	}
 
-	fmt.Fprintf(os.Stdout, "done. (%d trips remeasured, %d trips failed)\n", nSuccAggr, nFailedAggr)
+	fmt.Fprintf(os.Stdout, "done. (%d trips without full measure, %d trips remeasured, %d trips failed)\n", len(fixTrips), nSuccAggr, nFailedAggr)
 }
 
 func (s *StopTimeRemeasurer) buildAllSegments(feed *gtfsparser.Feed) {
@@ -113,12 +118,12 @@ func (s *StopTimeRemeasurer) buildAllSegments(feed *gtfsparser.Feed) {
 
 		for i := 0; i < len(shp.Points)- 1; i++ {
 			s.segmentsLon[shp][i] = uint64(i)
-			if shp.Points[i+1].Lon - shp.Points[i].Lon > s.lonMaxLengths[shp] {
-				s.lonMaxLengths[shp] = shp.Points[i+1].Lon - shp.Points[i].Lon
+			if math.Abs(float64(shp.Points[i+1].Lon - shp.Points[i].Lon)) > float64(s.lonMaxLengths[shp]) {
+				s.lonMaxLengths[shp] = float32(math.Abs(float64(shp.Points[i+1].Lon - shp.Points[i].Lon)))
 			}
 			s.segmentsLat[shp][i] = uint64(i)
-			if shp.Points[i+1].Lat - shp.Points[i].Lat > s.latMaxLengths[shp] {
-				s.latMaxLengths[shp] = shp.Points[i+1].Lat - shp.Points[i].Lat
+			if math.Abs(float64(shp.Points[i+1].Lat - shp.Points[i].Lat)) > float64(s.latMaxLengths[shp]) {
+				s.latMaxLengths[shp] = float32(math.Abs(float64(shp.Points[i+1].Lat - shp.Points[i].Lat)))
 			}
 		}
 	}
@@ -142,11 +147,31 @@ func (s *StopTimeRemeasurer) buildAllSegments(feed *gtfsparser.Feed) {
 // Build segment index for single shape
 func (s *StopTimeRemeasurer) buildSegments(shp *gtfs.Shape) {
 	sort.Slice(s.segmentsLon[shp], func(i, j int) bool {
-		return shp.Points[s.segmentsLon[shp][i]].Lon > shp.Points[s.segmentsLon[shp][j]].Lon
+		lona := shp.Points[s.segmentsLon[shp][i]].Lon
+		if shp.Points[s.segmentsLon[shp][i] + 1].Lon < lona {
+			lona = shp.Points[s.segmentsLon[shp][i] + 1].Lon
+		}
+
+		lonb := shp.Points[s.segmentsLon[shp][j]].Lon
+		if shp.Points[s.segmentsLon[shp][j] + 1].Lon < lonb {
+			lonb = shp.Points[s.segmentsLon[shp][j] + 1].Lon
+		}
+
+		return lona < lonb
 	})
 
 	sort.Slice(s.segmentsLat[shp], func(i, j int) bool {
-		return shp.Points[s.segmentsLat[shp][i]].Lat > shp.Points[s.segmentsLat[shp][j]].Lat
+		lata := shp.Points[s.segmentsLat[shp][i]].Lat
+		if shp.Points[s.segmentsLat[shp][i] + 1].Lat < lata {
+			lata = shp.Points[s.segmentsLat[shp][i] + 1].Lat
+		}
+
+		latb := shp.Points[s.segmentsLat[shp][j]].Lat
+		if shp.Points[s.segmentsLat[shp][j] + 1].Lat < latb {
+			latb = shp.Points[s.segmentsLat[shp][j] + 1].Lat
+		}
+
+		return lata < latb
 	})
 }
 
@@ -160,15 +185,20 @@ func (s *StopTimeRemeasurer) getCands(lat float32, lon float32, shp *gtfs.Shape)
 
 	latLngDistFactor := math.Cos(float64(lat) * rad);
 
-	lonSearchStart := float32(float64(lon) + ((searchRad / mPerDeg) / latLngDistFactor))
-	lonSearchEnd := float32(float64(lon - s.lonMaxLengths[shp]) - ((searchRad / mPerDeg) / latLngDistFactor))
+	lonSearchStart := float32(float64(lon - s.lonMaxLengths[shp]) - ((searchRad / mPerDeg) / latLngDistFactor))
+	lonSearchEnd := float32(float64(lon) + ((searchRad / mPerDeg) / latLngDistFactor))
 
 	lonStart, _ := sort.Find(len(s.segmentsLon[shp]), func(i int) int {
-		if lonSearchStart < shp.Points[s.segmentsLon[shp][i]].Lon {
+		lona := shp.Points[s.segmentsLon[shp][i]].Lon
+		if shp.Points[s.segmentsLon[shp][i] + 1].Lon < lona {
+			lona = shp.Points[s.segmentsLon[shp][i] + 1].Lon
+		}
+
+		if lona < lonSearchStart {
 			return 1
 		}
 
-		if lonSearchStart == shp.Points[s.segmentsLon[shp][i]].Lon {
+		if lonSearchStart == lona {
 			return 0
 		}
 
@@ -176,26 +206,36 @@ func (s *StopTimeRemeasurer) getCands(lat float32, lon float32, shp *gtfs.Shape)
 	})
 
 	lonEnd, _ := sort.Find(len(s.segmentsLon[shp]), func(i int) int {
-		if lonSearchEnd > shp.Points[s.segmentsLon[shp][i]].Lon {
-			return -1
+		lona := shp.Points[s.segmentsLon[shp][i]].Lon
+		if shp.Points[s.segmentsLon[shp][i] + 1].Lon < lona {
+			lona = shp.Points[s.segmentsLon[shp][i] + 1].Lon
 		}
 
-		if lonSearchEnd == shp.Points[s.segmentsLon[shp][i]].Lon {
-			return 0
-		}
-
-		return 1
-	})
-
-	latSearchStart := float32(float64(lat) + ((searchRad / mPerDeg)))
-	latSearchEnd := float32(float64(lat - s.latMaxLengths[shp]) - ((searchRad / mPerDeg)))
-
-	latStart, _ := sort.Find(len(s.segmentsLat[shp]), func(i int) int {
-		if latSearchStart < shp.Points[s.segmentsLat[shp][i]].Lat {
+		if lona < lonSearchEnd {
 			return 1
 		}
 
-		if latSearchStart == shp.Points[s.segmentsLat[shp][i]].Lat {
+		if lonSearchEnd == lona {
+			return 0
+		}
+
+		return -1
+	})
+
+	latSearchStart := float32(float64(lat - s.latMaxLengths[shp]) - ((searchRad / mPerDeg) / latLngDistFactor))
+	latSearchEnd := float32(float64(lat) + ((searchRad / mPerDeg) / latLngDistFactor))
+
+	latStart, _ := sort.Find(len(s.segmentsLat[shp]), func(i int) int {
+		lata := shp.Points[s.segmentsLat[shp][i]].Lat
+		if shp.Points[s.segmentsLat[shp][i] + 1].Lat < lata {
+			lata = shp.Points[s.segmentsLat[shp][i] + 1].Lat
+		}
+
+		if lata < latSearchStart {
+			return 1
+		}
+
+		if latSearchStart == lata {
 			return 0
 		}
 
@@ -203,15 +243,20 @@ func (s *StopTimeRemeasurer) getCands(lat float32, lon float32, shp *gtfs.Shape)
 	})
 
 	latEnd, _ := sort.Find(len(s.segmentsLat[shp]), func(i int) int {
-		if latSearchEnd > shp.Points[s.segmentsLat[shp][i]].Lat {
-			return -1
+		lata := shp.Points[s.segmentsLat[shp][i]].Lat
+		if shp.Points[s.segmentsLat[shp][i] + 1].Lat < lata {
+			lata = shp.Points[s.segmentsLat[shp][i] + 1].Lat
 		}
 
-		if latSearchEnd == shp.Points[s.segmentsLat[shp][i]].Lat {
+		if lata < latSearchEnd {
+			return 1
+		}
+
+		if latSearchEnd == lata {
 			return 0
 		}
 
-		return 1
+		return -1
 	})
 
 	searchSegsLat := make([]uint64, 0)
@@ -236,7 +281,9 @@ func (s *StopTimeRemeasurer) getCands(lat float32, lon float32, shp *gtfs.Shape)
 	for _, seg := range searchSegs {
 		snappedLon, snappedLat, progr := snapToWithProgr(float64(lon), float64(lat), float64(shp.Points[seg].Lon), float64(shp.Points[seg].Lat), float64(shp.Points[seg + 1].Lon), float64(shp.Points[seg + 1].Lat))
 		dist := haversine(float64(lat), float64(lon), snappedLat, snappedLon)
-		ret = append(ret, SegPair{int32(seg), dist, progr})
+		if dist <= searchRad {
+			ret = append(ret, SegPair{int32(seg), dist, progr})
+		}
 	}
 
 	return ret
@@ -249,7 +296,7 @@ func (s *StopTimeRemeasurer) remeasure(trip *gtfs.Trip) bool {
 		cands[i] = s.getCands(st.Stop().Lat, st.Stop().Lon, trip.Shape)
 
 		if len(cands[i]) == 0 {
-			// fmt.Println("No cands found for stop", st.Stop().Id, "on", trip.Shape.Id)
+			// fmt.Println("No cands found for stop @", st.Stop().Lat, ",", st.Stop().Lon, "on trip", trip.Id)
 			return false
 		}
 
@@ -284,7 +331,7 @@ func (s *StopTimeRemeasurer) remeasure(trip *gtfs.Trip) bool {
 			for k, _ := range dist[i+1] {
 				// if we are not on the last layer, and if the candidate would cause a back-travel, dont count
 				// as adjacent
-				if i != len(trip.StopTimes) - 1 && (cands[i][j].Seg > cands[i+1][k].Seg || (cands[i][j].Seg == cands[i+1][k].Seg && trip.Shape.Points[cands[i][j].Seg].Dist_traveled < trip.Shape.Points[cands[i+1][k].Seg].Dist_traveled)) {
+				if i != len(trip.StopTimes) - 1 && (cands[i][j].Seg > cands[i+1][k].Seg || (cands[i][j].Seg == cands[i+1][k].Seg && cands[i][j].Progr > cands[i+1][k].Progr)) {
 					continue
 				}
 				if dist[i][j] + cands[i][j].Dist < dist[i+1][k] {
@@ -304,10 +351,25 @@ func (s *StopTimeRemeasurer) remeasure(trip *gtfs.Trip) bool {
 
 	for i := len(trip.StopTimes) - 1; i >= 0; i-- {
 		chosen := prede[i + 1][last]
+
+		if i != len(trip.StopTimes) - 1 && cands[i][chosen].Seg > cands[i+1][last].Seg {
+			fmt.Println(cands[i][chosen].Seg, cands[i+1][last].Seg)
+		}
+
+		if i != len(trip.StopTimes) - 1 && cands[i][chosen].Seg == cands[i+1][last].Seg && cands[i][chosen].Progr > cands[i+1][last].Progr {
+			fmt.Println(cands[i][chosen].Seg, cands[i+1][last].Seg, cands[i][chosen].Progr, cands[i+1][last].Progr)
+		}
+
 		last = chosen
+
 		c := cands[i][chosen]
+
 		newDist := trip.Shape.Points[c.Seg].Dist_traveled + float32(float64(trip.Shape.Points[c.Seg + 1].Dist_traveled - trip.Shape.Points[c.Seg].Dist_traveled) * c.Progr)
 		trip.StopTimes[i].SetShape_dist_traveled(newDist)
+
+		// if i != len(trip.StopTimes) -1 && trip.StopTimes[i].Shape_dist_traveled() > trip.StopTimes[i+1].Shape_dist_traveled() {
+			// fmt.Println("FAIL")
+		// }
 	}
 
 	return true
