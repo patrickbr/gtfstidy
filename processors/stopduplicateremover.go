@@ -390,8 +390,9 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtf
 	parentsEqual := a.Parent_station != nil && a.Parent_station == b.Parent_station
 
 	if sdr.Fuzzy {
-		return ((distSApprox(a, b) <= sdr.DistThresholdStop/2 && parentsEqual) || a.Code == b.Code || len(a.Code) == 0 || len(b.Code) == 0) &&
-			((distSApprox(a, b) <= sdr.DistThresholdStop/2 && parentsEqual) || a.Name == b.Name) &&
+		distApprox := distSApprox(a, b)
+		return ((distApprox <= sdr.DistThresholdStop/2 && parentsEqual) || a.Code == b.Code || len(a.Code) == 0 || len(b.Code) == 0) &&
+			((distApprox <= sdr.DistThresholdStop/2 && parentsEqual) || a.Name == b.Name) &&
 			a.Desc == b.Desc &&
 			a.Zone_id == b.Zone_id &&
 			(a.Url == b.Url || a.Url == nil || b.Url == nil) &&
@@ -400,8 +401,8 @@ func (sdr StopDuplicateRemover) stopEquals(a *gtfs.Stop, b *gtfs.Stop, feed *gtf
 			a.Timezone.Equals(b.Timezone) &&
 			a.Wheelchair_boarding == b.Wheelchair_boarding &&
 			(a.Level == b.Level || a.Level == nil || b.Level == nil) &&
-			((distSApprox(a, b) <= sdr.DistThresholdStop/2 && parentsEqual && (len(a.Platform_code) == 0 || len(b.Platform_code) == 0)) || a.Platform_code == b.Platform_code) &&
-			(distSApprox(a, b) <= sdr.DistThresholdStop || (a.Location_type == 1 && distSApprox(a, b) <= sdr.DistThresholdStation))
+			((distApprox <= sdr.DistThresholdStop/2 && parentsEqual && (len(a.Platform_code) == 0 || len(b.Platform_code) == 0)) || a.Platform_code == b.Platform_code) &&
+			(distApprox <= sdr.DistThresholdStop || (a.Location_type == 1 && distApprox <= sdr.DistThresholdStation))
 	}
 
 	return addFldsEq && a.Code == b.Code &&
