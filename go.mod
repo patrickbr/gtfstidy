@@ -11,6 +11,6 @@ require (
 
 require (
 	github.com/klauspost/compress v1.17.7 // indirect
-	github.com/patrickbr/gtfsparser v0.0.0-20250811191025-67315fa616f6 // indirect
+	github.com/patrickbr/gtfsparser v0.0.0-20250811193039-5107a506b90b // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect
 )
