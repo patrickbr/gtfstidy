@@ -7,14 +7,64 @@
 package processors
 
 import (
+	"errors"
 	"fmt"
 	"github.com/patrickbr/gtfsparser"
 	gtfs "github.com/patrickbr/gtfsparser/gtfs"
 	"os"
 )
 
+type FileFilter int64
+
+const (
+	Agency FileFilter = iota
+	Routes
+	Services
+	Shapes
+	Stops
+	Transfers
+	Trips
+)
+
+func MakeOrphanRemover(args []string) (OrphanRemover, error) {
+	or := OrphanRemover{}
+	or.enabledFilters = make(map[FileFilter]bool, 0)
+	or.Enabled = len(args) > 0
+	for _, arg := range args {
+		switch arg {
+		case "all":
+			or.enabledFilters[Agency] = true
+			or.enabledFilters[Routes] = true
+			or.enabledFilters[Services] = true
+			or.enabledFilters[Shapes] = true
+			or.enabledFilters[Stops] = true
+			or.enabledFilters[Transfers] = true
+			or.enabledFilters[Trips] = true
+		case "agency":
+			or.enabledFilters[Agency] = true
+		case "routes":
+			or.enabledFilters[Routes] = true
+		case "services":
+			or.enabledFilters[Services] = true
+		case "shapes":
+			or.enabledFilters[Shapes] = true
+		case "stops":
+			or.enabledFilters[Stops] = true
+		case "transfers":
+			or.enabledFilters[Transfers] = true
+		case "trips":
+			or.enabledFilters[Trips] = true
+		default:
+			return OrphanRemover{}, errors.New("Unsupported file '" + arg + "'")
+		}
+	}
+	return or, nil
+}
+
 // OrphanRemover removes entities that aren't referenced anywhere
 type OrphanRemover struct {
+	enabledFilters map[FileFilter]bool
+	Enabled        bool
 }
 
 // Run the OrphanRemover on some feed
@@ -29,22 +79,36 @@ func (or OrphanRemover) Run(feed *gtfsparser.Feed) {
 	routesB := len(feed.Routes)
 	agenciesB := len(feed.Agencies)
 
-	or.removeTripOrphans(feed)
+	if or.enabledFilters[Trips] {
+		or.removeTripOrphans(feed)
+	}
 
-	or.removeTransferOrphans(feed)
+	if or.enabledFilters[Transfers] {
+		or.removeTransferOrphans(feed)
+	}
 
-	or.removeStopOrphans(feed)
+	if or.enabledFilters[Stops] {
+		or.removeStopOrphans(feed)
 
-	// do this 2 times, because stop deletion can create new stop orphans (parent_station)
-	or.removeStopOrphans(feed)
+		// do this 2 times, because stop deletion can create new stop orphans (parent_station)
+		or.removeStopOrphans(feed)
+	}
 
-	or.removeShapeOrphans(feed)
+	if or.enabledFilters[Shapes] {
+		or.removeShapeOrphans(feed)
+	}
 
-	or.removeServiceOrphans(feed)
+	if or.enabledFilters[Services] {
+		or.removeServiceOrphans(feed)
+	}
 
-	or.removeRouteOrphans(feed)
+	if or.enabledFilters[Routes] {
+		or.removeRouteOrphans(feed)
+	}
 
-	or.removeAgencyOrphans(feed)
+	if or.enabledFilters[Agency] {
+		or.removeAgencyOrphans(feed)
+	}
 
 	// delete transfers
 	feed.CleanTransfers()
