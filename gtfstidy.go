@@ -135,6 +135,7 @@ func main() {
 
 	nonOverlappingServices := flag.BoolP("non-overlapping-services", "", false, "create non-overlapping services")
 	groupAdjEquStops := flag.BoolP("group-adj-stop-times", "", false, "group adjacent stop times with eqv. stops")
+	groupAdjEquStopsAggressive := flag.BoolP("group-adj-stop-times-aggressive", "", false, "aggressivly group intra-station stops")
 	removeFillers := flag.BoolP("remove-fillers", "", false, "remove fill values (., .., .., -, ?) from some optional fields")
 
 	idPrefix := flag.StringP("prefix", "", "", "prefix used before all ids")
@@ -621,8 +622,8 @@ func main() {
 			minzers = append(minzers, processors.ServiceDuplicateRemover{})
 		}
 
-		if *groupAdjEquStops {
-			minzers = append(minzers, processors.AdjacentStopTimeGrouper{})
+		if *groupAdjEquStops || *groupAdjEquStopsAggressive {
+			minzers = append(minzers, processors.AdjacentStopTimeGrouper{*groupAdjEquStopsAggressive})
 		}
 
 		if *useRedTripMinimizer {

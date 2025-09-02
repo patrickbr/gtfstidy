@@ -15,6 +15,7 @@ import (
 
 // AdjacentStopTimeGrouper groups adjacent stop times with the same stop (this can happen if arrival and departure are modelled as separate stop events)
 type AdjacentStopTimeGrouper struct {
+	Force bool
 }
 
 // Run the FrequencyMinimizer on a feed
@@ -32,6 +33,15 @@ func (m AdjacentStopTimeGrouper) Run(feed *gtfsparser.Feed) {
 		for i := 1; i < len(t.StopTimes);i++ {
 			total++
 			if t.StopTimes[i-1].Stop() == t.StopTimes[i].Stop() && t.StopTimes[i-1].Arrival_time().Equals(t.StopTimes[i-1].Departure_time()) && t.StopTimes[i].Arrival_time().Equals(t.StopTimes[i].Departure_time()) && ((!t.StopTimes[i-1].HasDistanceTraveled() && !t.StopTimes[i].HasDistanceTraveled()) || (t.StopTimes[i-1].HasDistanceTraveled() && t.StopTimes[i].HasDistanceTraveled() && t.StopTimes[i-1].HasDistanceTraveled() == t.StopTimes[i].HasDistanceTraveled())) && t.StopTimes[i-1].Headsign() == t.StopTimes[i].Headsign() && t.StopTimes[i-1].Continuous_pickup() == t.StopTimes[i].Continuous_pickup() {
+
+				// update previous stop
+				newSt[len(newSt) - 1].SetDeparture_time(t.StopTimes[i].Departure_time())
+				newSt[len(newSt) - 1].SetDrop_off_type(t.StopTimes[i-1].Drop_off_type())
+				newSt[len(newSt) - 1].SetPickup_type(t.StopTimes[i].Pickup_type())
+				grouped++
+			} else if m.Force && (t.StopTimes[i-1].Stop() == t.StopTimes[i].Stop() ||  t.StopTimes[i-1].Stop().Parent_station == t.StopTimes[i].Stop().Parent_station) {
+
+				fmt.Println(t.StopTimes[i-1].Stop(), t.StopTimes[i].Stop())
 
 				// update previous stop
 				newSt[len(newSt) - 1].SetDeparture_time(t.StopTimes[i].Departure_time())
