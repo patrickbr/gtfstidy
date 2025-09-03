@@ -152,7 +152,8 @@ func main() {
 	keepAttributionIds := flag.BoolP("keep-attribution-ids", "", false, "preserve attribution IDs")
 	keepServiceIds := flag.BoolP("keep-service-ids", "", false, "preserve service IDs in calendar.txt and calendar_dates.txt")
 	keepAgencyIds := flag.BoolP("keep-agency-ids", "", false, "preserve agency IDs")
-	useOrphanDeleter := flag.BoolP("delete-orphans", "O", false, "remove entities that are not referenced anywhere")
+	orphanDeleters := flag.StringSliceP("delete-orphans", "O", []string{}, "remove entities that are not referenced anywhere\ncomma-separated list of supported files:\nall,agency,routes,services,shapes,stops,transfers,trips")
+	flag.Lookup("delete-orphans").NoOptDefVal = "all"
 	useShapeMinimizer := flag.BoolP("min-shapes", "s", false, "minimize shapes (using Douglas-Peucker)")
 	useShapeRemeasurer := flag.BoolP("remeasure-shapes", "m", false, "remeasure shapes (filling measurement-holes)")
 	useStopTimeRemeasurer := flag.BoolP("remeasure-stop-times", "r", false, "remeasure stop times")
@@ -297,7 +298,9 @@ func main() {
 		*useRedAgencyMinimizer = true
 		*useRedStopMinimizer = true
 		*useRedRouteMinimizer = true
-		*useOrphanDeleter = true
+		if len(*orphanDeleters) == 0 {
+			*orphanDeleters = []string{"all"}
+		}
 	}
 
 	if *minimizeShortHand {
@@ -309,7 +312,9 @@ func main() {
 	}
 
 	if *compressShortHand {
-		*useOrphanDeleter = true
+		if len(*orphanDeleters) == 0 {
+			*orphanDeleters = []string{"all"}
+		}
 		*useShapeMinimizer = true
 		*useRedShapeRemover = true
 		*useRedRouteMinimizer = true
@@ -318,6 +323,12 @@ func main() {
 		*useServiceMinimizer = true
 		*useRedTripMinimizer = true
 		*useRedAgencyMinimizer = true
+	}
+
+	or, err := processors.MakeOrphanRemover(*orphanDeleters)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing filter: %s\n", err)
+		os.Exit(1)
 	}
 
 	for _, polyFile := range polygonFiles {
@@ -541,8 +552,8 @@ func main() {
 			minzers = append(minzers, processors.CompleteTripsGeoFilter{Polygons: polys})
 		}
 
-		if *useOrphanDeleter {
-			minzers = append(minzers, processors.OrphanRemover{})
+		if or.Enabled {
+			minzers = append(minzers, or)
 		}
 
 		if *useRedAgencyMinimizer {
@@ -605,8 +616,8 @@ func main() {
 			}
 
 			// may have created route and stop orphans
-			if *useOrphanDeleter {
-				minzers = append(minzers, processors.OrphanRemover{})
+			if or.Enabled {
+				minzers = append(minzers, or)
 			}
 		}
 
@@ -636,8 +647,8 @@ func main() {
 			minzers = append(minzers, processors.TripDuplicateRemover{Fuzzy: *useRedTripMinimizerFuzzyRoute, Aggressive: *redTripMinimizerAggressive, MaxDayDist: 7})
 
 			// may have created route and stop orphans
-			if *useOrphanDeleter {
-				minzers = append(minzers, processors.OrphanRemover{})
+			if or.Enabled {
+				minzers = append(minzers, or)
 			}
 
 			// may have created service duplicates
