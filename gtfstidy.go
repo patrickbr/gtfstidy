@@ -167,6 +167,7 @@ func main() {
 	useFrequencyMinimizer := flag.BoolP("minimize-stoptimes", "T", false, "search for frequency patterns in explicit trips and combine them, using a CAP approach")
 	useCalDatesRemover := flag.BoolP("remove-cal-dates", "", false, "don't use calendar_dates.txt")
 	explicitCals := flag.BoolP("explicit-calendar", "", false, "add calendar.txt entry for every service, even irregular ones")
+	ensureTripHeadsigns := flag.BoolP("ensure-trip-headsigns", "", false, "write trip headsigns if missing")
 	ensureParents := flag.BoolP("ensure-stop-parents", "", false, "ensure that every stop (location_type=0) has a parent station")
 	keepColOrder := flag.BoolP("keep-col-order", "", false, "keep the original column ordering of the input feed")
 	keepFields := flag.BoolP("keep-additional-fields", "F", false, "keep all non-GTFS fields from the input")
@@ -624,6 +625,10 @@ func main() {
 
 		if *groupAdjEquStops || *groupAdjEquStopsAggressive {
 			minzers = append(minzers, processors.AdjacentStopTimeGrouper{*groupAdjEquStopsAggressive})
+		}
+
+		if *ensureTripHeadsigns {
+			minzers = append(minzers, processors.TripHeadsigner{})
 		}
 
 		if *useRedTripMinimizer {
