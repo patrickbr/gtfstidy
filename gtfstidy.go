@@ -385,7 +385,7 @@ func main() {
 		}
 
 		// ensure polygon is closed
-		if len(poly) > 1 && (poly[0][0] != poly[len(poly)-1][0] || poly[0][0] != poly[len(poly)-1][0]) {
+		if len(poly) > 1 && (poly[0][0] != poly[len(poly)-1][0] || poly[0][1] != poly[len(poly)-1][1]) {
 			poly = append(poly, [2]float64{poly[0][0], poly[0][1]})
 		}
 
@@ -416,7 +416,7 @@ func main() {
 			poly[3] = [2]float64{bbox[1][0], bbox[0][1]}
 
 			// ensure polygon is closed
-			if len(poly) > 1 && (poly[0][0] != poly[len(poly)-1][0] || poly[0][0] != poly[len(poly)-1][0]) {
+			if len(poly) > 1 && (poly[0][0] != poly[len(poly)-1][0] || poly[0][1] != poly[len(poly)-1][1]) {
 				poly = append(poly, [2]float64{poly[0][0], poly[0][1]})
 			}
 
