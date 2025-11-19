@@ -595,7 +595,7 @@ func main() {
 		}
 
 		if *useShapeRemeasurer || *useShapeMinimizer || *useRedShapeRemover || *useStopTimeRemeasurer {
-			minzers = append(minzers, processors.ShapeRemeasurer{*useStopTimeRemeasurer})
+			minzers = append(minzers, processors.ShapeRemeasurer{Force: *useStopTimeRemeasurer})
 		}
 
 		if *useShapeMinimizer {
@@ -635,7 +635,7 @@ func main() {
 		}
 
 		if *groupAdjEquStops || *groupAdjEquStopsAggressive {
-			minzers = append(minzers, processors.AdjacentStopTimeGrouper{*groupAdjEquStopsAggressive})
+			minzers = append(minzers, processors.AdjacentStopTimeGrouper{Force: *groupAdjEquStopsAggressive})
 		}
 
 		if *ensureTripHeadsigns {
