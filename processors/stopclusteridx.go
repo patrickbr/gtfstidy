@@ -27,6 +27,10 @@ type StopClusterIdx struct {
 }
 
 func NewStopClusterIdx(clusters []*StopCluster, cellWidth, cellHeight float64) *StopClusterIdx {
+	if cellWidth <= 0 || cellHeight <= 0 {
+		panic("invalid cellWidth or cellHeight")
+	}
+
 	idx := StopClusterIdx{width: 0.0, height: 0.0, cellWidth: cellWidth, cellHeight: cellHeight, xWidth: 0, yHeight: 0, llx: math.Inf(1), lly: math.Inf(1), urx: math.Inf(-1), ury: math.Inf(-1)}
 
 	for _, cluster := range clusters {
@@ -72,6 +76,12 @@ func NewStopClusterIdx(clusters []*StopCluster, cellWidth, cellHeight float64) *
 		return &idx
 	}
 
+	// assert(idx.yHeight >= 0, "idx.yHeight < 0")
+	// assert(idx.xWidth >= 0, "idx.yHeight < 0")
+
+	// assert(math.Ceil(idx.width/idx.cellWidth) >= 0, "math ceil < 0?")
+	// assert(math.Ceil(idx.height/idx.cellHeight) >= 0, "math ceil < 0?")
+
 	idx.xWidth = uint(math.Ceil(idx.width / idx.cellWidth))
 	idx.yHeight = uint(math.Ceil(idx.height / idx.cellHeight))
 
@@ -80,6 +90,7 @@ func NewStopClusterIdx(clusters []*StopCluster, cellWidth, cellHeight float64) *
 
 	// resize columns
 	for i := uint(0); i < idx.xWidth; i++ {
+		// assert(i < uint(len(idx.grid)), "i is out of grid bound")
 		idx.grid[i] = make([]map[int]bool, idx.yHeight)
 	}
 
@@ -98,16 +109,17 @@ func NewStopClusterIdx(clusters []*StopCluster, cellWidth, cellHeight float64) *
 func (gi *StopClusterIdx) Add(lat float64, lon float64, obj int) {
 	lx, ly := latLngToWebMerc(float32(lat), float32(lon))
 
-	x := gi.getCellXFromX(lx)
-	y := gi.getCellYFromY(ly)
-
-	if int(x) >= len(gi.grid) {
+	x := int(gi.getCellXFromX(lx))
+	y := int(gi.getCellYFromY(ly))
+	if x < 0 || x >= len(gi.grid) {
+		return
+	}
+	if y < 0 || y >= len(gi.grid[x]) {
 		return
 	}
 
-	if int(y) >= len(gi.grid[x]) {
-		return
-	}
+	// assert(x < len(gi.grid), "x is out of bounds")
+	// assert(y < len(gi.grid[x]), "y is out of bounds")
 
 	if gi.grid[x][y] == nil {
 		gi.grid[x][y] = make(map[int]bool)
@@ -143,34 +155,34 @@ func (gi *StopClusterIdx) GetNeighbors(excludeCid int, c *StopCluster, d float64
 func (gi *StopClusterIdx) GetNeighborsByLatLon(lat float64, lon float64, d float64) map[int]bool {
 	ret := make(map[int]bool)
 
-	// surrounding cells
-	xPerm := uint(math.Ceil(d / gi.cellWidth))
-	yPerm := uint(math.Ceil(d / gi.cellHeight))
+	if gi.cellWidth <= 0 || gi.cellHeight <= 0 || len(gi.grid) == 0 {
+		// invalid grid, just return empty
+		return ret
+	}
+
+	// compute surrounding cell range
+	xPerm := int(math.Ceil(d / gi.cellWidth))
+	yPerm := int(math.Ceil(d / gi.cellHeight))
 
 	lx, ly := latLngToWebMerc(float32(lat), float32(lon))
 
-	swX := max(0, gi.getCellXFromX(lx)-xPerm)
-	swY := max(0, gi.getCellYFromY(ly)-yPerm)
+	centerX := int(gi.getCellXFromX(lx))
+	centerY := int(gi.getCellYFromY(ly))
 
-	neX := min(gi.xWidth-1, gi.getCellXFromX(lx)+xPerm)
-	neY := min(gi.yHeight-1, gi.getCellYFromY(ly)+yPerm)
+	// clamp bounds to grid
+	swX := maxInt(0, centerX-xPerm)
+	swY := maxInt(0, centerY-yPerm)
 
-	if xPerm > swX {
-		swX = 0
-	} else {
-		swX = swX - xPerm
-	}
+	neX := minInt(len(gi.grid)-1, centerX+xPerm)
+	neY := minInt(len(gi.grid[0])-1, centerY+yPerm)
 
-	if yPerm > swY {
-		swY = 0
-	} else {
-		swY = swY - yPerm
-	}
-
-	for x := swX; x <= neX && x < uint(len(gi.grid)); x++ {
-		for y := swY; y <= neY && y < uint(len(gi.grid[x])); y++ {
-			for s := range gi.grid[x][y] {
-				ret[s] = true
+	// iterate over grid cells
+	for x := swX; x <= neX; x++ {
+		for y := swY; y <= neY; y++ {
+			if gi.grid[x][y] != nil {
+				for s := range gi.grid[x][y] {
+					ret[s] = true
+				}
 			}
 		}
 	}
@@ -178,10 +190,32 @@ func (gi *StopClusterIdx) GetNeighborsByLatLon(lat float64, lon float64, d float
 	return ret
 }
 
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func (gi *StopClusterIdx) getCellXFromX(x float64) uint {
-	return uint(math.Floor(math.Max(0, x-gi.llx) / gi.cellWidth))
+	if gi.cellWidth <= 0 {
+		return 0 // fallback
+	}
+	val := math.Floor(math.Max(0, x-gi.llx) / gi.cellWidth)
+	return uint(val)
 }
 
 func (gi *StopClusterIdx) getCellYFromY(y float64) uint {
-	return uint(math.Floor(math.Max(0, y-gi.lly) / gi.cellHeight))
+	if gi.cellHeight <= 0 {
+		return 0
+	}
+	val := math.Floor(math.Max(0, y-gi.lly) / gi.cellHeight)
+	return uint(val)
 }
