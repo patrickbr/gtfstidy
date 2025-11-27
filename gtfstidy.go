@@ -9,17 +9,18 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/patrickbr/gtfsparser"
-	"github.com/patrickbr/gtfsparser/gtfs"
-	"github.com/patrickbr/gtfstidy/processors"
-	"github.com/patrickbr/gtfswriter"
-	"github.com/paulmach/go.geojson"
-	flag "github.com/spf13/pflag"
 	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/patrickbr/gtfsparser"
+	"github.com/patrickbr/gtfsparser/gtfs"
+	"github.com/patrickbr/gtfstidy/processors"
+	"github.com/patrickbr/gtfswriter"
+	geojson "github.com/paulmach/go.geojson"
+	flag "github.com/spf13/pflag"
 )
 
 func getGtfsPoly(poly [][][]float64) gtfsparser.Polygon {
@@ -595,7 +596,7 @@ func main() {
 		}
 
 		if *useShapeRemeasurer || *useShapeMinimizer || *useRedShapeRemover || *useStopTimeRemeasurer {
-			minzers = append(minzers, processors.ShapeRemeasurer{*useStopTimeRemeasurer})
+			minzers = append(minzers, processors.ShapeRemeasurer{Force: *useStopTimeRemeasurer})
 		}
 
 		if *useShapeMinimizer {
@@ -635,7 +636,7 @@ func main() {
 		}
 
 		if *groupAdjEquStops || *groupAdjEquStopsAggressive {
-			minzers = append(minzers, processors.AdjacentStopTimeGrouper{*groupAdjEquStopsAggressive})
+			minzers = append(minzers, processors.AdjacentStopTimeGrouper{Force: *groupAdjEquStopsAggressive})
 		}
 
 		if *ensureTripHeadsigns {
