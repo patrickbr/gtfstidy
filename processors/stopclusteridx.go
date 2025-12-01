@@ -35,12 +35,6 @@ func getStopLatLon(s *gtfs.Stop) (float32, float32) {
 		// with lat/lon
 		if s.Parent_station != nil {
 			if math.IsNaN(float64(s.Parent_station.Lat)) || math.IsNaN(float64(s.Parent_station.Lon)) {
-				if s.Parent_station.Parent_station != nil {
-					if math.IsNaN(float64(s.Parent_station.Parent_station.Lat)) || math.IsNaN(float64(s.Parent_station.Parent_station.Lon)) {
-						panic(fmt.Errorf("Could not find lat/lon coordinate for stop %s", s.Id))
-					}
-					return s.Parent_station.Parent_station.Lat, s.Parent_station.Parent_station.Lon
-				}
 				panic(fmt.Errorf("Could not find lat/lon coordinate for stop %s", s.Id))
 			}
 
