@@ -8,6 +8,8 @@ package processors
 
 import (
 	"math"
+	"fmt"
+	gtfs "github.com/patrickbr/gtfsparser/gtfs"
 )
 
 // StopClusterIdx stores objects for fast nearest-neighbor
@@ -26,12 +28,30 @@ type StopClusterIdx struct {
 	grid       [][]map[int]bool
 }
 
+func getStopLatLon(s *gtfs.Stop) (float32, float32) {
+	if math.IsNaN(float64(s.Lat)) || math.IsNaN(float64(s.Lon)) {
+		// child came from an object with optional lat/lon,
+		// in which case the standard guarantees a parent
+		// with lat/lon
+		if s.Parent_station != nil {
+			if math.IsNaN(float64(s.Parent_station.Lat)) || math.IsNaN(float64(s.Parent_station.Lon)) {
+				panic(fmt.Errorf("Could not find lat/lon coordinate for stop %s", s.Id))
+			}
+
+			return s.Parent_station.Lat, s.Parent_station.Lon
+		}
+
+		panic(fmt.Errorf("Could not find lat/lon coordinate for stop %s", s.Id))
+	}
+	return s.Lat, s.Lon
+}
+
 func NewStopClusterIdx(clusters []*StopCluster, cellWidth, cellHeight float64) *StopClusterIdx {
 	idx := StopClusterIdx{width: 0.0, height: 0.0, cellWidth: cellWidth, cellHeight: cellHeight, xWidth: 0, yHeight: 0, llx: math.Inf(1), lly: math.Inf(1), urx: math.Inf(-1), ury: math.Inf(-1)}
 
 	for _, cluster := range clusters {
 		for _, s := range cluster.Parents {
-			x, y := latLngToWebMerc(s.Lat, s.Lon)
+			x, y := latLngToWebMerc(getStopLatLon(s))
 			if x < idx.llx {
 				idx.llx = x
 			} else if x > idx.urx {
@@ -46,7 +66,7 @@ func NewStopClusterIdx(clusters []*StopCluster, cellWidth, cellHeight float64) *
 		}
 
 		for _, s := range cluster.Childs {
-			x, y := latLngToWebMerc(s.Lat, s.Lon)
+			x, y := latLngToWebMerc(getStopLatLon(s))
 			if x < idx.llx {
 				idx.llx = x
 			} else if x > idx.urx {
@@ -88,7 +108,8 @@ func NewStopClusterIdx(clusters []*StopCluster, cellWidth, cellHeight float64) *
 			idx.Add(float64(s.Lat), float64(s.Lon), cid)
 		}
 		for _, s := range cluster.Childs {
-			idx.Add(float64(s.Lat), float64(s.Lon), cid)
+			lat, lon := getStopLatLon(s);
+			idx.Add(float64(lat), float64(lon), cid)
 		}
 	}
 
@@ -129,7 +150,8 @@ func (gi *StopClusterIdx) GetNeighbors(excludeCid int, c *StopCluster, d float64
 	}
 
 	for _, st := range c.Childs {
-		neighs := gi.GetNeighborsByLatLon(float64(st.Lat), float64(st.Lon), d)
+		lat, lon := getStopLatLon(st)
+		neighs := gi.GetNeighborsByLatLon(float64(lat), float64(lon), d)
 		for cid := range neighs {
 			if cid == excludeCid {
 				continue
