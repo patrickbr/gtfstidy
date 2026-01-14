@@ -39,7 +39,7 @@ func (m AdjacentStopTimeGrouper) Run(feed *gtfsparser.Feed) {
 				newSt[len(newSt) - 1].SetDrop_off_type(t.StopTimes[i-1].Drop_off_type())
 				newSt[len(newSt) - 1].SetPickup_type(t.StopTimes[i].Pickup_type())
 				grouped++
-			} else if m.Force && (t.StopTimes[i-1].Stop() == t.StopTimes[i].Stop() ||  t.StopTimes[i-1].Stop().Parent_station == t.StopTimes[i].Stop().Parent_station) {
+			} else if m.Force && (t.StopTimes[i-1].Stop() == t.StopTimes[i].Stop() ||  (t.StopTimes[i-1].Stop().Parent_station != nil && t.StopTimes[i-1].Stop().Parent_station == t.StopTimes[i].Stop().Parent_station)) {
 
 				// update previous stop
 				newSt[len(newSt) - 1].SetDeparture_time(t.StopTimes[i].Departure_time())

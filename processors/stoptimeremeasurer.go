@@ -351,25 +351,12 @@ func (s *StopTimeRemeasurer) remeasure(trip *gtfs.Trip) bool {
 
 	for i := len(trip.StopTimes) - 1; i >= 0; i-- {
 		chosen := prede[i + 1][last]
-
-		if i != len(trip.StopTimes) - 1 && cands[i][chosen].Seg > cands[i+1][last].Seg {
-			fmt.Println(cands[i][chosen].Seg, cands[i+1][last].Seg)
-		}
-
-		if i != len(trip.StopTimes) - 1 && cands[i][chosen].Seg == cands[i+1][last].Seg && cands[i][chosen].Progr > cands[i+1][last].Progr {
-			fmt.Println(cands[i][chosen].Seg, cands[i+1][last].Seg, cands[i][chosen].Progr, cands[i+1][last].Progr)
-		}
-
 		last = chosen
 
 		c := cands[i][chosen]
 
 		newDist := trip.Shape.Points[c.Seg].Dist_traveled + float32(float64(trip.Shape.Points[c.Seg + 1].Dist_traveled - trip.Shape.Points[c.Seg].Dist_traveled) * c.Progr)
 		trip.StopTimes[i].SetShape_dist_traveled(newDist)
-
-		// if i != len(trip.StopTimes) -1 && trip.StopTimes[i].Shape_dist_traveled() > trip.StopTimes[i+1].Shape_dist_traveled() {
-			// fmt.Println("FAIL")
-		// }
 	}
 
 	return true
