@@ -143,8 +143,8 @@ IDs are packed into dense integer arrays, either as base 10 or base 36 integers.
 
 #### Flags
 
-* `-i`: pack IDs into dense base 10 integers
-* `-d`: pack IDs into dense base 36 integers
+* `-i`/`--minimize-ids-num`: pack IDs into dense base 10 integers
+* `-d`/`--minimize-ids-char`: pack IDs into dense base 36 integers
 
 #### Modifies
 Every file.
@@ -221,7 +221,7 @@ Minimizes shape geometries using Douglas-Peucker. This processor **implicitly ca
 
 #### Flags
 
-* `-s`: minimize shapes (using Douglas-Peucker)
+* `-s`/`--min-shapes`: minimize shapes (using Douglas-Peucker)
 
 #### Modifies
 
@@ -272,7 +272,7 @@ Minimizes service ranges in `calendar.txt` and `calendar_dates.txt` by searching
 
 #### Flags
 
-* `-c`: minimize services by searching for the optimal exception/range coverage
+* `-c`/`--minimize-services`: minimize services by searching for the optimal exception/range coverage
 
 #### Modifies
 
@@ -323,7 +323,7 @@ The algorithm is based on a CAP (Cover by Arithmetic Progression) algorithm prop
 
 #### Flags
 
-* `-T`: search for frequency patterns in explicit trips and combine them
+* `-T`/`--minimize-stoptimes`: search for frequency patterns in explicit trips and combine them
 
 #### Modifies
 
@@ -384,7 +384,7 @@ Removes duplicate routes (routes that have the same attributes and the same fare
 
 #### Flags
 
-* `-R`: remove route duplicates
+* `-R`/`--remove-red-routes`: remove route duplicates
 
 #### Modifies
 
@@ -434,7 +434,7 @@ Removes duplicate services (services that cover the same set of dates) and updat
 
 #### Flags
 
-* `-C`: remove duplicate services in calendar.txt and calendar_dates.txt
+* `-C`/`--remove-red-services`: remove duplicate services in calendar.txt and calendar_dates.txt
 
 #### Modifies
 
@@ -479,7 +479,7 @@ A,1,1,1,1,1,1,0,20160814,20160821
 Removes duplicate shapes and updates references in `trips.txt`. Shape equality testing is done with a simple heuristic which resembles the [Fréchet-Distance](https://en.wikipedia.org/wiki/Fr%C3%A9chet_distance) but is faster. The check never underestimates the distance between two shapes, but overestimates it for shapes with total distances that are `>>` the max distance. **This processor implicitely calls the shape remeasurer**.
 
 #### Flags
-* `-S`: remove shape duplicates
+* `-S`/`--remove-red-shapes`: remove shape duplicates
 
 #### Modifies
 `shapes.txt`, `trips.txt`
@@ -528,7 +528,7 @@ Remeasures shapes and fills measurement gaps.
 
 #### Flags
 
-* `-m`: remeasure shapes (filling measurement-holes)
+* `-m`/`--remeasure-shapes`: remeasure shapes (filling measurement-holes)
 
 #### Modifies
 
@@ -573,7 +573,7 @@ If optional field values of feed entries have errors, this processors sets them 
 
 #### Flags
 
-* `-e`: if non-required fields have errors, fall back to the default values
+* `-e`/`--default-on-errs`: if non-required fields have errors, fall back to the default values
 
 #### Modifies
 
@@ -617,7 +617,7 @@ If feed entries have errors that can't be fixed in any other way (e.g. by `-e`),
 
 #### Flags:
 
-* `-D`: drop erroneous entries from feed
+* `-D`/`--drop-errs`: drop erroneous entries from feed
 
 #### Modifies:
 
