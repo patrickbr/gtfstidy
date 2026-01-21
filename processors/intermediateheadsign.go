@@ -41,10 +41,11 @@ func (pro FixIntermediateHeadsigns) Run(feed *gtfsparser.Feed) {
 		matchIndex := -1
 
 		// 1. Check if headsign is equal to a stop along the trip (except the last one)
-		for i := 0; i < len(trip.StopTimes)-1; i++ {
+		for i := len(trip.StopTimes) - 2; i >= 0; i-- {
 			st := trip.StopTimes[i]
 			if st.Stop() != nil && st.Stop().Name == *currentHeadsign {
 				matchIndex = i
+				break
 			}
 		}
 
