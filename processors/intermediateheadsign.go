@@ -45,6 +45,7 @@ func (pro FixIntermediateHeadsigns) Run(feed *gtfsparser.Feed) {
 			st := trip.StopTimes[i]
 			if st.Stop() != nil && st.Stop().Name == *currentHeadsign {
 				matchIndex = i
+				break
 			}
 		}
 
