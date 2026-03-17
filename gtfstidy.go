@@ -142,6 +142,7 @@ func main() {
 
 	keepIds := flag.BoolP("keep-ids", "", false, "preserve station, fare, shape, route, trip, level, agency, pathway, and service IDs")
 	keepStationIds := flag.BoolP("keep-station-ids", "", false, "preserve station IDs")
+	keepStationIFTOPTIds := flag.BoolP("keep-station-ifopt-ids", "", false, "don't remove duplicate stops if they have different IFTOP ids")
 	keepBlockIds := flag.BoolP("keep-block-ids", "", false, "preserve block IDs")
 	keepFareIds := flag.BoolP("keep-fare-ids", "", false, "preserve fare IDs")
 	keepShapeIds := flag.BoolP("keep-shape-ids", "", false, "preserve shape IDs")
@@ -572,6 +573,7 @@ func main() {
 				DistThresholdStop:    5.0,
 				DistThresholdStation: 50,
 				Fuzzy:                *useRedStopsMinimizerFuzzy,
+				KeepIFOPT:            *keepStationIFTOPTIds,
 			})
 		}
 
