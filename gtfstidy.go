@@ -593,6 +593,7 @@ func main() {
 				DistThresholdStop:    5.0,
 				DistThresholdStation: 50,
 				Fuzzy:                *useRedStopsMinimizerFuzzy,
+				KeepIFOPT:            *keepStationIFTOPTIds,
 			})
 		}
 
@@ -615,6 +616,7 @@ func main() {
 					DistThresholdStop:    5.0,
 					DistThresholdStation: 50,
 					Fuzzy:                *useRedStopsMinimizerFuzzy,
+					KeepIFOPT:            *keepStationIFTOPTIds,
 				})
 			}
 
