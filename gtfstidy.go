@@ -182,6 +182,8 @@ func main() {
 	useRedStopsMinimizerFuzzy := flag.BoolP("red-stops-fuzzy", "", false, "fuzzy station match for station duplicate removal")
 	useRedAgencyMinimizer := flag.BoolP("remove-red-agencies", "A", false, "remove agency duplicates")
 	useStopReclusterer := flag.BoolP("recluster-stops", "E", false, "recluster stops")
+	stopReclusterDistance := flag.Float64P("recluster-stops-dist", "", 75.0, "distance threshold for stop reclustering with -E")
+	stopReclusterSimiThreshold := flag.Float64P("recluster-stops-simi", "", 0.55, "similarity threshold for stop reclustering with -E")
 	useStopAverager := flag.BoolP("fix-far-away-parents", "", false, "try to fix too far away parent stations by averaging their position to childrens")
 	dropShapes := flag.BoolP("drop-shapes", "", false, "drop shapes")
 	polygonFilterCompleteTrips := flag.BoolP("complete-filtered-trips", "", false, "always include complete data for trips filtered e.g. using a geo filter")
@@ -579,8 +581,8 @@ func main() {
 
 		if *useStopReclusterer {
 			minzers = append(minzers, processors.StopReclusterer{
-				DistThreshold:     75,
-				NameSimiThreshold: 0.55,
+				DistThreshold:     *stopReclusterDistance,
+				NameSimiThreshold: *stopReclusterSimiThreshold,
 				GridCellSize:      10000,
 			})
 		}
