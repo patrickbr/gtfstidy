@@ -9,17 +9,18 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/patrickbr/gtfsparser"
-	"github.com/patrickbr/gtfsparser/gtfs"
-	"github.com/patrickbr/gtfstidy/processors"
-	"github.com/patrickbr/gtfswriter"
-	"github.com/paulmach/go.geojson"
-	flag "github.com/spf13/pflag"
 	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/patrickbr/gtfsparser"
+	"github.com/patrickbr/gtfsparser/gtfs"
+	"github.com/patrickbr/gtfstidy/processors"
+	"github.com/patrickbr/gtfswriter"
+	geojson "github.com/paulmach/go.geojson"
+	flag "github.com/spf13/pflag"
 )
 
 func getGtfsPoly(poly [][][]float64) gtfsparser.Polygon {
@@ -54,7 +55,7 @@ func parseDate(str string) gtfs.Date {
 		year, e = strconv.Atoi(str[0:4])
 	}
 
-	if e == nil && day < 1 || day > 31 {
+	if e == nil && (day < 1 || day > 31) {
 		e = fmt.Errorf("day must be in the range [1, 31]")
 	}
 
@@ -275,6 +276,7 @@ func main() {
 		*keepAgencyIds = true
 		*keepBlockIds = true
 		*keepPathwayIds = true
+		*keepAttributionIds = true
 	}
 
 	if *fixShortHand {
