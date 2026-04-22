@@ -9,9 +9,10 @@ package processors
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/patrickbr/gtfsparser"
 	gtfs "github.com/patrickbr/gtfsparser/gtfs"
-	"os"
 )
 
 type FileFilter int64
@@ -162,7 +163,7 @@ func (or OrphanRemover) removeTransferOrphans(feed *gtfsparser.Feed) {
 		}
 
 		if tk.To_route != nil {
-			_, inFromRoute = referenced_routes[tk.To_route]
+			_, inToRoute = referenced_routes[tk.To_route]
 		}
 
 		if inFrom && inTo && inFromRoute && inToRoute {

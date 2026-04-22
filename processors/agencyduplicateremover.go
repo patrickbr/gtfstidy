@@ -8,10 +8,11 @@ package processors
 
 import (
 	"fmt"
-	"github.com/patrickbr/gtfsparser"
-	gtfs "github.com/patrickbr/gtfsparser/gtfs"
 	"hash/fnv"
 	"os"
+
+	"github.com/patrickbr/gtfsparser"
+	gtfs "github.com/patrickbr/gtfsparser/gtfs"
 )
 
 // AgencyDuplicateRemover merges semantically equivalent routes
@@ -23,6 +24,11 @@ func (adr AgencyDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	fmt.Fprintf(os.Stdout, "Removing redundant agencies... ")
 	proced := make(map[*gtfs.Agency]bool, len(feed.Agencies))
 	bef := len(feed.Agencies)
+
+	if bef == 0 {
+		fmt.Fprintf(os.Stdout, "done. (no agencies found)")
+		return
+	}
 
 	chunks := adr.getAgencyChunks(feed)
 
