@@ -102,7 +102,7 @@ func parseCoords(s string) ([][2]float64, error) {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "gtfstidy - (C) 2016-2023 by Patrick Brosi <info@patrickbrosi.de>\n\nUsage:\n\n  %s [<options>] [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "gtfstidy - (C) 2016-2026 by Patrick Brosi <info@patrickbrosi.de>. Contributions by Patrick Steil, Davids Paskevics, and others.\n\nUsage:\n\n  %s [<options>] [-o <outputfile>] <input GTFS>\n\nAllowed options:\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
