@@ -192,6 +192,7 @@ func main() {
 	flag.StringArrayVar(&polygonStrings, "polygon", []string{}, "polygon filter, as comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon multiple times)")
 	flag.StringArrayVar(&polygonFiles, "polygon-file", []string{}, "polygon filter, as a file containing comma separated latitude,longitude pairs (multiple polygons allowed by defining --polygon-file multiple times), or a GeoJSON file ending with .geojson or .json")
 	showWarnings := flag.BoolP("show-warnings", "W", false, "show warnings")
+	showWarningsExtensive := flag.BoolP("show-warnings-extensive", "", false, "show extensive warnings as defined by the canonical GTFS validator")
 	minHeadway := flag.IntP("min-headway", "", 1, "min allowed headway (in seconds) for frequency found with -T")
 	maxHeadway := flag.IntP("max-headway", "", 3600*24, "max allowed headway (in seconds) for frequency found with -T")
 	zipCompressionLevel := flag.IntP("zip-compression-level", "", 9, "output ZIP file compression level, between 0 and 9")
@@ -437,6 +438,7 @@ func main() {
 	opts.EmptyStringRepl = *emptyStrRepl
 	opts.ZipFix = *fixZip
 	opts.ShowWarnings = *showWarnings
+	opts.ShowWarningsExtensive = *showWarningsExtensive
 	opts.DropShapes = *dropShapes
 	opts.KeepAddFlds = *keepFields
 	opts.DateFilterStart = startDate
@@ -456,7 +458,7 @@ func main() {
 			locFeed := gtfsparser.NewFeed()
 			locFeed.SetParseOpts(opts)
 			fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
-			if opts.ShowWarnings {
+			if opts.ShowWarnings || opts.ShowWarningsExtensive {
 				fmt.Fprintf(os.Stdout, "\n")
 			}
 			e = locFeed.Parse(gtfsPath)
@@ -466,7 +468,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, e.Error())
 				os.Exit(1)
 			}
-			if opts.ShowWarnings {
+			if opts.ShowWarnings || opts.ShowWarningsExtensive {
 				fmt.Fprintf(os.Stdout, "... done.\n")
 			} else {
 				fmt.Fprintf(os.Stdout, " done.\n")
@@ -480,7 +482,7 @@ func main() {
 
 	for i, gtfsPath := range gtfsPaths {
 		fmt.Fprintf(os.Stdout, "Parsing GTFS feed in '%s' ...", gtfsPath)
-		if opts.ShowWarnings {
+		if opts.ShowWarnings || opts.ShowWarningsExtensive {
 			fmt.Fprintf(os.Stdout, "\n")
 		}
 		if len(gtfsPaths) > 1 {
@@ -503,7 +505,7 @@ func main() {
 
 		if opts.DropErroneous {
 			s := feed.ErrorStats
-			if opts.ShowWarnings {
+			if opts.ShowWarnings || opts.ShowWarningsExtensive {
 				fmt.Fprintf(os.Stdout, "... done.")
 			} else {
 				fmt.Fprintf(os.Stdout, " done.")
