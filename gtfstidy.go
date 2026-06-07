@@ -163,6 +163,7 @@ func main() {
 	useShapeSnapper := flag.BoolP("snap-stops", "", false, "snap stop points to shape if dist > 100 m")
 	useRedShapeRemover := flag.BoolP("remove-red-shapes", "S", false, "remove shape duplicates")
 	useRedRouteMinimizer := flag.BoolP("remove-red-routes", "R", false, "remove route duplicates")
+	useRedRouteMinimizerMinSharedStops := flag.IntP("red-routes-min-shared-stations", "", 0, "minimum number of stops that must be shared for two routes to be merged")
 	useRedServiceMinimizer := flag.BoolP("remove-red-services", "C", false, "remove duplicate services in calendar.txt and calendar_dates.txt")
 	useIDMinimizerNum := flag.BoolP("minimize-ids-num", "i", false, "minimize IDs using numerical IDs (e.g. 144, 145, 146...)")
 	useIDMinimizerChar := flag.BoolP("minimize-ids-char", "d", false, "minimize IDs using character IDs (e.g. abc, abd, abe, abf...)")
@@ -637,7 +638,7 @@ func main() {
 		}
 
 		if *useRedRouteMinimizer {
-			minzers = append(minzers, processors.RouteDuplicateRemover{})
+			minzers = append(minzers, processors.RouteDuplicateRemover{OnlyMergeRoutesSharingNStops: *useRedRouteMinimizerMinSharedStops})
 		}
 
 		if *useRedServiceMinimizer {
