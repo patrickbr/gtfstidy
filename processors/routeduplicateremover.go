@@ -317,7 +317,6 @@ func (rdr RouteDuplicateRemover) routeEquals(a *gtfs.Route, b *gtfs.Route, feed 
 
 	if rdr.OnlyMergeRoutesSharingNStops > 0 {
 		if !rdr.routesShareStops(rdr.OnlyMergeRoutesSharingNStops, a, b, stops) {
-			fmt.Println(a.Id, b.Id)
 			return false
 		}
 	}
