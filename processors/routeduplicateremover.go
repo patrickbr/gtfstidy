@@ -35,8 +35,11 @@ func (rdr RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	}
 
 	if rdr.OnlyMergeRoutesSharingNStops > 0 {
+		for _, r := range feed.Routes {
+			stops[r] = make(map[*gtfs.Stop]bool, 1)
+		}
+
 		for r, ts := range trips {
-			stops[r] = make(map[*gtfs.Stop]bool, len(ts) * 5)
 			for _, t := range ts {
 				for _, st := range t.StopTimes {
 					stop := st.Stop()
@@ -92,7 +95,7 @@ func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gt
 				if _, ok := feed.Routes[r.Id]; !ok {
 					continue
 				}
-				if r != route && rdr.routeEquals(r, route, feed, stops) && rdr.checkFareEquality(feed, route, r) {
+				if r != route && rdr.routeEquals(r, route, feed) && rdr.checkFareEquality(feed, route, r) {
 					rets[j] = append(rets[j], r)
 				}
 			}
@@ -110,6 +113,36 @@ func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gt
 
 	for _, r := range rets {
 		ret = append(ret, r...)
+	}
+
+	if rdr.OnlyMergeRoutesSharingNStops > 0 {
+		ret2 := make([]*gtfs.Route, 0)
+		proced := make(map[*gtfs.Route]bool, 0)
+		for {
+			changed := false
+			for _, r := range ret {
+				if _, ok := proced[r]; ok {
+					continue
+				}
+				if rdr.routesShareStops(rdr.OnlyMergeRoutesSharingNStops, route, r, stops) {
+					ret2 = append(ret2, r)
+					proced[r] = true
+					changed = true
+
+					// update stops for route
+					for s, _ := range stops[r] {
+						stops[route][s] = true
+					}
+
+					// update stops for r
+					stops[r] = stops[route]
+				}
+			}
+			if !changed {
+				break
+			}
+		}
+		return ret2
 	}
 
 	return ret
@@ -263,10 +296,10 @@ func (rdr RouteDuplicateRemover) getRouteChunks(feed *gtfsparser.Feed) map[uint3
 
 func (rdr RouteDuplicateRemover) routesShareStops(n int, a *gtfs.Route, b *gtfs.Route, stops map[*gtfs.Route]map[*gtfs.Stop]bool) bool {
 	if _, ok := stops[a]; !ok {
-		return false;
+		return false
 	}
 	if _, ok := stops[b]; !ok {
-		return false;
+		return false
 	}
 
 	count := 0
@@ -305,19 +338,13 @@ func (rdr RouteDuplicateRemover) routeHash(r *gtfs.Route) uint32 {
 }
 
 // Check if two routes are equal
-func (rdr RouteDuplicateRemover) routeEquals(a *gtfs.Route, b *gtfs.Route, feed *gtfsparser.Feed, stops map[*gtfs.Route]map[*gtfs.Stop]bool) bool {
+func (rdr RouteDuplicateRemover) routeEquals(a *gtfs.Route, b *gtfs.Route, feed *gtfsparser.Feed) bool {
 	addFldsEq := true
 
 	for _, v := range feed.RoutesAddFlds {
 		if v[a.Id] != v[b.Id] {
 			addFldsEq = false
 			break
-		}
-	}
-
-	if rdr.OnlyMergeRoutesSharingNStops > 0 {
-		if !rdr.routesShareStops(rdr.OnlyMergeRoutesSharingNStops, a, b, stops) {
-			return false
 		}
 	}
 
