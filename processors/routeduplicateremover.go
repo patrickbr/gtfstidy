@@ -18,7 +18,7 @@ import (
 
 // RouteDuplicateRemover merges semantically equivalent routes
 type RouteDuplicateRemover struct {
-	OnlyMergeRoutesSharingNStops int
+	OnlyMergeRoutesSharingStop bool
 }
 
 // Run this RouteDuplicateRemover on some feed
@@ -34,7 +34,7 @@ func (rdr RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		trips[t.Route] = append(trips[t.Route], t)
 	}
 
-	if rdr.OnlyMergeRoutesSharingNStops > 0 {
+	if rdr.OnlyMergeRoutesSharingStop {
 		for _, r := range feed.Routes {
 			stops[r] = make(map[*gtfs.Stop]bool, 1)
 		}
@@ -68,8 +68,8 @@ func (rdr RouteDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		if len(eqRoutes) > 0 {
 			rdr.combineRoutes(feed, append(eqRoutes, r), trips)
 
-			for _, r := range eqRoutes {
-				proced[r] = true
+			for _, rt := range eqRoutes {
+				proced[rt] = true
 			}
 
 			proced[r] = true
@@ -115,7 +115,7 @@ func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gt
 		ret = append(ret, r...)
 	}
 
-	if rdr.OnlyMergeRoutesSharingNStops > 0 {
+	if rdr.OnlyMergeRoutesSharingStop {
 		ret2 := make([]*gtfs.Route, 0)
 		proced := make(map[*gtfs.Route]bool, 0)
 		for {
@@ -124,18 +124,15 @@ func (rdr RouteDuplicateRemover) getEquivalentRoutes(route *gtfs.Route, feed *gt
 				if _, ok := proced[r]; ok {
 					continue
 				}
-				if rdr.routesShareStops(rdr.OnlyMergeRoutesSharingNStops, route, r, stops) {
+				if rdr.routesShareStops(route, r, stops) {
 					ret2 = append(ret2, r)
 					proced[r] = true
 					changed = true
 
-					// update stops for route
+					// update the stops for route, important for transitivity
 					for s, _ := range stops[r] {
 						stops[route][s] = true
 					}
-
-					// update stops for r
-					stops[r] = stops[route]
 				}
 			}
 			if !changed {
@@ -294,26 +291,14 @@ func (rdr RouteDuplicateRemover) getRouteChunks(feed *gtfsparser.Feed) map[uint3
 	return chunks
 }
 
-func (rdr RouteDuplicateRemover) routesShareStops(n int, a *gtfs.Route, b *gtfs.Route, stops map[*gtfs.Route]map[*gtfs.Stop]bool) bool {
-	if _, ok := stops[a]; !ok {
-		return false
-	}
-	if _, ok := stops[b]; !ok {
-		return false
-	}
-
-	count := 0
+func (rdr RouteDuplicateRemover) routesShareStops(a *gtfs.Route, b *gtfs.Route, stops map[*gtfs.Route]map[*gtfs.Stop]bool) bool {
 	for s, _ := range stops[a] {
 		if _, ok := stops[b][s]; ok {
-			count += 1
-		}
-
-		if count >= n {
-			break
+			return true
 		}
 	}
 
-	return count >= n
+	return false
 }
 
 func (rdr RouteDuplicateRemover) routeHash(r *gtfs.Route) uint32 {
