@@ -88,6 +88,8 @@ func TestGtfsTidy(t *testing.T) {
 	opts = gtfsparser.ParseOptions{UseDefValueOnError: true, DropErroneous: true, DryRun: false, CheckNullCoordinates: false, EmptyStringRepl: "", ZipFix: false}
 	feed.SetParseOpts(opts)
 
+	e = feed.Parse("./processors/testfeed-err")
+
 	// write feed back to output
 	w = gtfswriter.Writer{ZipCompressionLevel: 9, Sorted: true}
 	e = w.Write(feed, outputPath)
