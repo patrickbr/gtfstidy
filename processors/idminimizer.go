@@ -33,7 +33,7 @@ type IDMinimizer struct {
 
 // Run this IDMinimizer on a feed
 func (minimizer IDMinimizer) Run(feed *gtfsparser.Feed) {
-	j := 9
+	j := 10
 	if minimizer.KeepStations {
 		j = j - 1
 	}
