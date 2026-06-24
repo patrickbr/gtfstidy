@@ -9,9 +9,10 @@ package processors
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/patrickbr/gtfsparser"
 	gtfs "github.com/patrickbr/gtfsparser/gtfs"
-	"os"
 )
 
 // ServiceCalDatesRemover removes any entry in calendar_dates.txt by
@@ -204,7 +205,7 @@ func (sm *ServiceCalDatesRem) getBlocks(feed *gtfsparser.Feed, s *gtfs.Service) 
 		service.SetStart_date(s.GetFirstDefinedDate())
 		service.SetEnd_date(s.GetLastDefinedDate())
 
-		ret2 = append(ret, service)
+		ret2 = append(ret2, service)
 	}
 
 	return ret2
