@@ -762,7 +762,11 @@ func main() {
 		if *keepAgencyIds && len(prefixes) > 0 {
 			for id, s := range feed.Agencies {
 				for prefix := range prefixes {
-					if strings.HasPrefix(id, prefix) {
+					// if the id is exactly the prefix, the input agency ID was empty
+					// if we have multiple agencies, dont drop the prefix, it would
+					// create entries in routes.txt without an agency ID, which is
+					// not allowed for multiple agencies
+					if strings.HasPrefix(id, prefix) && (len(feed.Agencies) == 1 || id != prefix) {
 						oldId := strings.TrimPrefix(id, prefix)
 						if _, ok := feed.Agencies[oldId]; !ok {
 							feed.Agencies[oldId] = s
