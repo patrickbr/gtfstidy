@@ -56,8 +56,10 @@ func (pro FixIntermediateHeadsigns) Run(feed *gtfsparser.Feed) {
 			// New Trip Headsign: E
 			// Stop Headsign for A, B: C
 
-			// Update trip headsign to the actual last stop
-			trip.Headsign = &lastStop.Name
+			// Update trip headsign to the actual last stop.
+			// Copy the string to avoid aliasing into the Stop struct
+			lastStopName := lastStop.Name
+			trip.Headsign = &lastStopName
 
 			// Update stop_headsign for all stops prior to the match
 			for j := 0; j < matchIndex; j++ {
