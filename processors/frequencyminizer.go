@@ -430,7 +430,7 @@ func (m FrequencyMinimizer) getTimeIndependentEquivalentTrips(trip *gtfs.Trip, t
 
 // Convert seconds since midnight to a GTFS time
 func (m FrequencyMinimizer) getGtfsTimeFromSec(s int) gtfs.Time {
-	return gtfs.Time{Hour: int8(s / 3600), Minute: int8((s - (s/3600)*3600) / 60), Second: int8(s - ((s / 60) * 60))}
+	return gtfs.Time{Hour: int16(s / 3600), Minute: int8((s - (s/3600)*3600) / 60), Second: int8(s - ((s / 60) * 60))}
 }
 
 // Check if two trips are equal without considering absolute stop times
