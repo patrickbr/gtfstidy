@@ -145,17 +145,23 @@ func geohashNeighbors(hash string) []string {
 }
 
 // precisionForMeters returns the coarsest geohash precision (1–9) whose cell
-// short-side is ≤ m metres. Callers pass their desired grid-cell size and get
-// back the precision that best matches it without over-shooting.
+// still covers a radius of m metres. Callers pass their desired grid-cell
+// size and get back the finest precision that does not undershoot it.
+//
+// The short-side figures from the table above understate a cell's true
+// extent (a point near the long edge needs the long side, roughly double
+// the short side, to stay within one cell), so the comparison here uses
+// the long-side size to decide whether a precision level is still coarse
+// enough for m.
 func precisionForMeters(m float64) int {
-	// Short-side cell size in metres for precision 1–9.
-	sizes := []float64{2_500_000, 630_000, 78_000, 20_000, 2_400, 610, 76, 19, 2.4}
-	for p, size := range sizes {
-		if size <= m {
+	// Long-side cell size in metres for precision 1–9 (~2x the short side).
+	sizes := []float64{5_000_000, 1_260_000, 156_000, 40_000, 4_800, 1_220, 152, 38, 4.8}
+	for p := len(sizes) - 1; p >= 0; p-- {
+		if sizes[p] >= m {
 			return p + 1
 		}
 	}
-	return 9
+	return 1
 }
 
 // clamp returns v clamped to [lo, hi].

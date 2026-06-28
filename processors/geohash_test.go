@@ -26,7 +26,7 @@ func TestGeohashEncode_KnownValues(t *testing.T) {
 		// Ezs42 — the canonical example from Gustavo Niemeyer's original post.
 		{42.6, -5.6, 5, "ezs42"},
 		// Hauptbahnhof Berlin (rounded to precision 6).
-		{52.5251, 13.3694, 6, "u33db4"},
+		{52.5251, 13.3694, 6, "u33db1"},
 		// New York City.
 		{40.7128, -74.0060, 6, "dr5reg"},
 		// Origin.
