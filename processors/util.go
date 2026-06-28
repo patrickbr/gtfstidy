@@ -7,8 +7,9 @@
 package processors
 
 import (
-	gtfs "github.com/patrickbr/gtfsparser/gtfs"
 	"math"
+
+	gtfs "github.com/patrickbr/gtfsparser/gtfs"
 )
 
 var DEG_TO_RAD float64 = 0.017453292519943295769236907684886127134428718885417254560
@@ -220,7 +221,7 @@ func diff(a []uint64, b []uint64) []uint64 {
 			ret = append(ret, a[i])
 			i++
 		} else {
-			ret = append(ret, a[i])
+			ret = append(ret, b[i])
 			j++
 		}
 	}
