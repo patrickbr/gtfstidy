@@ -221,7 +221,7 @@ func diff(a []uint64, b []uint64) []uint64 {
 			ret = append(ret, a[i])
 			i++
 		} else {
-			ret = append(ret, b[i])
+			ret = append(ret, b[j])
 			j++
 		}
 	}
