@@ -175,6 +175,7 @@ func main() {
 	explicitCals := flag.BoolP("explicit-calendar", "", false, "add calendar.txt entry for every service, even irregular ones")
 	ensureTripHeadsigns := flag.BoolP("ensure-trip-headsigns", "", false, "write trip headsigns if missing")
 	ensureParents := flag.BoolP("ensure-stop-parents", "", false, "ensure that every stop (location_type=0) has a parent station")
+	fixTripHeadsigns := flag.BoolP("fix-trip-headsigns", "", false, "fixes trip headsigns pointing to previous stops")
 	keepColOrder := flag.BoolP("keep-col-order", "", false, "keep the original column ordering of the input feed")
 	keepFields := flag.BoolP("keep-additional-fields", "F", false, "keep all non-GTFS fields from the input")
 	dropTooFast := flag.BoolP("drop-too-fast-trips", "", false, "drop trips that are too fast to realistically occur")
@@ -653,6 +654,9 @@ func main() {
 
 		if *ensureTripHeadsigns {
 			minzers = append(minzers, processors.TripHeadsigner{})
+		}
+		if *fixTripHeadsigns {
+			minzers = append(minzers, processors.FixIntermediateHeadsigns{})
 		}
 
 		if *useRedTripMinimizer || *stableTripIds {
