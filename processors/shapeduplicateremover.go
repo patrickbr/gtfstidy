@@ -18,7 +18,7 @@ import (
 type ShapeDuplicateRemover struct {
 	MaxEqDist float64
 	deleted   map[*gtfs.Shape]bool
-	mercs     map[*gtfs.Shape][][]float64
+	mercs     map[*gtfs.Shape][][2]float64
 }
 
 // Run this ShapeDuplicateRemover on some feed
@@ -29,13 +29,14 @@ func (sdr ShapeDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	sdr.deleted = make(map[*gtfs.Shape]bool)
 
 	// build projection cache
-	sdr.mercs = make(map[*gtfs.Shape][][]float64)
+	sdr.mercs = make(map[*gtfs.Shape][][2]float64)
 
 	for _, s := range feed.Shapes {
-		for _, p := range s.Points {
-			x, y := latLngToWebMerc(p.Lat, p.Lon)
-			sdr.mercs[s] = append(sdr.mercs[s], []float64{x, y})
+		m := make([][2]float64, len(s.Points))
+		for i, p := range s.Points {
+			m[i][0], m[i][1] = latLngToWebMerc(p.Lat, p.Lon)
 		}
+		sdr.mercs[s] = m
 	}
 
 	numchunks := MaxParallelism()
@@ -158,7 +159,7 @@ func (sdr *ShapeDuplicateRemover) inDistTo(shpA, shpB *gtfs.Shape) bool {
 // Heuristic distance from point p to a shape. Starts checking at anchor point s in shape. Because we are only
 // looking at surrounding segments, this check underestimates the real distance but should work fine for
 // distances in nearly equal shapes.
-func (sdr *ShapeDuplicateRemover) distToShp(px, py float64, shp [][]float64, s int) (int, float64) {
+func (sdr *ShapeDuplicateRemover) distToShp(px, py float64, shp [][2]float64, s int) (int, float64) {
 	minDist := math.Inf(1)
 	if s < 0 {
 		s = 0

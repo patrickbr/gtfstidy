@@ -18,7 +18,7 @@ import (
 // ShapeMinimizer minimizes shapes.
 type ShapeSnapper struct {
 	MaxDist   float64
-	mercs     map[*gtfs.Shape][][]float64
+	mercs     map[*gtfs.Shape][][2]float64
 	stopMercs map[*gtfs.Stop][2]float64
 }
 
@@ -29,14 +29,15 @@ func (sm ShapeSnapper) Run(feed *gtfsparser.Feed) {
 	orign := len(feed.Stops)
 
 	// build projection cache
-	sm.mercs = make(map[*gtfs.Shape][][]float64)
+	sm.mercs = make(map[*gtfs.Shape][][2]float64)
 	sm.stopMercs = make(map[*gtfs.Stop][2]float64)
 
 	for _, s := range feed.Shapes {
-		for _, p := range s.Points {
-			x, y := latLngToWebMerc(p.Lat, p.Lon)
-			sm.mercs[s] = append(sm.mercs[s], []float64{x, y})
+		m := make([][2]float64, len(s.Points))
+		for i, p := range s.Points {
+			m[i][0], m[i][1] = latLngToWebMerc(p.Lat, p.Lon)
 		}
+		sm.mercs[s] = m
 	}
 
 	for _, s := range feed.Stops {

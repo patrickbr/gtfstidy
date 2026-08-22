@@ -27,7 +27,7 @@ type ShapeIdx struct {
 	grid       [][]map[*gtfs.Shape]bool
 }
 
-func NewShapeIdx(shapes []*gtfs.Shape, mercs map[*gtfs.Shape][][]float64, cellWidth, cellHeight float64) *ShapeIdx {
+func NewShapeIdx(shapes []*gtfs.Shape, mercs map[*gtfs.Shape][][2]float64, cellWidth, cellHeight float64) *ShapeIdx {
 	idx := ShapeIdx{width: 0.0, height: 0.0, cellWidth: cellWidth, cellHeight: cellHeight, xWidth: 0, yHeight: 0, llx: math.Inf(1), lly: math.Inf(1), urx: math.Inf(-1), ury: math.Inf(-1)}
 
 	// retrieving shape bounding box
@@ -78,10 +78,10 @@ func NewShapeIdx(shapes []*gtfs.Shape, mercs map[*gtfs.Shape][][]float64, cellWi
 	return &idx
 }
 
-func (gi *ShapeIdx) Add(origShp *gtfs.Shape, shp [][]float64) {
+func (gi *ShapeIdx) Add(origShp *gtfs.Shape, shp [][2]float64) {
 	for i := 1; i < len(shp); i++ {
 		ax, ay := shp[i-1][0], shp[i-1][1]
-		bx, by := shp[i][0], shp[0][1]
+		bx, by := shp[i][0], shp[i][1]
 		llx := math.Min(ax, bx)
 		lly := math.Min(ay, by)
 		urx := math.Max(ax, bx)
@@ -182,7 +182,7 @@ func (gi *ShapeIdx) isects(x0, y0, x1, y1 float64, x, y uint) bool {
 	return isect
 }
 
-func (gi *ShapeIdx) GetNeighbors(shp [][]float64, d float64) map[*gtfs.Shape]bool {
+func (gi *ShapeIdx) GetNeighbors(shp [][2]float64, d float64) map[*gtfs.Shape]bool {
 	ret := make(map[*gtfs.Shape]bool)
 
 	if len(shp) < 2 {

@@ -38,10 +38,11 @@ func (sm ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 	sem := make(chan empty, numchunks)
 	for i, c := range chunks {
 		go func(chunk []*gtfs.Shape, a int) {
+			var w shapeMinWorker
 			for _, s := range chunk {
 				bef := len(s.Points)
 				chunknum[a] += len(s.Points)
-				s.Points = sm.minimizeShape(s.Points, sm.Epsilon)
+				s.Points = w.minimizeShape(s.Points, sm.Epsilon)
 				for i := 0; i < len(s.Points); i++ {
 					s.Points[i].Sequence = uint32(i)
 				}
@@ -69,31 +70,74 @@ func (sm ShapeMinimizer) Run(feed *gtfsparser.Feed) {
 		100.0*float64(n)/(float64(orign)+0.001))
 }
 
+type shapeMinWorker struct {
+	projX []float64
+	projY []float64
+	keep  []bool
+	stack [][2]int
+}
+
 // Minimize a single shape using the Douglas-Peucker algorithm
-func (sm *ShapeMinimizer) minimizeShape(points gtfs.ShapePoints, e float64) gtfs.ShapePoints {
-	var maxD float64
-	var maxI int
+func (w *shapeMinWorker) minimizeShape(points gtfs.ShapePoints, e float64) gtfs.ShapePoints {
+	if len(points) < 3 {
+		// nothing to minimize
+		return points
+	}
 
-	for i := 1; i < len(points)-1; i++ {
-		// reproject to web mercator to be on euclidean plane
-		px, py := latLngToWebMerc(points[i].Lat, points[i].Lon)
-		lax, lay := latLngToWebMerc(points[0].Lat, points[0].Lon)
-		lbx, lby := latLngToWebMerc(points[len(points)-1].Lat, points[len(points)-1].Lon)
+	if cap(w.projX) < len(points) {
+		w.projX = make([]float64, len(points))
+		w.projY = make([]float64, len(points))
+		w.keep = make([]bool, len(points))
+	}
+	w.projX = w.projX[:len(points)]
+	w.projY = w.projY[:len(points)]
+	w.keep = w.keep[:len(points)]
 
-		// TODO: this is not entirely correct, we should check the measurement distance here also!
-		d := perpendicularDist(px, py, lax, lay, lbx, lby)
-		if d > maxD {
-			maxI = i
-			maxD = d
+	for i := range points {
+		w.projX[i], w.projY[i] = latLngToWebMerc(points[i].Lat, points[i].Lon)
+		w.keep[i] = false
+	}
+
+	w.keep[0] = true
+	w.keep[len(points)-1] = true
+
+	w.stack = append(w.stack[:0], [2]int{0, len(points) - 1})
+
+	for len(w.stack) > 0 {
+		seg := w.stack[len(w.stack)-1]
+		w.stack = w.stack[:len(w.stack)-1]
+		a, b := seg[0], seg[1]
+
+		var maxD float64
+		var maxI int
+
+		for i := a + 1; i < b; i++ {
+			d := perpendicularDist(w.projX[i], w.projY[i], w.projX[a], w.projY[a], w.projX[b], w.projY[b])
+			if d > maxD {
+				maxI = i
+				maxD = d
+			}
+		}
+
+		if maxD > e {
+			w.keep[maxI] = true
+			w.stack = append(w.stack, [2]int{a, maxI}, [2]int{maxI, b})
 		}
 	}
 
-	if maxD > e {
-		retA := sm.minimizeShape(points[:maxI+1], e)
-		retB := sm.minimizeShape(points[maxI:], e)
-
-		return append(retA[:len(retA)-1], retB...)
+	n := 0
+	for i := range points {
+		if w.keep[i] {
+			n++
+		}
 	}
 
-	return gtfs.ShapePoints{points[0], points[len(points)-1]}
+	ret := make(gtfs.ShapePoints, 0, n)
+	for i := range points {
+		if w.keep[i] {
+			ret = append(ret, points[i])
+		}
+	}
+
+	return ret
 }
