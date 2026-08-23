@@ -25,14 +25,14 @@ type TripDuplicateRemover struct {
 	Aggressive  bool
 	MaxDayDist  int
 	serviceIdC  int
-	serviceList map[*gtfs.Service][]uint64
+	serviceList map[*gtfs.Service][]uint16
 	refDate     time.Time
 	serviceRefs map[*gtfs.Service]int
 }
 
 type Overlap struct {
 	Trip  *gtfs.Trip
-	Dates []uint64
+	Dates []uint16
 }
 
 // Run this TripDuplicateRemover on some feed
@@ -76,7 +76,7 @@ func (m TripDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		m.serviceRefs[t.Service] += 1
 	}
 
-	m.serviceList = make(map[*gtfs.Service][]uint64)
+	m.serviceList = make(map[*gtfs.Service][]uint16)
 
 	// infinity time
 	m.refDate = time.Unix(1<<63-62135596801, 999999999)
@@ -101,8 +101,12 @@ func (m TripDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	for m.combineAllOverlapTrips(feed) {
 	}
 
+	if m.MaxDayDist > 65536 {
+		m.MaxDayDist = 65536
+	}
+
 	for i := 1; i <= m.MaxDayDist; i++ {
-		for m.combineAllAdjTrips(feed, uint64(i), false) {
+		for m.combineAllAdjTrips(feed, uint16(i), false) {
 		}
 	}
 
@@ -516,7 +520,7 @@ func (m *TripDuplicateRemover) tripCalContained(child *gtfs.Trip, parent *gtfs.T
 }
 
 // Check if trip child is adjacent to trip parent calendar-wise
-func (m *TripDuplicateRemover) tripCalAdj(child *gtfs.Trip, parent *gtfs.Trip, maxdist uint64) bool {
+func (m *TripDuplicateRemover) tripCalAdj(child *gtfs.Trip, parent *gtfs.Trip, maxdist uint16) bool {
 	// only merge if daymap is equal, to avoid creating complicated services
 	if !(!child.Service.Start_date().IsEmpty() && !parent.Service.Start_date().IsEmpty() && child.Service.RawDaymap() == parent.Service.RawDaymap()) {
 		return false
@@ -536,7 +540,7 @@ func (m *TripDuplicateRemover) tripCalAdj(child *gtfs.Trip, parent *gtfs.Trip, m
 }
 
 // Check if trip a is overlapping trip b calendar wise
-func (m *TripDuplicateRemover) tripCalOverlap(a *gtfs.Trip, b *gtfs.Trip) []uint64 {
+func (m *TripDuplicateRemover) tripCalOverlap(a *gtfs.Trip, b *gtfs.Trip) []uint16 {
 	ret := intersect(m.serviceList[a.Service], m.serviceList[b.Service])
 	return ret
 }
@@ -622,7 +626,7 @@ func (m *TripDuplicateRemover) tripHash(t *gtfs.Trip) uint64 {
 	return h.Sum64()
 }
 
-func (m *TripDuplicateRemover) getDateFromRefDay(d uint64) gtfs.Date {
+func (m *TripDuplicateRemover) getDateFromRefDay(d uint16) gtfs.Date {
 	return gtfs.GetGtfsDateFromTime((m.refDate.AddDate(0, 0, int(d))))
 }
 
@@ -695,7 +699,10 @@ func (m *TripDuplicateRemover) writeServiceList(s *gtfs.Service) {
 	for d := start; !d.GetTime().After(endT); d = d.GetOffsettedDate(1) {
 		if s.IsActiveOn(d) {
 			day := uint64(d.GetTime().Sub(m.refDate).Hours()) / 24
-			m.serviceList[s] = append(m.serviceList[s], day)
+			if day > 65536 {
+				panic("tripduplicateremover cannot handle feeds spanning more than 65536 days")
+			}
+			m.serviceList[s] = append(m.serviceList[s], uint16(day))
 		}
 	}
 }
@@ -893,7 +900,7 @@ func (m *TripDuplicateRemover) combineAllOverlapTrips(feed *gtfsparser.Feed) boo
 	return merged
 }
 
-func (m *TripDuplicateRemover) combineAllAdjTrips(feed *gtfsparser.Feed, maxDist uint64, aggressive bool) bool {
+func (m *TripDuplicateRemover) combineAllAdjTrips(feed *gtfsparser.Feed, maxDist uint16, aggressive bool) bool {
 	nchunks := m.getTripChunks(feed)
 
 	rets := make([][][]*gtfs.Trip, len(nchunks))

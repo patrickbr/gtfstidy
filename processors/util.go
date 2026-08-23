@@ -152,14 +152,14 @@ func cosSimi(a map[int]float64, b map[int]float64) float64 {
 	return sumA / (math.Sqrt(s1) * math.Sqrt(s2))
 }
 
-func merge(a []uint64, b []uint64) []uint64 {
+func merge[V int64 | int32 | int16 | int8 | uint64 | uint32 | uint16 | uint8](a []V, b []V) []V {
 	lenA := len(a)
 	lenB := len(b)
 
 	i := 0
 	j := 0
 
-	ret := make([]uint64, 0)
+	ret := make([]V, 0)
 
 	for i < lenA && j < lenB {
 		if a[i] == b[j] {
@@ -198,7 +198,7 @@ func merge(a []uint64, b []uint64) []uint64 {
 	return ret
 }
 
-func diff(a []uint64, b []uint64) []uint64 {
+func diff[V int64 | int32 | int16 | int8 | uint64 | uint32 | uint16 | uint8](a []V, b []V) []V {
 	lenA := len(a)
 	lenB := len(b)
 	if lenA == 0 {
@@ -212,7 +212,7 @@ func diff(a []uint64, b []uint64) []uint64 {
 	i := 0
 	j := 0
 
-	ret := make([]uint64, 0)
+	ret := make([]V, 0)
 	for i < lenA && j < lenB {
 		if a[i] == b[j] {
 			i++
@@ -239,7 +239,7 @@ func diff(a []uint64, b []uint64) []uint64 {
 	return ret
 }
 
-func intersect(a []uint64, b []uint64) []uint64 {
+func intersect[V int64 | int32 | int16 | int8 | uint64 | uint32 | uint16 | uint8](a []V, b []V) []V {
 	lenA := len(a)
 	lenB := len(b)
 	if lenA == 0 || lenB == 0 {
@@ -257,7 +257,7 @@ func intersect(a []uint64, b []uint64) []uint64 {
 	i := 0
 	j := 0
 
-	ret := make([]uint64, 0)
+	ret := make([]V, 0)
 	for i < lenA && j < lenB {
 		if a[i] == b[j] {
 			ret = append(ret, a[i])
