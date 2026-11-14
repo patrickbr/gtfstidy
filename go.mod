@@ -3,7 +3,7 @@ module github.com/patrickbr/gtfstidy
 go 1.18
 
 require (
-	github.com/patrickbr/gtfsparser v0.0.0-20260821222520-58b02b342c71
+	github.com/patrickbr/gtfsparser v0.0.0-20261114122636-baa112b6762a
 	github.com/patrickbr/gtfswriter v0.0.0-20260821225435-0a581077911d
 	github.com/paulmach/go.geojson v1.5.0
 	github.com/spf13/pflag v1.0.5

@@ -6,6 +6,8 @@ github.com/patrickbr/gtfsparser v0.0.0-20260622153410-c2b72a7817fa h1:sNCPdHor6w
 github.com/patrickbr/gtfsparser v0.0.0-20260622153410-c2b72a7817fa/go.mod h1:WsjXLsxSQc+KfBJ7APQhk3yz+4DztzMYARQ+EfxKYSQ=
 github.com/patrickbr/gtfsparser v0.0.0-20260821222520-58b02b342c71 h1:YAg9EoP3rG5Dv5PAWquT/1po1TAHCOhLF/ykNkO7bNo=
 github.com/patrickbr/gtfsparser v0.0.0-20260821222520-58b02b342c71/go.mod h1:WsjXLsxSQc+KfBJ7APQhk3yz+4DztzMYARQ+EfxKYSQ=
+github.com/patrickbr/gtfsparser v0.0.0-20261114122636-baa112b6762a h1:OHElFQ0BbXO188a3aDEqKeN5Wq+gh7dIGxSlYiFNQDE=
+github.com/patrickbr/gtfsparser v0.0.0-20261114122636-baa112b6762a/go.mod h1:WsjXLsxSQc+KfBJ7APQhk3yz+4DztzMYARQ+EfxKYSQ=
 github.com/patrickbr/gtfswriter v0.0.0-20260505191856-63f4781c384e h1:2AJCg+RitTqw6eQGYv/c2j6SY5KryFPb3V3BPsRkvGA=
 github.com/patrickbr/gtfswriter v0.0.0-20260505191856-63f4781c384e/go.mod h1:B5RQqAhVjVuyfmnugGWZAENLM0liyRWR0lbhkcXcZc8=
 github.com/patrickbr/gtfswriter v0.0.0-20260821225435-0a581077911d h1:LykovsC+8UWIS1Qswj0X7Qtp/SWskL0b0HS8VWQJiHs=
