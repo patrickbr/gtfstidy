@@ -38,8 +38,12 @@ func (sdr StopDuplicateRemover) Run(feed *gtfsparser.Feed) {
 	levels := make(map[*gtfs.Level][]*gtfs.Stop, len(feed.Levels))
 	procedLvls := make(map[*gtfs.Level]bool, len(feed.Levels))
 
-	// collect levels that use stops as parents
+	locTypesPresent := make(map[int8]bool)
+
+	// collect levels that use stops as parents, also collect
+	// loctypes
 	for _, s := range feed.Stops {
+		locTypesPresent[s.Location_type] = true
 		if s.Level != nil {
 			levels[s.Level] = append(levels[s.Level], s)
 		}
@@ -64,65 +68,78 @@ func (sdr StopDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
-	// run multiple times to catch parent equivalencies
-	for i := 0; i < 3; i++ {
-		stoptimes := make(map[*gtfs.Stop][]*gtfs.StopTime, len(feed.Stops))
-		stops := make(map[*gtfs.Stop][]*gtfs.Stop, len(feed.Stops))
-		transfers := make(map[*gtfs.Stop][]gtfs.TransferKey, len(feed.Stops))
-		pathways := make(map[*gtfs.Stop][]*gtfs.Pathway, len(feed.Stops))
-		proced := make(map[*gtfs.Stop]bool, len(feed.Stops))
+	modes := []int{0}
 
-		chunks := sdr.getStopChunks(feed)
+	if sdr.Fuzzy {
+		modes = []int{1, 2}
+	}
 
-		// collect stop times that use stops
-		for _, t := range feed.Trips {
-			for i, st := range t.StopTimes {
-				stoptimes[st.Stop()] = append(stoptimes[st.Stop()], &t.StopTimes[i])
-			}
+	locTypes := []int8{1, 0, 2, 4}
+
+	for _, locType := range locTypes {
+		if _, ok := locTypesPresent[locType]; !ok {
+			continue
 		}
+		for _, mode := range modes {
+			stoptimes := make(map[*gtfs.Stop][]*gtfs.StopTime, len(feed.Stops))
+			stops := make(map[*gtfs.Stop][]*gtfs.Stop, len(feed.Stops))
+			transfers := make(map[*gtfs.Stop][]gtfs.TransferKey, len(feed.Stops))
+			pathways := make(map[*gtfs.Stop][]*gtfs.Pathway, len(feed.Stops))
+			proced := make(map[*gtfs.Stop]bool, len(feed.Stops))
 
-		// collect stops that use stops as parents
-		for _, s := range feed.Stops {
-			if s.Parent_station != nil {
-				stops[s.Parent_station] = append(stops[s.Parent_station], s)
-			}
-		}
+			chunks := sdr.getStopChunks(feed, locType, mode)
 
-		// collect transfers that use stop
-		for tk := range feed.Transfers {
-			transfers[tk.From_stop] = append(transfers[tk.From_stop], tk)
-			if tk.From_stop != tk.To_stop {
-				transfers[tk.To_stop] = append(transfers[tk.To_stop], tk)
-			}
-		}
-
-		// collect pathways that use stop
-		for _, p := range feed.Pathways {
-			pathways[p.From_stop] = append(pathways[p.From_stop], p)
-			if p.From_stop != p.To_stop {
-				pathways[p.To_stop] = append(pathways[p.To_stop], p)
-			}
-		}
-
-		i := 0
-
-		for _, s := range feed.Stops {
-			i += 1
-			if _, ok := proced[s]; ok {
-				continue
+			// collect stop times that use stops
+			for _, t := range feed.Trips {
+				for i, st := range t.StopTimes {
+					stoptimes[st.Stop()] = append(stoptimes[st.Stop()], &t.StopTimes[i])
+				}
 			}
 
-			hash := sdr.stopHash(s)
-			eqStops := sdr.getEquivalentStops(s, feed, chunks[hash])
+			// collect stops that use stops as parents
+			for _, s := range feed.Stops {
+				if s.Parent_station != nil {
+					stops[s.Parent_station] = append(stops[s.Parent_station], s)
+				}
+			}
 
-			if len(eqStops) > 0 {
-				sdr.combineStops(feed, append(eqStops, s), stoptimes, stops, transfers, pathways)
+			// collect transfers that use stop
+			for tk := range feed.Transfers {
+				transfers[tk.From_stop] = append(transfers[tk.From_stop], tk)
+				if tk.From_stop != tk.To_stop {
+					transfers[tk.To_stop] = append(transfers[tk.To_stop], tk)
+				}
+			}
 
-				for _, s := range eqStops {
-					proced[s] = true
+			// collect pathways that use stop
+			for _, p := range feed.Pathways {
+				pathways[p.From_stop] = append(pathways[p.From_stop], p)
+				if p.From_stop != p.To_stop {
+					pathways[p.To_stop] = append(pathways[p.To_stop], p)
+				}
+			}
+
+			for _, s := range feed.Stops {
+				if _, ok := proced[s]; ok {
+					continue
 				}
 
-				proced[s] = true
+				if s.Location_type != locType {
+					continue
+				}
+
+				hash := sdr.stopHash(s, mode)
+				eqStops := sdr.getEquivalentStops(s, feed, chunks[hash])
+
+				if len(eqStops) > 0 {
+					sdr.combineStops(feed, append(eqStops, s), stoptimes, stops, transfers, pathways)
+
+					for _, s := range eqStops {
+						proced[s] = true
+					}
+
+					proced[s] = true
+				}
 			}
 		}
 	}
@@ -244,7 +261,7 @@ func (sdr StopDuplicateRemover) combineStops(feed *gtfsparser.Feed, stops []*gtf
 	}
 }
 
-func (sdr StopDuplicateRemover) getStopChunks(feed *gtfsparser.Feed) map[uint32][][]*gtfs.Stop {
+func (sdr StopDuplicateRemover) getStopChunks(feed *gtfsparser.Feed, locType int8, mode int) map[uint32][][]*gtfs.Stop {
 	numchunks := MaxParallelism()
 
 	// maps stop (parents) to all trips originating from it
@@ -252,7 +269,10 @@ func (sdr StopDuplicateRemover) getStopChunks(feed *gtfsparser.Feed) map[uint32]
 	chunks := make(map[uint32][][]*gtfs.Stop)
 
 	for _, r := range feed.Stops {
-		hash := sdr.stopHash(r)
+		if r.Location_type != locType {
+			continue
+		}
+		hash := sdr.stopHash(r, mode)
 		stops[hash] = append(stops[hash], r)
 	}
 
@@ -272,7 +292,14 @@ func (sdr StopDuplicateRemover) getStopChunks(feed *gtfsparser.Feed) map[uint32]
 	return chunks
 }
 
-func (sdr StopDuplicateRemover) stopHash(s *gtfs.Stop) uint32 {
+func (sdr StopDuplicateRemover) stopHash(s *gtfs.Stop, mode int) uint32 {
+	// modes: 0 is normal mode (full match), 1 is the first pass of
+	// fuzzy mode (parents must be non-nil equal), and 2 ist the
+	// second pass of fuzzy mode (normalized stop names must be equals)
+	//
+	// see this condition in in stopEquals:
+	//		((distApprox <= sdr.DistThresholdStop/2 && parentsEqual) || sdr.stopNormalizer.Replace(a.Name) == sdr.stopNormalizer.Replace(b.Name))
+
 	h := fnv.New32a()
 
 	b := make([]byte, 8)
@@ -280,7 +307,7 @@ func (sdr StopDuplicateRemover) stopHash(s *gtfs.Stop) uint32 {
 	binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(s.Parent_station))))
 	h.Write(b)
 
-	if !sdr.Fuzzy {
+	if mode == 0 {
 		binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(s.Level))))
 		h.Write(b)
 	}
@@ -291,21 +318,34 @@ func (sdr StopDuplicateRemover) stopHash(s *gtfs.Stop) uint32 {
 	binary.LittleEndian.PutUint64(b, uint64(s.Wheelchair_boarding))
 	h.Write(b)
 
-	if !sdr.Fuzzy {
+	if mode == 0 {
 		h.Write([]byte(s.Code))
 	}
 
-	if !sdr.Fuzzy {
+	if mode == 0 {
 		h.Write([]byte(s.Name))
+	}
+
+	if mode == 2 {
+		normedName := sdr.stopNormalizer.Replace(s.Name)
+		h.Write([]byte(normedName))
+	}
+
+	if mode == 1 {
+		if s.Parent_station == nil {
+			// in mode 1, stops without a matching parent
+			// are ignored, use the ID as a unique hash val
+			h.Write([]byte(s.Id))
+		} else {
+			binary.LittleEndian.PutUint64(b, uint64(uintptr(unsafe.Pointer(s.Parent_station))))
+			h.Write(b)
+		}
 	}
 
 	h.Write([]byte(s.Desc))
 	h.Write([]byte(s.Zone_id))
 	h.Write([]byte(s.Timezone.GetTzString()))
-
-	if !sdr.Fuzzy {
-		h.Write([]byte(s.Platform_code))
-	}
+	h.Write([]byte(s.Platform_code))
 
 	return h.Sum32()
 }

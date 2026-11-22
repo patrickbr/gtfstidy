@@ -110,7 +110,7 @@ func (m TripDuplicateRemover) Run(feed *gtfsparser.Feed) {
 		}
 	}
 
-	if (m.Aggressive) {
+	if m.Aggressive {
 		for m.combineAllAdjTrips(feed, 0, true) {
 		}
 	}
